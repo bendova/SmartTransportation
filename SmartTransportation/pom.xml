@@ -39,6 +39,11 @@
 			<version>${presage.version}</version>
 			<type>war</type>
 		</dependency>
+		<dependency>
+			<groupId>uk.ac.imperial.presage2</groupId>
+			<artifactId>presage2-sqldb</artifactId>
+			<version>${presage.version}</version>
+		</dependency>
 	</dependencies>
 
 	<repositories>

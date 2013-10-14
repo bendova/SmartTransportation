@@ -1,4 +1,4 @@
-package Messages;
+package messageData;
 
 import uk.ac.imperial.presage2.util.location.Location;
 

@@ -2,10 +2,11 @@ package SmartTransportation;
 import java.util.HashSet;
 import java.util.Set;
 
-import Agents.Mediator;
-import Agents.Taxi;
-import Agents.TaxiStation;
-import Agents.User;
+
+import agents.Mediator;
+import agents.Taxi;
+import agents.TaxiStation;
+import agents.User;
 
 import com.google.inject.AbstractModule;
 
@@ -77,7 +78,7 @@ public class Simulation extends InjectedSimulation
 		for(int i = 0; i < usersCount; i++)
 		{
 			s.addParticipant(new User(Random.randomUUID(), "User"+i, 
-					getRandomLocation(), mMediatorNetworkAddress));
+					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress));
 		}
 	}
 	

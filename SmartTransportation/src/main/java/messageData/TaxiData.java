@@ -1,4 +1,4 @@
-package Messages;
+package messageData;
 
 import java.util.UUID;
 

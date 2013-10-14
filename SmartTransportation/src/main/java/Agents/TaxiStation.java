@@ -1,21 +1,21 @@
-package Agents;
+package agents;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import Messages.RegisterAsTaxiMessage;
-import Messages.RegisterAsTaxiServiceProviderMessage;
-import Messages.TaxiData;
-import Messages.TaxiOrder;
-import Messages.TaxiOrderMessage;
-import Messages.TaxiServiceReply;
-import Messages.TaxiServiceReplyMessage;
-import Messages.TaxiServiceRequest;
-import Messages.TaxiServiceRequestMessage;
+import messageData.TaxiData;
+import messageData.TaxiOrder;
+import messageData.TaxiServiceReply;
+import messageData.TaxiServiceRequest;
+import messages.RegisterAsTaxiMessage;
+import messages.RegisterAsTaxiStationMessage;
+import messages.TaxiOrderMessage;
+import messages.TaxiServiceReplyMessage;
+import messages.TaxiServiceRequestMessage;
+
 
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 import uk.ac.imperial.presage2.core.messaging.Input;
@@ -40,8 +40,8 @@ public class TaxiStation extends AbstractParticipant
 		mLocation = location;
 		mMediatorAddress = mediatorNetworkAddress;
 		
-		mTaxiesSet = new HashSet<TaxiData>();
-		mFreeTaxiesSet = new HashSet<TaxiData>();
+		mTaxiesSet = Collections.synchronizedSet(new HashSet<TaxiData>());
+		mFreeTaxiesSet = Collections.synchronizedSet(new HashSet<TaxiData>());
 		mTaxiRequestMessages = new PriorityBlockingQueue<TaxiServiceRequestMessage>();
 	}
 	
@@ -61,8 +61,8 @@ public class TaxiStation extends AbstractParticipant
 	
 	private void registerAsTaxiServiceProvider()
 	{
-		RegisterAsTaxiServiceProviderMessage submitMessage = new 
-				RegisterAsTaxiServiceProviderMessage(network.getAddress(), mMediatorAddress);
+		RegisterAsTaxiStationMessage submitMessage = new 
+				RegisterAsTaxiStationMessage(network.getAddress(), mMediatorAddress);
 		network.sendMessage(submitMessage);
 	}
 	
@@ -144,7 +144,8 @@ public class TaxiStation extends AbstractParticipant
 					if(nearestTaxiData != null)
 					{
 						SendReplyToUser(taxiRequestMessage.getFrom(), nearestTaxiData.getID());
-						SendOrderToTaxi(nearestTaxiData.getNetworkAddress(), userLocation, taxiServiceRequest.getID());
+						SendOrderToTaxi(nearestTaxiData.getNetworkAddress(), userLocation, taxiServiceRequest.getID(),
+								taxiRequestMessage.getFrom());
 						mFreeTaxiesSet.remove(nearestTaxiData);
 						mTaxiRequestMessages.remove(taxiRequestMessage);
 					}
@@ -158,13 +159,14 @@ public class TaxiStation extends AbstractParticipant
 		logger.info("FindFreeTaxiNearestTo() userLocation " + userLocation);
 		
 		TaxiData nearestTaxiData = null;
-		Location nearestTaxiLocation = mLocation;
+		Location nearestTaxiLocation = null;
 		if(mFreeTaxiesSet.isEmpty() == false)
 		{
 			for (TaxiData taxiData : mFreeTaxiesSet) 
 			{
 				Location taxiLocation = mLocationService.getAgentLocation(taxiData.getID());
-				if(taxiLocation.distanceTo(userLocation) < nearestTaxiLocation.distanceTo(userLocation))
+				if((nearestTaxiLocation == null) || 
+					(taxiLocation.distanceTo(userLocation) < nearestTaxiLocation.distanceTo(userLocation)))
 				{
 					nearestTaxiLocation = taxiLocation;
 					nearestTaxiData = taxiData;
@@ -185,11 +187,11 @@ public class TaxiStation extends AbstractParticipant
 		network.sendMessage(taxiServiceReplyMessage);
 	}
 	
-	private void SendOrderToTaxi(NetworkAddress toTaxi, Location userLocation, UUID userID)
+	private void SendOrderToTaxi(NetworkAddress toTaxi, Location userLocation, UUID userID, NetworkAddress userNetworkAddress)
 	{
 		logger.info("SendOrderToTaxi() toTaxi " + toTaxi);
 		
-		TaxiOrder taxiOrder = new TaxiOrder(userID, userLocation);
+		TaxiOrder taxiOrder = new TaxiOrder(userLocation, userID, userNetworkAddress);
 		TaxiOrderMessage taxiOrderMessage = new TaxiOrderMessage(taxiOrder, network.getAddress(), toTaxi);
 		network.sendMessage(taxiOrderMessage);
 	}

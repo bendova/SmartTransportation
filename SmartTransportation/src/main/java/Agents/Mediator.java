@@ -1,20 +1,14 @@
-package Agents;
+package agents;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import org.drools.process.core.datatype.impl.NewInstanceDataTypeFactory;
-import org.drools.rule.Function;
-import org.omg.PortableInterceptor.ForwardRequest;
+import messageData.UserRequest;
+import messages.*;
 
-import Messages.*;
 import uk.ac.imperial.presage2.core.messaging.Input;
-import uk.ac.imperial.presage2.core.network.Message;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 
@@ -43,9 +37,9 @@ public class Mediator extends AbstractParticipant
 			{
 				processRequest((TaxiServiceRequestMessage)input);
 			}
-			else if (input instanceof RegisterAsTaxiServiceProviderMessage)
+			else if (input instanceof RegisterAsTaxiStationMessage)
 			{
-				processRequest((RegisterAsTaxiServiceProviderMessage)input);
+				processRequest((RegisterAsTaxiStationMessage)input);
 			}
 		}
 	}
@@ -84,7 +78,7 @@ public class Mediator extends AbstractParticipant
 		}
 	}
 	
-	private void processRequest(RegisterAsTaxiServiceProviderMessage taxiStationNetworkAddress)
+	private void processRequest(RegisterAsTaxiStationMessage taxiStationNetworkAddress)
 	{
 		mTaxiStations.add(taxiStationNetworkAddress.getFrom());
 	}

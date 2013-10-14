@@ -1,10 +1,13 @@
-package Agents;
+package agents;
 import java.util.Set;
 import java.util.UUID;
 
-import Messages.TaxiServiceReplyMessage;
-import Messages.TaxiServiceRequest;
-import Messages.TaxiServiceRequestMessage;
+import messageData.TaxiServiceRequest;
+import messages.RequestDestinationMessage;
+import messages.TakeMeToDestinationMessage;
+import messages.TaxiServiceReplyMessage;
+import messages.TaxiServiceRequestMessage;
+
 
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -16,15 +19,22 @@ import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 
 public class User extends AbstractParticipant
 {
-	private Location mLocation;
+	private Location mStartLocation;
+	private Location mTargetLocation;
 	private ParticipantLocationService mLocationService;
 	private NetworkAddress mMediatorAddress;
 	
-	public User(UUID id, String name, Location location, NetworkAddress mediatorNetworkAddress) 
+	public User(UUID id, String name, Location startLocation, Location targetLocation, NetworkAddress mediatorNetworkAddress) 
 	{
 		super(id, name);
 		
-		mLocation = location;
+		assert(id != null);
+		assert(startLocation != null);
+		assert(targetLocation != null);
+		assert(mediatorNetworkAddress != null);
+		
+		mStartLocation = startLocation;
+		mTargetLocation = targetLocation;
 		mMediatorAddress = mediatorNetworkAddress;
 	}
 	
@@ -32,7 +42,7 @@ public class User extends AbstractParticipant
 	protected Set<ParticipantSharedState> getSharedState() 
 	{
 		Set<ParticipantSharedState> shareState =  super.getSharedState();
-		shareState.add(ParticipantLocationService.createSharedState(getID(), mLocation));
+		shareState.add(ParticipantLocationService.createSharedState(getID(), mStartLocation));
 		return shareState;
 	}
 	
@@ -61,7 +71,7 @@ public class User extends AbstractParticipant
 	{
 		logger.info("SendRequestMessageToMediator() " + getTime());
 		
-		TaxiServiceRequest myRequest = new TaxiServiceRequest(mLocation);
+		TaxiServiceRequest myRequest = new TaxiServiceRequest(mStartLocation);
 		TaxiServiceRequestMessage myMessage = new TaxiServiceRequestMessage(myRequest, 
 				network.getAddress(), mMediatorAddress);
 		network.sendMessage(myMessage);
@@ -76,11 +86,18 @@ public class User extends AbstractParticipant
 	}
 	
 	@Override
-	protected void processInput(Input in) 
+	protected void processInput(Input input) 
 	{
-		if((in != null) && (in instanceof TaxiServiceReplyMessage))
+		if(input != null)
 		{
-			processReply((TaxiServiceReplyMessage)in);
+			if(input instanceof TaxiServiceReplyMessage)
+			{
+				processReply((TaxiServiceReplyMessage)input);
+			}
+			else if(input instanceof RequestDestinationMessage)
+			{
+				processRequest((RequestDestinationMessage)input);
+			}
 		}
 	}
 	
@@ -89,4 +106,13 @@ public class User extends AbstractParticipant
 		logger.info("ProcessReply() Received reply: " + taxiServiceReplyMessage.getData().getMessage()); 
 	}
 	
+	private void processRequest(RequestDestinationMessage requestDestinationMessage)
+	{
+		logger.info("processRequest() " + requestDestinationMessage.getData());
+		
+		TakeMeToDestinationMessage destinationMessage = new 
+				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
+						requestDestinationMessage.getFrom());
+		network.sendMessage(destinationMessage);
+	}
 }

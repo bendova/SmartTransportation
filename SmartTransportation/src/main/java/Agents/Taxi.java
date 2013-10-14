@@ -1,15 +1,20 @@
-package Agents;
+package agents;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import Messages.RegisterAsTaxiMessage;
-import Messages.TaxiData;
-import Messages.TaxiOrder;
-import Messages.TaxiOrderMessage;
+import messageData.TaxiData;
+import messageData.TaxiOrder;
+import messages.RegisterAsTaxiMessage;
+import messages.RequestDestinationMessage;
+import messages.TakeMeToDestinationMessage;
+import messages.TaxiOrderMessage;
+
 
 import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
 import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
+import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.location.Location;
@@ -22,6 +27,7 @@ public class Taxi extends AbstractParticipant
 	private Location mLocation;
 	private NetworkAddress mTaxiStationAddress;
 	private ParticipantLocationService mLocationService;
+	private TaxiOrder mCurrentTaxiOrder;
 	
 	public Taxi(UUID id, String name, Location location, NetworkAddress taxiStationNetworkAddress) 
 	{
@@ -31,7 +37,8 @@ public class Taxi extends AbstractParticipant
 	}
 	
 	@Override
-	protected Set<ParticipantSharedState> getSharedState() {
+	protected Set<ParticipantSharedState> getSharedState() 
+	{
 		Set<ParticipantSharedState> ss = super.getSharedState();
 		ss.add(ParticipantLocationService.createSharedState(getID(), mLocation));
 		return ss;
@@ -43,6 +50,7 @@ public class Taxi extends AbstractParticipant
 		super.initialise();
 		
 		registerToTaxiServiceProvider();
+		initializeLocationService();
 	}
 	
 	private void registerToTaxiServiceProvider()
@@ -55,6 +63,18 @@ public class Taxi extends AbstractParticipant
 		network.sendMessage(registerMessage);
 	}
 	
+	private void initializeLocationService()
+	{
+		try
+		{
+			mLocationService = getEnvironmentService(ParticipantLocationService.class);
+		}
+		catch (UnavailableServiceException e) 
+		{
+			logger.warn(e);
+		}
+	}
+	
 	@Override
 	protected void processInput(Input input) 
 	{
@@ -63,17 +83,20 @@ public class Taxi extends AbstractParticipant
 			if(input instanceof TaxiOrderMessage)
 			{
 				// TODO check if free before processing
-				processOrder((TaxiOrderMessage)input);
+				processOrderMessage((TaxiOrderMessage)input);
+			}
+			else if (input instanceof TakeMeToDestinationMessage)
+			{
+				processOrderMessage((TakeMeToDestinationMessage)input);
 			}
 		}
 	}
 	
-	private void processOrder(TaxiOrderMessage orderMessage)
+	private void processOrderMessage(TaxiOrderMessage orderMessage)
 	{
 		logger.info("processOrder()"); 
-		TaxiOrder taxiOrder = orderMessage.getData();
-		moveToLocation(taxiOrder.getUserLocation());
-		// TODO interact with client
+		mCurrentTaxiOrder = orderMessage.getData();
+		moveToLocation(mCurrentTaxiOrder.getUserLocation());
 	}
 	
 	private void moveToLocation(Location targetLocation)
@@ -88,6 +111,52 @@ public class Taxi extends AbstractParticipant
 		{
 			logger.warn("Error while moving!", e);
 		}
-		logger.info("moveToLocation() mLocation " + mLocation); 
+	}
+	
+	@Override
+	public void incrementTime()
+	{
+		super.incrementTime();
+		
+		updateLocation();
+	}
+	
+	private void updateLocation()
+	{
+		Location currentLocation = mLocationService.getAgentLocation(getID());
+		if(mLocation.equals(currentLocation) == false)
+		{
+			logger.info("UpdateLocation() currentLocation " + currentLocation);
+			
+			mLocation = currentLocation;
+			if((mCurrentTaxiOrder != null) && (mLocation.equals(mCurrentTaxiOrder.getUserLocation())))
+			{
+				onUserLocationReached();
+			}
+		}
+	}
+	
+	private void onUserLocationReached()
+	{
+		logger.info("OnUserLocationReached()");
+		
+ 		requestDestinationFrom(mCurrentTaxiOrder.getUserNetworkAddress());
+	}
+	
+	private void requestDestinationFrom(NetworkAddress fromUser)
+	{
+		RequestDestinationMessage requestDestination = new RequestDestinationMessage(
+				network.getAddress(), fromUser);
+		network.sendMessage(requestDestination);
+	}
+	
+	private void processOrderMessage(TakeMeToDestinationMessage takeMeToDestinationMessage)
+	{
+		logger.info("processOrderMessage() takeMeToDestination " + takeMeToDestinationMessage.getData());
+		
+		if(takeMeToDestinationMessage.getFrom().equals(mCurrentTaxiOrder.getUserNetworkAddress()))
+		{
+			moveToLocation(takeMeToDestinationMessage.getData());
+		}
 	}
 }

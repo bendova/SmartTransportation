@@ -1,4 +1,4 @@
-package Messages;
+package util;
 import uk.ac.imperial.presage2.core.Time;
 
 public class TimeStamp implements Time{

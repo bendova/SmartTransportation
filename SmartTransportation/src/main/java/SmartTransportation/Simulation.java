@@ -1,8 +1,15 @@
+package SmartTransportation;
 import java.util.HashSet;
 import java.util.Set;
 
+import Agents.Mediator;
+import Agents.Taxi;
+import Agents.TaxiStation;
+import Agents.User;
+
 import com.google.inject.AbstractModule;
 
+import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
 import uk.ac.imperial.presage2.core.simulator.Parameter;
 import uk.ac.imperial.presage2.core.simulator.Scenario;
@@ -26,6 +33,11 @@ public class Simulation extends InjectedSimulation
 	@Parameter(name="taxiStationsCount")
 	public int taxiStationsCount;
 	
+	@Parameter(name="taxiesCount")
+	public int taxiesCount;
+	
+	private NetworkAddress mMediatorNetworkAddress;
+	
 	public Simulation(Set<AbstractModule> modules)
 	{
 		super(modules);
@@ -48,22 +60,55 @@ public class Simulation extends InjectedSimulation
 	@Override
 	protected void addToScenario(Scenario s) 
 	{
+		AddMediator(s);
+		AddUsers(s);
+		AddTaxiStations(s);
+	}
+	
+	private void AddMediator(Scenario s)
+	{
+		Mediator mediator = new Mediator(Random.randomUUID(), "Mediator");
+		s.addParticipant(mediator);
+		mMediatorNetworkAddress = mediator.getNetworkAddress();
+	}
+	
+	private void AddUsers(Scenario s)
+	{
 		for(int i = 0; i < usersCount; i++)
 		{
-			int initialX = Random.randomInt(areaSize);
-			int initialY = Random.randomInt(areaSize);
-			Location startLocation = new Location(initialX, initialY);
-			s.addParticipant(new User(Random.randomUUID(), "User"+i, startLocation));
-		}
-		
-		Location[] startLocations = {new Location(0, 0),
-		                             new Location(0, 10),
-		                             new Location(10, 0),
-		                             new Location(10, 10)};
-		for(int i = 0; i < taxiStationsCount; i++)
-		{
-			s.addParticipant(new TaxiStationAgent(Random.randomUUID(), "TaxiStation"+i, startLocations[i]));
+			s.addParticipant(new User(Random.randomUUID(), "User"+i, 
+					getRandomLocation(), mMediatorNetworkAddress));
 		}
 	}
-
+	
+	private void AddTaxiStations(Scenario s)
+	{
+		Location[] startLocations = {new Location(0, 0),
+                new Location(0, 10),
+                new Location(10, 0),
+                new Location(10, 10)};
+		for(int i = 0; i < taxiStationsCount; i++)
+		{
+			TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
+					"TaxiStation"+i, startLocations[i], mMediatorNetworkAddress);
+			s.addParticipant(taxiStation);
+			AddTaxies(s, taxiStation.getNetworkAddress());
+		}
+	}
+	
+	private void AddTaxies(Scenario s, NetworkAddress taxiStationNetworkAddress)
+	{
+		for(int i = 0; i < taxiesCount; i++)
+		{
+			s.addParticipant(new Taxi(Random.randomUUID(), "Taxi"+i, getRandomLocation(),
+					taxiStationNetworkAddress));
+		}
+	}
+	
+	private Location getRandomLocation()
+	{
+		int initialX = Random.randomInt(areaSize);
+		int initialY = Random.randomInt(areaSize);
+		return new Location(initialX, initialY);
+	}
 }

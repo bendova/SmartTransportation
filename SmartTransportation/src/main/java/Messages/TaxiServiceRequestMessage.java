@@ -1,17 +1,17 @@
 package messages;
 
-import messageData.TaxiServiceRequest;
+import messageData.taxiServiceRequest.TaxiServiceRequestInterface;
 import uk.ac.imperial.presage2.core.messaging.Performative;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;
 import util.TimeStamp;
 
-public class TaxiServiceRequestMessage extends UnicastMessage<TaxiServiceRequest>
+public class TaxiServiceRequestMessage extends UnicastMessage<TaxiServiceRequestInterface>
 										implements Comparable<TaxiServiceRequestMessage>
 {	
-	public TaxiServiceRequestMessage(TaxiServiceRequest request, NetworkAddress from, NetworkAddress to)
+	public TaxiServiceRequestMessage(TaxiServiceRequestInterface request, NetworkAddress from, NetworkAddress to)
 	{
-		super(Performative.PROPOSE, from, to, new TimeStamp());
+		super(Performative.REQUEST, from, to, new TimeStamp());
 		
 		assert(request != null);
 		data = request;		
@@ -22,7 +22,7 @@ public class TaxiServiceRequestMessage extends UnicastMessage<TaxiServiceRequest
 	{
 		if(otherMessage != null)
 		{
-			return (timestamp.intValue() - otherMessage.timestamp.intValue());
+			return (otherMessage.timestamp.intValue() - timestamp.intValue());
 		}
 		return 1;
 	}

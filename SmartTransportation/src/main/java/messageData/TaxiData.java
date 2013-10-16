@@ -8,7 +8,6 @@ public class TaxiData
 {
 	private UUID mTaxiID;
 	private NetworkAddress mTaxiNetworkAddress;
-
 	
 	public TaxiData(UUID taxiID, NetworkAddress taxiNetworkAddress)
 	{

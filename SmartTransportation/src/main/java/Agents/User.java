@@ -2,12 +2,14 @@ package agents;
 import java.util.Set;
 import java.util.UUID;
 
-import messageData.TaxiServiceRequest;
+import messageData.taxiServiceRequest.TaxiServiceRequest;
+import messages.DestinationReachedMessage;
 import messages.RequestDestinationMessage;
+import messages.RequestTaxiServiceConfirmationMessage;
 import messages.TakeMeToDestinationMessage;
 import messages.TaxiServiceReplyMessage;
+import messages.TaxiServiceRequestConfirmationMessage;
 import messages.TaxiServiceRequestMessage;
-
 
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -23,6 +25,7 @@ public class User extends AbstractParticipant
 	private Location mTargetLocation;
 	private ParticipantLocationService mLocationService;
 	private NetworkAddress mMediatorAddress;
+	private TaxiServiceRequest mCurrentTaxiServiceRequest;
 	
 	public User(UUID id, String name, Location startLocation, Location targetLocation, NetworkAddress mediatorNetworkAddress) 
 	{
@@ -32,6 +35,8 @@ public class User extends AbstractParticipant
 		assert(startLocation != null);
 		assert(targetLocation != null);
 		assert(mediatorNetworkAddress != null);
+		
+		logger.info("User() id " + id);
 		
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
@@ -50,9 +55,11 @@ public class User extends AbstractParticipant
 	public void initialise()
 	{
 		super.initialise();
+		logger.info("initialise() mStartLocation " + mStartLocation);
+		logger.info("initialise() mTargetLocation " + mTargetLocation);
 		
 		initializeLocationService();
-		sendRequestMessageToMediator();
+		sendTaxiRequestMessageToMediator();
 	}
 	
 	private void initializeLocationService()
@@ -67,12 +74,14 @@ public class User extends AbstractParticipant
 		}
 	}
 	
-	private void sendRequestMessageToMediator()
+	private void sendTaxiRequestMessageToMediator()
 	{
-		logger.info("SendRequestMessageToMediator() " + getTime());
+		logger.info("sendTaxiRequestMessageToMediator()");
 		
-		TaxiServiceRequest myRequest = new TaxiServiceRequest(mStartLocation);
-		TaxiServiceRequestMessage myMessage = new TaxiServiceRequestMessage(myRequest, 
+		assert(mCurrentTaxiServiceRequest == null);
+		
+		mCurrentTaxiServiceRequest = new TaxiServiceRequest(mStartLocation, getID());
+		TaxiServiceRequestMessage myMessage = new TaxiServiceRequestMessage(mCurrentTaxiServiceRequest, 
 				network.getAddress(), mMediatorAddress);
 		network.sendMessage(myMessage);
 	}
@@ -82,7 +91,7 @@ public class User extends AbstractParticipant
 	{
 		super.incrementTime();
 		
-//		logger.info("incrementTime() " + getTime());
+		mCurrentTaxiServiceRequest.incrementTime();
 	}
 	
 	@Override
@@ -90,7 +99,16 @@ public class User extends AbstractParticipant
 	{
 		if(input != null)
 		{
-			if(input instanceof TaxiServiceReplyMessage)
+			if(input instanceof RequestTaxiServiceConfirmationMessage)
+			{
+				// TODO make this smarter; we want to weight our option
+				// before confirming the offers from any taxi station
+				if(mCurrentTaxiServiceRequest.isValid())
+				{
+					confirmRequest((RequestTaxiServiceConfirmationMessage)input);
+				}
+			}
+			else if(input instanceof TaxiServiceReplyMessage)
 			{
 				processReply((TaxiServiceReplyMessage)input);
 			}
@@ -98,7 +116,21 @@ public class User extends AbstractParticipant
 			{
 				processRequest((RequestDestinationMessage)input);
 			}
+			else if(input instanceof DestinationReachedMessage)
+			{
+				onDestinationReached((DestinationReachedMessage)input);
+			}
 		}
+	}
+	
+	private void confirmRequest(RequestTaxiServiceConfirmationMessage requestConfirmationMessage)
+	{
+		logger.info("confirmRequest() Taxi at: " + requestConfirmationMessage.getData());
+		
+		TaxiServiceRequestConfirmationMessage confirmationMessage = new TaxiServiceRequestConfirmationMessage("I confirm the request",
+				network.getAddress(), requestConfirmationMessage.getFrom());
+		network.sendMessage(confirmationMessage);
+		mCurrentTaxiServiceRequest.cancel();
 	}
 	
 	private void processReply(TaxiServiceReplyMessage taxiServiceReplyMessage)
@@ -114,5 +146,11 @@ public class User extends AbstractParticipant
 				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
 						requestDestinationMessage.getFrom());
 		network.sendMessage(destinationMessage);
+	}
+	
+	private void onDestinationReached(DestinationReachedMessage message)
+	{
+		logger.info("onDestinationReached() " + message.getData());
+		
 	}
 }

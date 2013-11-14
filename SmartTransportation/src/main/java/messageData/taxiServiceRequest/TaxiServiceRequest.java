@@ -10,22 +10,24 @@ public class TaxiServiceRequest implements TimeDriven, TaxiServiceRequestInterfa
 	private Location mLocation;
 	private String mMessage;
 	private UUID mUserID;
+	private UUID mAuthKey;
 	private int mTimeOutTimeSteps;
 	private int mAgeTimeSteps;
 	private boolean mIsValid;
 	
-	public TaxiServiceRequest(Location location, UUID userID) 
+	public TaxiServiceRequest(Location location, UUID userID, UUID authKey) 
 	{
-		this(location, userID, -1);
+		this(location, userID, authKey, -1);
 	}
 	
-	public TaxiServiceRequest(Location location, UUID userID, int timeOutTimeSteps)
+	public TaxiServiceRequest(Location location, UUID userID, UUID authKey, int timeOutTimeSteps)
 	{
 		assert(location != null);
 		assert(userID != null);
 		
 		mLocation = location;
 		mUserID = userID;
+		mAuthKey = authKey;
 		mMessage = "I need a taxi!";
 		mTimeOutTimeSteps = timeOutTimeSteps;
 		mAgeTimeSteps = 0;
@@ -69,6 +71,12 @@ public class TaxiServiceRequest implements TimeDriven, TaxiServiceRequestInterfa
 	public UUID getUserID()
 	{
 		return mUserID;
+	}
+	
+	@Override
+	public UUID getUserAuthKey()
+	{
+		return mAuthKey;
 	}
 	
 	@Override

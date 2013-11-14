@@ -8,6 +8,7 @@ public interface TaxiServiceRequestInterface
 {
 	public Location getLocation();
 	public String getMessage();
-	public UUID getUserID();	
+	public UUID getUserID();
+	public UUID getUserAuthKey();
 	public boolean isValid();	
 }

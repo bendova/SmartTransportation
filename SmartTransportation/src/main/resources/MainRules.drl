@@ -1,0 +1,34 @@
+package main
+
+import agents.User;
+import agents.Taxi;
+
+global org.apache.log4j.Logger logger;
+global Integer DISTANCE_BETWEEN_REVISIONS;
+
+rule "Say Hello! to taxi users"
+    when
+        $user: User(name.startsWith("TaxiUser"))
+    then
+    	logger.info("MainRules::Hello! " + $user);
+
+end
+
+rule "send taxies to revisions"
+    when
+        $taxi: Taxi(getDistanceTraveled() > DISTANCE_BETWEEN_REVISIONS,
+        			getCurrentStatus() == Taxi.Status.AVAILABLE)
+    then
+        //logger.info("MainRules::Sending to revision taxi " + $taxi + " with distance traveled " + $taxi.getDistanceTraveled());
+		//$taxi.goToRevision();
+end
+
+rule "send revized taxies back to work"
+	when 
+		$taxi: Taxi(getCurrentStatus() == Taxi.Status.IN_REVISION,
+					isRevisionComplete() == true)
+	then 
+		//logger.info("MainRules::Sending back to work taxi " + $taxi);
+		//$taxi.resetDistanceTraveled();
+		//$taxi.goToWork();
+end

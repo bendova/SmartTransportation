@@ -1,9 +1,20 @@
 package SmartTransportation;
+
+import gui.AgentData;
+import gui.AgentData.AgentType;
+import gui.GUI;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
-import org.drools.command.ExecuteCommand;
+import javafx.util.Duration;
 
+import org.drools.runtime.StatefulKnowledgeSession;
+import org.drools.runtime.rule.FactHandle;
 
 import agents.Mediator;
 import agents.Taxi;
@@ -11,16 +22,15 @@ import agents.TaxiStation;
 import agents.User;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Injector;
+import com.google.inject.Inject;
+import com.sun.javafx.collections.MappingChange.Map;
 
-import uk.ac.imperial.presage2.core.Time;
 import uk.ac.imperial.presage2.core.TimeDriven;
-import uk.ac.imperial.presage2.core.environment.EnvironmentConnector;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
-import uk.ac.imperial.presage2.core.network.NetworkConnectorFactory;
 import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
 import uk.ac.imperial.presage2.core.simulator.Parameter;
 import uk.ac.imperial.presage2.core.simulator.Scenario;
+import uk.ac.imperial.presage2.rules.RuleModule;
 import uk.ac.imperial.presage2.util.environment.AbstractEnvironmentModule;
 import uk.ac.imperial.presage2.util.location.Location;
 import uk.ac.imperial.presage2.util.location.MoveHandler;
@@ -44,14 +54,29 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Parameter(name="taxiesCount")
 	public int taxiesCount;
 	
+	public static final int DISTANCE_BETWEEN_REVISIONS = 10;
+	
+	private StatefulKnowledgeSession session;
+	
 	private NetworkAddress mMediatorNetworkAddress;
 	
 	private int mNextUserIndex = 0;
-	private boolean mAreUsersAdded = false;
+	private List<Taxi> mTaxies;
+	
+	private static List<AgentData> taxiAgentsData = new LinkedList<AgentData>();
+	private static List<AgentData> userAgentsData = new LinkedList<AgentData>();
+	
+	private static GUI mGUI;
 	
 	public Simulation(Set<AbstractModule> modules)
 	{
 		super(modules);
+		mTaxies = new LinkedList<Taxi>();
+	}
+	
+	@Inject
+	public void setSession(StatefulKnowledgeSession session) {
+		this.session = session;
 	}
 	
 	@Override
@@ -65,6 +90,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 					.addParticipantEnvironmentService(ParticipantLocationService.class));
 		modules.add(NetworkModule.fullyConnectedNetworkModule());
 		
+		modules.add(new RuleModule().addClasspathDrlFile("MainRules.drl"));
+		
 		return modules;
 	}
 
@@ -75,6 +102,9 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		AddUsers(s);
 		AddTaxiStations(s);
 		s.addTimeDriven(this);
+		
+		session.setGlobal("logger", logger);
+		session.setGlobal("DISTANCE_BETWEEN_REVISIONS", DISTANCE_BETWEEN_REVISIONS);
 	}
 	
 	private void AddMediator(Scenario s)
@@ -90,8 +120,10 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		for(int i = 0; i < usersCount; i++)
 		{
-			s.addParticipant(new User(Random.randomUUID(), "TaxiUser"+(mNextUserIndex++), 
-					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress));
+			User newUser = new User(Random.randomUUID(), "TaxiUser"+(mNextUserIndex++), 
+					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress);
+			s.addParticipant(newUser);
+			session.insert(newUser);
 		}
 	}
 	
@@ -99,25 +131,27 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		Location[] startLocations = {new Location(0, 0),
-                new Location(0, 10),
-                new Location(10, 0),
-                new Location(10, 10)};
 		for(int i = 0; i < taxiStationsCount; i++)
 		{
+			String stationName = "TaxiStation"+i;
 			TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
-					"TaxiStation"+i, startLocations[i], mMediatorNetworkAddress);
+					stationName, getRandomLocation(), mMediatorNetworkAddress);
 			s.addParticipant(taxiStation);
-			AddTaxies(s, taxiStation.getNetworkAddress());
+			AddTaxies(s, taxiStation.getNetworkAddress(), stationName);
 		}
 	}
 	
-	private void AddTaxies(Scenario s, NetworkAddress taxiStationNetworkAddress)
+	private void AddTaxies(Scenario s, NetworkAddress taxiStationNetworkAddress, 
+			String taxiStationName)
 	{
 		for(int i = 0; i < taxiesCount; i++)
 		{
-			s.addParticipant(new Taxi(Random.randomUUID(), "TaxiCab"+i, getRandomLocation(),
-					taxiStationNetworkAddress));
+			String taxiName = taxiStationName + "_TaxiCab"+i;
+			Taxi newTaxi = new Taxi(Random.randomUUID(), taxiName, getRandomLocation(),
+					taxiStationNetworkAddress);
+			s.addParticipant(newTaxi);
+			session.insert(newTaxi);
+			mTaxies.add(newTaxi);
 		}
 	}
 	
@@ -132,9 +166,56 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	public void incrementTime() 
 	{
 		logger.info("incrementTime() " + getSimulator().getCurrentSimulationTime());
+		updateTaxiesInSession();
+		session.fireAllRules();
+	}
+	
+	private void updateTaxiesInSession()
+	{
+		for(Taxi taxi: mTaxies)
+		{
+			session.update(session.getFactHandle(taxi), taxi);
+		}
+	}
+	
+	@Override
+	public void run() 
+	{
+		super.run();
+		onSimulationComplete();
+	}
+	
+	public static void setGUI(GUI instance)
+	{
+		mGUI = instance;
+	}
+	
+	private void onSimulationComplete()
+	{
+		System.out.println("onSimulationComplete()");
 		
-//		FIXME
-//		AddUsers(scenario);
+		mGUI.setAreaSize(areaSize, areaSize);
+		mGUI.setTaxiAgentsData(taxiAgentsData);
+		mGUI.setUserAgentsData(userAgentsData);
+		mGUI.setTimeStepsCount(finishTime);
+		mGUI.setTimeStepDuration(Duration.millis(200));
+		mGUI.beginAnimation();
+	}
+	
+	public static void addTaxiLocations(String agentName, ArrayList<Location> locations)
+	{
+		//System.out.println("addLocations() " + locations);
+		assert(locations != null);
+		
+		taxiAgentsData.add(new AgentData(AgentType.TAXI_CAB, agentName, locations));
+	}
+	
+	public static void addUserLocations(String agentName, ArrayList<Location> locations)
+	{
+		//System.out.println("addUserLocations() " + locations);
+		assert(locations != null);
+		
+		userAgentsData.add(new AgentData(AgentType.TAXI_USER, agentName, locations));
 	}
 	
 	/*	

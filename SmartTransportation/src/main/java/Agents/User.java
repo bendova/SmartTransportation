@@ -1,6 +1,15 @@
 package agents;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+
+import conversations.usertaxi.DestinationReachedAction;
+import conversations.usertaxi.RequestDestinationAction;
+import conversations.usertaxi.UserProtocol;
+
+import SmartTransportation.Simulation;
 
 import messageData.taxiServiceRequest.TaxiServiceRequest;
 import messages.DestinationReachedMessage;
@@ -23,9 +32,15 @@ public class User extends AbstractParticipant
 {
 	private Location mStartLocation;
 	private Location mTargetLocation;
+	private boolean mDestinationReached;
 	private ParticipantLocationService mLocationService;
 	private NetworkAddress mMediatorAddress;
 	private TaxiServiceRequest mCurrentTaxiServiceRequest;
+	
+	private Queue<RequestTaxiServiceConfirmationMessage> confirmationRequests;
+	private ArrayList<Location> mLocations; 
+	
+	private UserProtocol mProtocol;
 	
 	public User(UUID id, String name, Location startLocation, Location targetLocation, NetworkAddress mediatorNetworkAddress) 
 	{
@@ -40,7 +55,11 @@ public class User extends AbstractParticipant
 		
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
+		mDestinationReached = false;
 		mMediatorAddress = mediatorNetworkAddress;
+		
+		confirmationRequests = new LinkedList<RequestTaxiServiceConfirmationMessage>();
+		mLocations = new ArrayList<Location>();
 	}
 	
 	@Override
@@ -59,6 +78,7 @@ public class User extends AbstractParticipant
 		logger.info("initialise() mTargetLocation " + mTargetLocation);
 		
 		initializeLocationService();
+		//initialiseProtocol();
 		sendTaxiRequestMessageToMediator();
 	}
 	
@@ -74,13 +94,37 @@ public class User extends AbstractParticipant
 		}
 	}
 	
+	private void initialiseProtocol()
+	{
+		mProtocol = new UserProtocol(network);
+		
+		RequestDestinationAction requestDestinationAction = new RequestDestinationAction()
+		{
+			@Override
+			public void processMessage(RequestDestinationMessage msg) 
+			{
+				processRequest(msg);
+			}
+		};
+		DestinationReachedAction destinationReachedAction = new DestinationReachedAction() 
+		{
+			@Override
+			public void processMessage(DestinationReachedMessage msg)
+			{
+				onDestinationReached(msg);
+			}
+		};
+		
+		mProtocol.initProtocolWithTaxi(requestDestinationAction, destinationReachedAction);
+	}
+	
 	private void sendTaxiRequestMessageToMediator()
 	{
 		logger.info("sendTaxiRequestMessageToMediator()");
 		
 		assert(mCurrentTaxiServiceRequest == null);
 		
-		mCurrentTaxiServiceRequest = new TaxiServiceRequest(mStartLocation, getID());
+		mCurrentTaxiServiceRequest = new TaxiServiceRequest(mStartLocation, getID(), authkey);
 		TaxiServiceRequestMessage myMessage = new TaxiServiceRequestMessage(mCurrentTaxiServiceRequest, 
 				network.getAddress(), mMediatorAddress);
 		network.sendMessage(myMessage);
@@ -92,6 +136,58 @@ public class User extends AbstractParticipant
 		super.incrementTime();
 		
 		mCurrentTaxiServiceRequest.incrementTime();
+		if(mDestinationReached == false)
+		{
+			mLocations.add(mLocationService.getAgentLocation(getID()));
+		}
+	}
+	
+	@Override
+	public void execute()
+	{
+		// pull in Messages from the network
+		enqueueInput(this.network.getMessages());
+		
+		// process inputs
+		while (inputQueue.size() > 0) 
+		{
+			Input input = inputQueue.poll();
+			if(input instanceof RequestTaxiServiceConfirmationMessage)
+			{
+				confirmationRequests.add((RequestTaxiServiceConfirmationMessage)input);
+			}
+			else
+			{
+				processInput(input);
+			}
+		}
+		if(mCurrentTaxiServiceRequest.isValid() && (confirmationRequests.size() > 0))
+		{
+			handleConfirmationRequests();
+		}
+	}
+	
+	private void handleConfirmationRequests()
+	{
+		logger.info("handleConfirmationRequests()");
+		
+		// let's find the offer for a taxi 
+		// that is closest to us
+		RequestTaxiServiceConfirmationMessage confirmedRequest = confirmationRequests.poll();
+		double minDistance = confirmedRequest.getData().distanceTo(mStartLocation);
+		for(RequestTaxiServiceConfirmationMessage request : confirmationRequests)
+		{
+			double distance = request.getData().distanceTo(mStartLocation);
+			if(minDistance > distance)
+			{
+				confirmedRequest = request;
+				minDistance = distance;
+			}
+		}
+		
+		logger.info("handleConfirmationRequests() Accepting offer for taxi at " + confirmedRequest.getData());
+		
+		confirmRequest(confirmedRequest);
 	}
 	
 	@Override
@@ -99,33 +195,28 @@ public class User extends AbstractParticipant
 	{
 		if(input != null)
 		{
-			if(input instanceof RequestTaxiServiceConfirmationMessage)
-			{
-				// TODO make this smarter; we want to weight our option
-				// before confirming the offers from any taxi station
-				if(mCurrentTaxiServiceRequest.isValid())
-				{
-					confirmRequest((RequestTaxiServiceConfirmationMessage)input);
-				}
-			}
-			else if(input instanceof TaxiServiceReplyMessage)
+			if(input instanceof TaxiServiceReplyMessage)
 			{
 				processReply((TaxiServiceReplyMessage)input);
 			}
 			else if(input instanceof RequestDestinationMessage)
 			{
 				processRequest((RequestDestinationMessage)input);
+				
+				// mProtocol.handle((RequestDestinationMessage)input);
 			}
 			else if(input instanceof DestinationReachedMessage)
 			{
 				onDestinationReached((DestinationReachedMessage)input);
+				
+				// mProtocol.handle((DestinationReachedMessage)input);
 			}
 		}
 	}
 	
 	private void confirmRequest(RequestTaxiServiceConfirmationMessage requestConfirmationMessage)
 	{
-		logger.info("confirmRequest() Taxi at: " + requestConfirmationMessage.getData());
+		logger.info("confirmRequest()");
 		
 		TaxiServiceRequestConfirmationMessage confirmationMessage = new TaxiServiceRequestConfirmationMessage("I confirm the request",
 				network.getAddress(), requestConfirmationMessage.getFrom());
@@ -146,11 +237,18 @@ public class User extends AbstractParticipant
 				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
 						requestDestinationMessage.getFrom());
 		network.sendMessage(destinationMessage);
+//		mProtocol.handle(destinationMessage);
 	}
 	
 	private void onDestinationReached(DestinationReachedMessage message)
 	{
 		logger.info("onDestinationReached() " + message.getData());
-		
+		mDestinationReached = true;
+	}
+	
+	@Override
+	public void onSimulationComplete()
+	{
+		Simulation.addUserLocations(getName(), mLocations);
 	}
 }

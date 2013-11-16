@@ -1,4 +1,4 @@
-package protocols;
+package util.protocols;
 
 import java.util.Iterator;
 import java.util.Set;
@@ -8,9 +8,9 @@ import uk.ac.imperial.presage2.core.network.Message;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.SimTime;
-import uk.ac.imperial.presage2.util.fsm.FSMDescription;
-import uk.ac.imperial.presage2.util.fsm.FSMException;
-import uk.ac.imperial.presage2.util.protocols.*;
+import uk.ac.imperial.presage2.util.protocols.Conversation;
+import uk.ac.imperial.presage2.util.protocols.Protocol;
+import uk.ac.imperial.presage2.util.protocols.Role;
 
 public class FSMProtocol extends Protocol implements TimeDriven {
 

@@ -1,4 +1,4 @@
-package messageData.taxiServiceRequest;
+package messages.messageData.taxiServiceRequest;
 
 import java.util.UUID;
 

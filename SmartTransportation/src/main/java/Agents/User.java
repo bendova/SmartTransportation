@@ -5,13 +5,10 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 
-import conversations.usertaxi.DestinationReachedAction;
-import conversations.usertaxi.RequestDestinationAction;
-import conversations.usertaxi.UserProtocol;
-
+import conversations.protocols.user.Protocol;
+import conversations.usertaxi.actions.DestinationReachedAction;
+import conversations.usertaxi.actions.RequestDestinationAction;
 import SmartTransportation.Simulation;
-
-import messageData.taxiServiceRequest.TaxiServiceRequest;
 import messages.DestinationReachedMessage;
 import messages.RequestDestinationMessage;
 import messages.RequestTaxiServiceConfirmationMessage;
@@ -19,7 +16,7 @@ import messages.TakeMeToDestinationMessage;
 import messages.TaxiServiceReplyMessage;
 import messages.TaxiServiceRequestConfirmationMessage;
 import messages.TaxiServiceRequestMessage;
-
+import messages.messageData.taxiServiceRequest.TaxiServiceRequest;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.location.Location;
@@ -40,7 +37,7 @@ public class User extends AbstractParticipant
 	private Queue<RequestTaxiServiceConfirmationMessage> confirmationRequests;
 	private ArrayList<Location> mLocations; 
 	
-	private UserProtocol mProtocol;
+	private Protocol mProtocol;
 	
 	public User(UUID id, String name, Location startLocation, Location targetLocation, NetworkAddress mediatorNetworkAddress) 
 	{
@@ -78,7 +75,7 @@ public class User extends AbstractParticipant
 		logger.info("initialise() mTargetLocation " + mTargetLocation);
 		
 		initializeLocationService();
-		//initialiseProtocol();
+		initialiseProtocol();
 		sendTaxiRequestMessageToMediator();
 	}
 	
@@ -96,7 +93,7 @@ public class User extends AbstractParticipant
 	
 	private void initialiseProtocol()
 	{
-		mProtocol = new UserProtocol(network);
+		mProtocol = new Protocol(network);
 		
 		RequestDestinationAction requestDestinationAction = new RequestDestinationAction()
 		{
@@ -201,15 +198,15 @@ public class User extends AbstractParticipant
 			}
 			else if(input instanceof RequestDestinationMessage)
 			{
-				processRequest((RequestDestinationMessage)input);
+				//processRequest((RequestDestinationMessage)input);
 				
-				// mProtocol.handle((RequestDestinationMessage)input);
+				mProtocol.withTaxi().handle((RequestDestinationMessage)input);
 			}
 			else if(input instanceof DestinationReachedMessage)
 			{
-				onDestinationReached((DestinationReachedMessage)input);
+				//onDestinationReached((DestinationReachedMessage)input);
 				
-				// mProtocol.handle((DestinationReachedMessage)input);
+				mProtocol.withTaxi().handle((DestinationReachedMessage)input);
 			}
 		}
 	}
@@ -236,8 +233,8 @@ public class User extends AbstractParticipant
 		TakeMeToDestinationMessage destinationMessage = new 
 				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
 						requestDestinationMessage.getFrom());
-		network.sendMessage(destinationMessage);
-//		mProtocol.handle(destinationMessage);
+		//network.sendMessage(destinationMessage);
+		mProtocol.withTaxi().handle(destinationMessage);
 	}
 	
 	private void onDestinationReached(DestinationReachedMessage message)

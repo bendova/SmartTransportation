@@ -1,7 +1,7 @@
-package conversations.usertaxi;
+package conversations.usertaxi.actions;
 
-import uk.ac.imperial.presage2.util.fsm.*;
 import messages.DestinationReachedMessage;
+import util.protocols.*;
 
 public abstract class DestinationReachedAction implements Action
 {

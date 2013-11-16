@@ -1,4 +1,4 @@
-package messageData;
+package messages.messageData;
 import java.util.UUID;
 
 import uk.ac.imperial.presage2.core.util.random.Random;

@@ -1,4 +1,4 @@
-package protocols;
+package util.protocols;
 
 public class Timeout {
 	final int time;

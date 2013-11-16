@@ -1,4 +1,4 @@
-package protocols;
+package util.protocols;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,9 +12,6 @@ import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.SimTime;
 import uk.ac.imperial.presage2.core.util.random.Random;
-import uk.ac.imperial.presage2.util.fsm.FSM;
-import uk.ac.imperial.presage2.util.fsm.FSMDescription;
-import uk.ac.imperial.presage2.util.fsm.FSMException;
 import uk.ac.imperial.presage2.util.protocols.Conversation;
 import uk.ac.imperial.presage2.util.protocols.Role;
 

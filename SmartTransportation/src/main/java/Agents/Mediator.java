@@ -5,9 +5,8 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import messageData.UserRequest;
 import messages.*;
-
+import messages.messageData.UserRequest;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;

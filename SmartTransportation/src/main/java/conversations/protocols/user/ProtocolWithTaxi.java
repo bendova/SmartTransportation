@@ -1,28 +1,31 @@
-package conversations.usertaxi;
+package conversations.protocols.user;
 
 import java.util.UUID;
-
-import protocols.FSMProtocol;
 
 import messages.DestinationReachedMessage;
 import messages.RequestDestinationMessage;
 import messages.TakeMeToDestinationMessage;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;
-import uk.ac.imperial.presage2.util.fsm.Action;
+import util.protocols.Action;
+import util.protocols.FSMProtocol;
+import conversations.usertaxi.ConversationDescription;
+import conversations.usertaxi.actions.DestinationReachedAction;
+import conversations.usertaxi.actions.RequestDestinationAction;
+import conversations.usertaxi.actions.SendMessage;
 
-public class UserProtocol
-{	
+public class ProtocolWithTaxi 
+{
 	private NetworkAdaptor mNetworkAdaptor;
 	private FSMProtocol mWithTaxiProtocol;
 	private UUID mConversationKey;
 	
-	public UserProtocol(NetworkAdaptor network)
+	public ProtocolWithTaxi(NetworkAdaptor adaptor)
 	{
-		mNetworkAdaptor = network;
+		mNetworkAdaptor = adaptor;
 	}
 	
-	public void initProtocolWithTaxi(RequestDestinationAction requestDestinationAction,
+	public void init(RequestDestinationAction requestDestinationAction,
 			DestinationReachedAction destinationReachedAction)
 	{
 		assert(mWithTaxiProtocol == null);
@@ -58,5 +61,4 @@ public class UserProtocol
 		msg.setProtocol(ConversationDescription.PROTOCOL_NAME);
 		mWithTaxiProtocol.handle(msg);
 	}
-	
 }

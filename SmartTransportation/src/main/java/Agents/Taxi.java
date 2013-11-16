@@ -6,13 +6,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import conversations.usertaxi.TakeMeToDestinationAction;
-import conversations.usertaxi.TaxiProtocol;
-
+import conversations.protocols.taxi.Protocol;
+import conversations.usertaxi.actions.TakeMeToDestinationAction;
 import SmartTransportation.Simulation;
-
-import messageData.TaxiData;
-import messageData.TaxiOrder;
 import messages.DestinationReachedMessage;
 import messages.RegisterAsTaxiMessage;
 import messages.RejectOrderMessage;
@@ -22,7 +18,8 @@ import messages.TakeMeToDestinationMessage;
 import messages.TaxiOrderCompleteMessage;
 import messages.TaxiOrderMessage;
 import messages.TaxiStatusUpdateMessage;
-
+import messages.messageData.TaxiData;
+import messages.messageData.TaxiOrder;
 import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
 import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
@@ -48,7 +45,7 @@ public class Taxi extends AbstractParticipant
 	
 	private ArrayList<Location> mLocations; 
 	
-	private TaxiProtocol mProtocol;
+	private Protocol mProtocol;
 	
 	public enum Status
 	{
@@ -135,7 +132,7 @@ public class Taxi extends AbstractParticipant
 		super.initialise();
 		
 		initializeLocationService();
-		// initialiseProtocol();
+		initialiseProtocol();
 		registerToTaxiServiceProvider();
 	}
 	
@@ -153,7 +150,7 @@ public class Taxi extends AbstractParticipant
 	
 	private void initialiseProtocol()
 	{
-		mProtocol = new TaxiProtocol(network);
+		mProtocol = new Protocol(network);
 		TakeMeToDestinationAction action = new TakeMeToDestinationAction() 
 		{
 			@Override
@@ -194,9 +191,9 @@ public class Taxi extends AbstractParticipant
 			}
 			else if (input instanceof TakeMeToDestinationMessage)
 			{
-				processOrderMessage((TakeMeToDestinationMessage)input);
+				//processOrderMessage((TakeMeToDestinationMessage)input);
 				
-				// mProtocol.handle((TakeMeToDestinationMessage)input);
+				mProtocol.withUser().handle((TakeMeToDestinationMessage)input);
 			}
 			else if (input instanceof RevisionCompleteMessage)
 			{
@@ -328,8 +325,8 @@ public class Taxi extends AbstractParticipant
 		
 		RequestDestinationMessage requestDestination = new RequestDestinationMessage(
 				network.getAddress(), fromUser);
-		network.sendMessage(requestDestination);
-		// mProtocol.handle(requestDestination);
+		//network.sendMessage(requestDestination);
+		mProtocol.withUser().handle(requestDestination);
 	}
 	
 	private void processOrderMessage(TakeMeToDestinationMessage takeMeToDestinationMessage)
@@ -359,8 +356,8 @@ public class Taxi extends AbstractParticipant
 		DestinationReachedMessage msg = new DestinationReachedMessage(
 				"We have reached your destination, sir!", 
 				network.getAddress(), mCurrentTaxiOrder.getUserNetworkAddress());
-		network.sendMessage(msg);
-		// mProtocol.handle(msg);
+		//network.sendMessage(msg);
+		mProtocol.withUser().handle(msg);
 	}
 	
 	private void notifyStationOfStatusUpdate()

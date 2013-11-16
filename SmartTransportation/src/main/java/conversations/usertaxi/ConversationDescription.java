@@ -3,7 +3,7 @@ package conversations.usertaxi;
 import messages.DestinationReachedMessage;
 import messages.RequestDestinationMessage;
 import messages.TakeMeToDestinationMessage;
-import uk.ac.imperial.presage2.util.fsm.*;
+import util.protocols.*;
 
 public class ConversationDescription extends FSMDescription
 {

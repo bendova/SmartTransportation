@@ -1,8 +1,7 @@
-package conversations.usertaxi;
+package conversations.usertaxi.actions;
 
-import protocols.FSMConversation;
 import uk.ac.imperial.presage2.core.network.Message;
-import uk.ac.imperial.presage2.util.fsm.*;
+import util.protocols.*;
 
 public class SendMessage implements Action
 {

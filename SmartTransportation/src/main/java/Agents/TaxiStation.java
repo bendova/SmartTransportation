@@ -9,11 +9,6 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import messageData.TaxiData;
-import messageData.TaxiOrder;
-import messageData.TaxiServiceReply;
-import messageData.taxiServiceRequest.TaxiServiceRequest;
-import messageData.taxiServiceRequest.TaxiServiceRequestInterface;
 import messages.RegisterAsTaxiMessage;
 import messages.RegisterAsTaxiStationMessage;
 import messages.RejectOrderMessage;
@@ -27,6 +22,11 @@ import messages.TaxiServiceRequestMessage;
 import messages.TaxiStatusUpdateMessage;
 
 
+import messages.messageData.TaxiData;
+import messages.messageData.TaxiOrder;
+import messages.messageData.TaxiServiceReply;
+import messages.messageData.taxiServiceRequest.TaxiServiceRequest;
+import messages.messageData.taxiServiceRequest.TaxiServiceRequestInterface;
 import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 import uk.ac.imperial.presage2.core.messaging.Input;

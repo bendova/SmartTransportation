@@ -1,6 +1,6 @@
 package messages;
 
-import messageData.TaxiData;
+import messages.messageData.TaxiData;
 import uk.ac.imperial.presage2.core.messaging.Performative;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;

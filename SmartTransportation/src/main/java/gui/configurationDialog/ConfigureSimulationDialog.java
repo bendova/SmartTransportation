@@ -1,4 +1,4 @@
-package gui;
+package gui.configurationDialog;
 
 import javafx.event.*;
 import javafx.geometry.HPos;
@@ -16,7 +16,7 @@ public class ConfigureSimulationDialog extends Stage
 	private final String AREA_SIZE_DEFAULT = "10";
 	private final String USERS_COUNT_DEFAULT = "20";
 	private final String TAXIES_COUNT_DEFAULT = "3";
-	private final String TAXI_STATION_COUNT_DEFAULT = "2";
+	private final String TAXI_STATION_COUNT_DEFAULT = "1";
 	
 	private Group mRoot;
 	

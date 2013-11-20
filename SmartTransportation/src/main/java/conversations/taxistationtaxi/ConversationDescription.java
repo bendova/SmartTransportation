@@ -1,6 +1,7 @@
 package conversations.taxistationtaxi;
 
 import messages.RegisterAsTaxiMessage;
+import messages.RejectOrderMessage;
 import messages.RevisionCompleteMessage;
 import messages.TaxiOrderCompleteMessage;
 import messages.TaxiOrderMessage;
@@ -11,42 +12,65 @@ public class ConversationDescription extends FSMDescription
 {
 	public static final String PROTOCOL_NAME = "TaxiWithTaxiStationConvesationProtocol";
 	
-	private static final String STATE_WAITING_REGISTRATION 	= "WaitingRegistration";
-	private static final String STATE_WAITING_ORDER 		= "WaitingOrder";
-	private static final String STATE_COMPLETING_ORDER 		= "CompletingOrder";
-	private static final String STATE_UNAVAILABLE 			= "Unavailable";
-	private static final String STATE_RETIRED 				= "Retired";
-	
-	public void init(	Action requestDestinationAction,
-						Action takeMeToDestinationAction,
-						Action destinationReachedAction) 
+	public enum States
 	{
-		assert(requestDestinationAction != null);
-		assert(takeMeToDestinationAction != null);
-		assert(destinationReachedAction != null);
+		WAITING_REGISTRATION,
+		WAITING_ORDER,
+		COMPLETING_ORDER,
+		IN_REVISION,
+		RETIRED
+	}
+	
+	public enum Transitions
+	{
+		REGISTERING,
+		SENDING_ORDER,
+		ORDER_COMPLETE,
+		REJECT_ORDER,
+		GOING_TO_REVISION,
+		REVISION_COMPLETE,
+		RETIRING
+	}
+	
+	public void init(	Action onRegisterAction,
+						Action onSendOrderAction,
+						Action onOrderCompleteAction,
+						Action onRejectOrderAction,
+						Action onGoingToRevisionAction,
+						Action onRevisionCompleteAction) 
+	{
+		assert(onRegisterAction != null);
+		assert(onSendOrderAction != null);
+		assert(onOrderCompleteAction != null);
+		assert(onRejectOrderAction != null);
+		assert(onGoingToRevisionAction != null);
+		assert(onRevisionCompleteAction != null);
 		
 		try
 		{
-			addState(STATE_WAITING_REGISTRATION,	StateType.START);
-			addState(STATE_WAITING_ORDER, 			StateType.ACTIVE);
-			addState(STATE_COMPLETING_ORDER, 		StateType.ACTIVE);
-			addState(STATE_UNAVAILABLE, 			StateType.ACTIVE);
-			addState(STATE_RETIRED, 				StateType.END);
+			addState(States.WAITING_REGISTRATION,	StateType.START);
+			addState(States.WAITING_ORDER, 			StateType.ACTIVE);
+			addState(States.COMPLETING_ORDER, 		StateType.ACTIVE);
+			addState(States.IN_REVISION, 			StateType.ACTIVE);
+			addState(States.RETIRED, 				StateType.END);
 			
-			RegisterCondition regCondition = new RegisterCondition();
-			addTransition("Registering", regCondition, STATE_WAITING_REGISTRATION, STATE_WAITING_ORDER, Action.NOOP);
+			addTransition(Transitions.REGISTERING, new RegisterCondition(), 
+					States.WAITING_REGISTRATION, States.WAITING_ORDER, onRegisterAction);
 			
-			SendOrderCondition sendOrderCondition = new SendOrderCondition();
-			addTransition("SendingOrder", sendOrderCondition, STATE_WAITING_ORDER, STATE_COMPLETING_ORDER, Action.NOOP);
+			addTransition(Transitions.SENDING_ORDER, new SendOrderCondition(), 
+					States.WAITING_ORDER, States.COMPLETING_ORDER, onSendOrderAction);
 			
-			CompletingOrderCondition completingOrderCondition = new CompletingOrderCondition();
-			addTransition("CompletingOrder", completingOrderCondition, STATE_COMPLETING_ORDER, STATE_WAITING_ORDER, Action.NOOP);
+			addTransition(Transitions.ORDER_COMPLETE, new CompletingOrderCondition(), 
+					States.COMPLETING_ORDER, States.WAITING_ORDER, onOrderCompleteAction);
 			
-			GoToUnavailableCondition unavailableCondition = new GoToUnavailableCondition();
-			addTransition("GoToUnavailable", unavailableCondition, STATE_WAITING_ORDER, STATE_UNAVAILABLE, Action.NOOP);
+			addTransition(Transitions.REJECT_ORDER, new RejectOrderCondition(), 
+					States.COMPLETING_ORDER, States.IN_REVISION, onRejectOrderAction);
 			
-			GoToBackToWorkCondition goToWorkCondition = new GoToBackToWorkCondition();
-			addTransition("GoBackToWork", goToWorkCondition, STATE_UNAVAILABLE, STATE_WAITING_ORDER, Action.NOOP);
+			addTransition(Transitions.GOING_TO_REVISION, new GoToRevisionCondition(), 
+					States.WAITING_ORDER, States.IN_REVISION, onGoingToRevisionAction);
+			
+			addTransition(Transitions.REVISION_COMPLETE, new RevisionCompleteCondition(), 
+					States.IN_REVISION, States.WAITING_ORDER, onRevisionCompleteAction);
 			
 			this.build();
 		}
@@ -60,8 +84,7 @@ public class ConversationDescription extends FSMDescription
 	{
 		@Override
 		public boolean allow(Object event, Object entity, State state) {
-			if((state.getName() == ConversationDescription.STATE_WAITING_REGISTRATION) &&
-				(event instanceof RegisterAsTaxiMessage))
+			if(event instanceof RegisterAsTaxiMessage)
 			{
 				return true;
 			}
@@ -73,8 +96,7 @@ public class ConversationDescription extends FSMDescription
 	{
 		@Override
 		public boolean allow(Object event, Object entity, State state) {
-			if((state.getName() == ConversationDescription.STATE_WAITING_ORDER) &&
-				(event instanceof TaxiOrderMessage))
+			if(event instanceof TaxiOrderMessage)
 			{
 				return true;
 			}
@@ -86,8 +108,7 @@ public class ConversationDescription extends FSMDescription
 	{
 		@Override
 		public boolean allow(Object event, Object entity, State state) {
-			if((state.getName() == ConversationDescription.STATE_COMPLETING_ORDER) &&
-				(event instanceof TaxiOrderCompleteMessage))
+			if(event instanceof TaxiOrderCompleteMessage)
 			{
 				return true;
 			}
@@ -95,12 +116,11 @@ public class ConversationDescription extends FSMDescription
 		}
 	}
 	
-	private class GoToUnavailableCondition implements TransitionCondition
+	private class RejectOrderCondition implements TransitionCondition
 	{
 		@Override
 		public boolean allow(Object event, Object entity, State state) {
-			if((state.getName() == ConversationDescription.STATE_WAITING_ORDER) &&
-				(event instanceof TaxiStatusUpdateMessage))
+			if(event instanceof RejectOrderMessage)
 			{
 				return true;
 			}
@@ -108,12 +128,23 @@ public class ConversationDescription extends FSMDescription
 		}
 	}
 	
-	private class GoToBackToWorkCondition implements TransitionCondition
+	private class GoToRevisionCondition implements TransitionCondition
 	{
 		@Override
 		public boolean allow(Object event, Object entity, State state) {
-			if((state.getName() == ConversationDescription.STATE_UNAVAILABLE) &&
-				(event instanceof RevisionCompleteMessage))
+			if(event instanceof TaxiStatusUpdateMessage)
+			{
+				return true;
+			}
+			return false;
+		}
+	}
+	
+	private class RevisionCompleteCondition implements TransitionCondition
+	{
+		@Override
+		public boolean allow(Object event, Object entity, State state) {
+			if(event instanceof TaxiStatusUpdateMessage)
 			{
 				return true;
 			}

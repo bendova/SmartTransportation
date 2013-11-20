@@ -11,6 +11,10 @@ public class TaxiServiceReply
 	private UUID mTaxiID;
 	public TaxiServiceReply(UUID taxiID, String message)
 	{
+		if(taxiID == null)
+		{
+			System.out.println("TaxiServiceReply() Logic error!");
+		}
 		assert(message != null);
 		assert(taxiID != null);
 		mMessage = message;

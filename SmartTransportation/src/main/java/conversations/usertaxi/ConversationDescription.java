@@ -8,7 +8,7 @@ import util.protocols.*;
 public class ConversationDescription extends FSMDescription
 {
 	public static final String PROTOCOL_NAME = "UserWithTaxiConvesationProtocol";
-	
+
 	private static final String STATE_WAITING_REQUEST 			= "WaitingRequestDestination";
 	private static final String STATE_REQUEST_DESTINATION 		= "RequestDestination";
 	private static final String STATE_TAKE_ME_TO_DESTINATION	= "TakeMeToDestination";

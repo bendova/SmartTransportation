@@ -1,5 +1,9 @@
 package gui;
 
+import gui.configurationDialog.ConfigureSimulationDialog;
+import gui.configurationDialog.SimulationConfiguration;
+import gui.configurationDialog.SubmitConfigurationHandler;
+
 import java.util.*;
 
 import SmartTransportation.Simulation;
@@ -25,17 +29,28 @@ public class GUI extends Application
 	private final double TAXI_SIZE = 10;
 	private final double USER_SIZE = 10;
 	
-	private List<AgentData> mTaxiAgentsData = new LinkedList<AgentData>();
-	private List<AgentData> mUserAgentsData = new LinkedList<AgentData>();
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
-	
-	private int mTimeStepsCount = 1;
+
 	private Duration mTimeStepDuration = new Duration(1000);
 	
-	private Group mRoot = new Group();
+	private List<AgentData> mTaxiAgentsData = new LinkedList<AgentData>();
+	private List<AgentData> mUserAgentsData = new LinkedList<AgentData>();
+	
+	private Group mRoot;
+	private MenuBar mMenuBar;
 	private Stage mStage;
+	private Group mAgentsGroup;
 	private int mAgentsAnimatingCount = 0;
+	
+	enum AnimationState
+	{
+		PLAYING,
+		PAUSED,
+		FINISHED
+	}
+	
+	private AnimationState mAnimationState = AnimationState.PAUSED;
 	
 	public static void main(String[] args)
 	{
@@ -58,6 +73,13 @@ public class GUI extends Application
 		});
 	}
 	
+	private void openConfigurationDialog(Stage parent, SubmitConfigurationHandler submitHandler)
+	{
+		ConfigureSimulationDialog dialog = new ConfigureSimulationDialog(parent, submitHandler);
+		dialog.sizeToScene();
+		dialog.show();
+	}
+	
 	private void startSimulation(SimulationConfiguration config)
 	{
 		Simulation.setGUI(this);
@@ -75,13 +97,6 @@ public class GUI extends Application
 			e.printStackTrace();
 		}
 	}
-
-	private void openConfigurationDialog(Stage parent, SubmitConfigurationHandler submitHandler)
-	{
-		ConfigureSimulationDialog dialog = new ConfigureSimulationDialog(parent, submitHandler);
-		dialog.sizeToScene();
-		dialog.show();
-	}
 	
 	public void beginAnimation()
 	{
@@ -89,73 +104,81 @@ public class GUI extends Application
 		
 		mStage.setTitle("Smart Transportation");
 		
-//		MenuBar menuBar = new MenuBar();
-//		menuBar.prefWidthProperty().bind(mStage.widthProperty());
-//		
-//		Menu menu = new Menu("Controls");
-//		MenuItem menuItem = new MenuItem("Play/Pause");
-//		menuItem.setOnAction(new EventHandler<ActionEvent>() 
-//		{
-//			@Override
-//			public void handle(ActionEvent arg0) 
-//			{
-//				// TODO
-//				
-//			}
-//		});
-//		menu.getItems().add(menuItem);
-//		menuBar.getMenus().add(menu);
-//		
-//		mRoot.getChildren().add(menuBar);
+		mMenuBar = createMenuBar();
+		
+		mAgentsGroup = new Group();
+		mAgentsGroup.translateYProperty().bind(mMenuBar.heightProperty());
+		addAgentsToScene(mAgentsGroup.getChildren());
+		
+		mRoot = new Group();
+		mRoot.getChildren().add(mMenuBar);
+		mRoot.getChildren().add(mAgentsGroup);
 		
 		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
-		addAgentsToScene(mRoot.getChildren());
 		mStage.setScene(scene);
+		
 		mStage.show();
 	}
 	
-	public void setAreaSize(int width, int height)
+	private MenuBar createMenuBar()
 	{
-		assert(width > 0);
-		assert(height > 0);
+		MenuBar menuBar = new MenuBar();
+		menuBar.prefWidthProperty().bind(mStage.widthProperty());
 		
-		mMapWidth = width * PIXELS_PER_AREA_UNIT;
-		mMapHeight = height * PIXELS_PER_AREA_UNIT;
+		Menu menu = new Menu("");
 		
-		System.out.println("mMapWidth " + mMapWidth);
-		System.out.println("mMapHeight " + mMapHeight);
+		/*
+		MenuItem playMenuItem = new MenuItem("");
+		
+		playMenuItem.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent arg0) 
+			{
+				play();
+			}
+		});
+		menu.getItems().add(playMenuItem);
+		
+		MenuItem pauseMenuItem = new MenuItem("Pause");
+		pauseMenuItem.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent arg0) 
+			{
+				pause();
+			}
+		});
+		menu.getItems().add(pauseMenuItem);
+		
+		MenuItem replayMenuItem = new MenuItem("Replay");
+		replayMenuItem.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent arg0) 
+			{
+				replay();
+			}
+		});
+		menu.getItems().add(replayMenuItem);
+		*/
+		ToggleButton playPauseToggle = new ToggleButton("Play/Pause");
+		playPauseToggle.setOnAction(new EventHandler<ActionEvent>()
+		{
+			@Override
+			public void handle(ActionEvent event)
+			{
+				togglePlay();
+			}
+		});
+		
+		menu.setGraphic(playPauseToggle);
+		menuBar.getMenus().add(menu);
+		
+		return menuBar;
 	}
 	
-	public void setTimeStepDuration(Duration timeStepDuration)
-	{
-		assert(timeStepDuration != null);
-		assert(timeStepDuration.toMillis() != Double.NaN);
-		
-		mTimeStepDuration = timeStepDuration;		
-	}
-	
-	public void setTimeStepsCount(int timeStepsCount)
-	{
-		assert(timeStepsCount > 0);
-		
-		mTimeStepsCount = timeStepsCount;
-	}
-	
-	public void setTaxiAgentsData(List<AgentData> agentsData)
-	{
-		assert(agentsData != null);
-		
-		mTaxiAgentsData = agentsData;
-	}
-	
-	public void setUserAgentsData(List<AgentData> agentsData)
-	{
-		assert(agentsData != null);
-		
-		mUserAgentsData = agentsData;
-	}
-	
-	private void addAgentsToScene(ObservableList<Node> rootChildren)
+	private void addAgentsToScene(ObservableList<Node> childrenList)
 	{
 		for(AgentData agentData: mTaxiAgentsData)
 		{
@@ -167,7 +190,7 @@ public class GUI extends Application
 			addAnimations(hBox, agentData);
 			agentData.setNode(hBox);
 			
-			rootChildren.add(hBox);
+			childrenList.add(hBox);
 		}
 		
 		for(AgentData agentData: mUserAgentsData)
@@ -180,7 +203,7 @@ public class GUI extends Application
 			addAnimations(vBox, agentData);
 			agentData.setNode(vBox);
 			
-			rootChildren.add(vBox);
+			childrenList.add(vBox);
 		}
 	}
 	
@@ -216,13 +239,6 @@ public class GUI extends Application
 				}).
 				fill(Color.GREEN).
 				build();
-				
-//				CircleBuilder.create().
-//				centerX(agentX).centerY(agentY).
-//				radius(USER_SIZE).
-//				fill(new Color(0, 0, 0, 1)).
-//				build();
-//		
 		return triangle;
 	}
 	
@@ -278,19 +294,70 @@ public class GUI extends Application
 				{
 					System.out.println("Animation finished!");
 					
-					// replay();
+					mAnimationState = AnimationState.FINISHED;
 				}
 			}
 		});
-		sequentialTransition.play();
 		mAgentsAnimatingCount++;
+	}
+	
+	private void togglePlay()
+	{
+		switch(mAnimationState)
+		{
+		case FINISHED:
+			replay();
+			mAnimationState = AnimationState.PLAYING;
+			break;
+		case PAUSED:
+			play();
+			mAnimationState = AnimationState.PLAYING;
+			break;
+		case PLAYING:
+			pause();
+			mAnimationState = AnimationState.PAUSED;
+			break;
+		default:
+			assert(false); // case not handled
+			break;
+		}
+	}
+	
+	private void play()
+	{
+		Animation animation;
+		for(AgentData agentData: mTaxiAgentsData)
+		{
+			animation = agentData.getAnimation();
+			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
+			{
+				animation.play();
+			}
+		}
+		for(AgentData agentData: mUserAgentsData)
+		{
+			animation = agentData.getAnimation();
+			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
+			{
+				animation.play();
+			}
+		}
+	}
+	
+	private void pause()
+	{
+		for(AgentData agentData: mTaxiAgentsData)
+		{
+			agentData.getAnimation().pause();
+		}
+		for(AgentData agentData: mUserAgentsData)
+		{
+			agentData.getAnimation().pause();
+		}
 	}
 	
 	private void replay()
 	{
-		Label simOverLabel = new Label("Replay");
-		mRoot.getChildren().add(simOverLabel);
-		
 		for(AgentData agentData: mTaxiAgentsData)
 		{
 			agentData.getNode().setOpacity(1);
@@ -301,5 +368,39 @@ public class GUI extends Application
 			agentData.getNode().setOpacity(1);
 			agentData.getAnimation().playFromStart();
 		}
+	}
+	
+	public void setAreaSize(int width, int height)
+	{
+		assert(width > 0);
+		assert(height > 0);
+		
+		mMapWidth = width * PIXELS_PER_AREA_UNIT;
+		mMapHeight = height * PIXELS_PER_AREA_UNIT;
+		
+		System.out.println("mMapWidth " + mMapWidth);
+		System.out.println("mMapHeight " + mMapHeight);
+	}
+	
+	public void setTimeStepDuration(Duration timeStepDuration)
+	{
+		assert(timeStepDuration != null);
+		assert(timeStepDuration.toMillis() != Double.NaN);
+		
+		mTimeStepDuration = timeStepDuration;		
+	}
+	
+	public void setTaxiAgentsData(List<AgentData> agentsData)
+	{
+		assert(agentsData != null);
+		
+		mTaxiAgentsData = agentsData;
+	}
+	
+	public void setUserAgentsData(List<AgentData> agentsData)
+	{
+		assert(agentsData != null);
+		
+		mUserAgentsData = agentsData;
 	}
 }

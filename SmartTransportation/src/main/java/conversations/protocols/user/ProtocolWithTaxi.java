@@ -7,12 +7,11 @@ import messages.RequestDestinationMessage;
 import messages.TakeMeToDestinationMessage;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;
-import util.protocols.Action;
 import util.protocols.FSMProtocol;
+import conversations.commonActions.SendMessageAction;
 import conversations.usertaxi.ConversationDescription;
 import conversations.usertaxi.actions.DestinationReachedAction;
 import conversations.usertaxi.actions.RequestDestinationAction;
-import conversations.usertaxi.actions.SendMessage;
 
 public class ProtocolWithTaxi 
 {
@@ -31,7 +30,7 @@ public class ProtocolWithTaxi
 		assert(mWithTaxiProtocol == null);
 		
 		ConversationDescription desc = new ConversationDescription();
-		Action takeMeToDestinationAction = new SendMessage();
+		SendMessageAction takeMeToDestinationAction = new SendMessageAction();
 		desc.init(requestDestinationAction, takeMeToDestinationAction, 
 				destinationReachedAction);
 		
@@ -39,23 +38,23 @@ public class ProtocolWithTaxi
 				desc, mNetworkAdaptor);
 	}
 	
-	public void handle(RequestDestinationMessage msg)
+	public void handleRequestDestination(RequestDestinationMessage msg)
 	{
 		mConversationKey = msg.getConversationKey();
 		mWithTaxiProtocol.spawn(msg);
 	}
 	
-	public void handle(TakeMeToDestinationMessage msg)
+	public void sendTakeMeToDestination(TakeMeToDestinationMessage msg)
 	{
-		handleMessage(msg);
+		sendMessage(msg);
 	}
 	
-	public void handle(DestinationReachedMessage msg)
+	public void handleOnDestinationReached(DestinationReachedMessage msg)
 	{
-		handleMessage(msg);
+		mWithTaxiProtocol.handle(msg);
 	}
 	
-	private void handleMessage(UnicastMessage<?> msg)
+	private void sendMessage(UnicastMessage<?> msg)
 	{
 		msg.setConversationKey(mConversationKey);
 		msg.setProtocol(ConversationDescription.PROTOCOL_NAME);

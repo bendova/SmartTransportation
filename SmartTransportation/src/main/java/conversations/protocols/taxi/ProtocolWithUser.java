@@ -7,8 +7,8 @@ import java.util.UUID;
 import messages.DestinationReachedMessage;
 import messages.RequestDestinationMessage;
 import messages.TakeMeToDestinationMessage;
+import conversations.commonActions.SendMessageAction;
 import conversations.usertaxi.ConversationDescription;
-import conversations.usertaxi.actions.SendMessage;
 import conversations.usertaxi.actions.TakeMeToDestinationAction;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -34,8 +34,8 @@ public class ProtocolWithUser
 		assert(mWithUserProtocol == null);
 		
 		ConversationDescription desc = new ConversationDescription();
-		Action requestDestinationAction = new SendMessage();
-		Action destinationReachedAction = new SendMessage();
+		Action requestDestinationAction = new SendMessageAction();
+		Action destinationReachedAction = new SendMessageAction();
 		desc.init(requestDestinationAction, takeMeToDestinationAction, 
 				destinationReachedAction);
 		
@@ -43,7 +43,7 @@ public class ProtocolWithUser
 				desc, mNetworkAdaptor);
 	}
 	
-	public void handle(RequestDestinationMessage msg)
+	public void requestDestination(RequestDestinationMessage msg)
 	{
 		Conversation conversation = mWithUserProtocol.spawn(msg.getFrom());
 		conversationsMap.put(msg.getTo(), conversation.getID());
@@ -51,13 +51,13 @@ public class ProtocolWithUser
 		handleMessage(msg);
 	}
 	
-	public void handle(TakeMeToDestinationMessage msg)
+	public void handleTakeMeToDestination(TakeMeToDestinationMessage msg)
 	{
 		msg.setConversationKey(conversationsMap.get(msg.getFrom()));
 		handleMessage(msg);
 	}
 	
-	public void handle(DestinationReachedMessage msg)
+	public void reportDestinationReached(DestinationReachedMessage msg)
 	{
 		NetworkAddress userAddress = msg.getTo();
 		msg.setConversationKey(conversationsMap.get(userAddress));

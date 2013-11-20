@@ -1,31 +1,15 @@
 package agents;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import messages.RegisterAsTaxiMessage;
-import messages.RegisterAsTaxiStationMessage;
-import messages.RejectOrderMessage;
-import messages.RevisionCompleteMessage;
-import messages.TaxiOrderCompleteMessage;
-import messages.TaxiOrderMessage;
-import messages.TaxiServiceReplyMessage;
-import messages.RequestTaxiServiceConfirmationMessage;
-import messages.TaxiServiceRequestConfirmationMessage;
-import messages.TaxiServiceRequestMessage;
-import messages.TaxiStatusUpdateMessage;
-
-
-import messages.messageData.TaxiData;
-import messages.messageData.TaxiOrder;
-import messages.messageData.TaxiServiceReply;
-import messages.messageData.taxiServiceRequest.TaxiServiceRequest;
+import conversations.protocols.taxistation.ProtocolWithTaxi;
+import conversations.taxistationtaxi.actions.OnOrderCompleteAction;
+import conversations.taxistationtaxi.actions.OnRegisterAction;
+import conversations.taxistationtaxi.actions.OnRejectOrderAction;
+import conversations.taxistationtaxi.actions.OnTaxiStatusUpdateAction;
+import messages.*;
+import messages.messageData.*;
 import messages.messageData.taxiServiceRequest.TaxiServiceRequestInterface;
 import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
@@ -42,8 +26,7 @@ public class TaxiStation extends AbstractParticipant
 	{
 		PENDING_PROCESSING,
 		AWAITING_CONFIRMATION,
-		AWAITING_SERVICE,
-		CONFIRMED,
+		READY_FOR_SERVICE,
 		BEING_SERVICED,
 		COMPLETED,
 		CANCELED
@@ -51,7 +34,7 @@ public class TaxiStation extends AbstractParticipant
 	
 	private class TaxiRequest implements TimeDriven, Comparable<TaxiRequest>
 	{
-		private static final int DEFAULT_TIME_OUT = 1;
+		private static final int DEFAULT_TIME_OUT = 100;
 		
 		private TaxiRequestState mCurrentState;
 		private TaxiServiceRequestInterface mRequestData;
@@ -60,6 +43,9 @@ public class TaxiStation extends AbstractParticipant
 		
 		private int mCurrentTime;
 		private int mTimeoutTime;
+		
+		private boolean mWasConfirmed;
+		private boolean mIsAssigned;
 		
 		public TaxiRequest(TaxiServiceRequestMessage requestMessage)
 		{
@@ -76,6 +62,9 @@ public class TaxiStation extends AbstractParticipant
 			
 			mCurrentTime = currentTime;
 			mTimeoutTime = timeOutTimeSteps;
+			
+			mWasConfirmed = false;
+			mIsAssigned = false;
 		}
 		
 		public TaxiServiceRequestInterface getRequestData()
@@ -96,11 +85,17 @@ public class TaxiStation extends AbstractParticipant
 		public void setServicedBy(NetworkAddress taxiAddress)
 		{
 			mServicedByTaxi = taxiAddress;
+			mIsAssigned = (mServicedByTaxi != null);
 		}
 		
 		public NetworkAddress getServicedBy()
 		{
 			return mServicedByTaxi;
+		}
+		
+		public void setAsPendingProcessing()
+		{
+			mCurrentState = TaxiRequestState.PENDING_PROCESSING;
 		}
 		
 		public void setAsAwaitingConfirmation()
@@ -110,23 +105,29 @@ public class TaxiStation extends AbstractParticipant
 			mCurrentState = TaxiRequestState.AWAITING_CONFIRMATION;
 		}
 		
-		public void setAsConfirmed()
+		public void setAsReadyForService()
 		{
-			assert(mCurrentState == TaxiRequestState.AWAITING_CONFIRMATION);
+			assert(mWasConfirmed);
+			assert(mIsAssigned);
+			assert(mCurrentState != TaxiRequestState.CANCELED);
+			assert(mCurrentState != TaxiRequestState.COMPLETED);
 			
-			mCurrentState = TaxiRequestState.CONFIRMED;
+			mCurrentState = TaxiRequestState.READY_FOR_SERVICE;
 		}
 		
 		public void setAsBeingServiced()
 		{
-			assert(mCurrentState != TaxiRequestState.COMPLETED);
-			assert(mCurrentState != TaxiRequestState.CANCELED);
+			assert(mCurrentState == TaxiRequestState.READY_FOR_SERVICE);
 			
 			mCurrentState = TaxiRequestState.BEING_SERVICED;
 		}
 		
 		public void setAsCompleted()
 		{
+			if(mCurrentState != TaxiRequestState.BEING_SERVICED)
+			{
+				logger.info("setAsCompleted() Logic error!");
+			}
 			assert(mCurrentState == TaxiRequestState.BEING_SERVICED);
 			
 			mCurrentState = TaxiRequestState.COMPLETED;
@@ -139,11 +140,6 @@ public class TaxiStation extends AbstractParticipant
 			
 			mCurrentState = TaxiRequestState.CANCELED;
 		}
-		
-		public void setAsAwaitingService()
-		{
-			mCurrentState = TaxiRequestState.AWAITING_SERVICE;
-		}
 
 		@Override
 		public void incrementTime() 
@@ -153,9 +149,24 @@ public class TaxiStation extends AbstractParticipant
 		
 		public boolean hasTimedOut()
 		{
-			return (mCurrentTime < mTimeoutTime);
+			return (mCurrentTime > mTimeoutTime);
 		}
 
+		public void setIsConfirmed()
+		{
+			mWasConfirmed = true;
+		}
+		
+		public boolean wasConfirmed()
+		{
+			return mWasConfirmed;
+		}
+		
+		public boolean isAssigned()
+		{
+			return mIsAssigned;
+		}
+		
 		@Override
 		public int compareTo(TaxiRequest o) 
 		{
@@ -173,6 +184,7 @@ public class TaxiStation extends AbstractParticipant
 	private Map<NetworkAddress, UUID> mTaxiesMap;
 	private List<NetworkAddress> mFreeTaxiesList;
 	private ParticipantLocationService mLocationService;
+	private ProtocolWithTaxi withTaxi;
 	
 	public TaxiStation(UUID id, String name, Location location, NetworkAddress mediatorNetworkAddress) 
 	{
@@ -197,6 +209,7 @@ public class TaxiStation extends AbstractParticipant
 		
 		registerAsTaxiServiceProvider();
 		initializeLocationService();
+		initializeProtocols();
 	}
 	
 	private void registerAsTaxiServiceProvider()
@@ -218,6 +231,47 @@ public class TaxiStation extends AbstractParticipant
 		}
 	}
 	
+	private void initializeProtocols()
+	{
+		withTaxi = new ProtocolWithTaxi(network);
+		OnRegisterAction onRegisterAction = new OnRegisterAction() 
+		{
+			@Override
+			public void processMessage(RegisterAsTaxiMessage msg) 
+			{
+				registerTaxi(msg);
+			}
+		};
+		
+		OnOrderCompleteAction onOrderCompleteAction = new OnOrderCompleteAction() 
+		{
+			@Override
+			public void processMessage(TaxiOrderCompleteMessage msg) 
+			{
+				handleTaxiOrderComplete(msg);
+			}
+		};
+		
+		OnRejectOrderAction onRejectOrderAction = new OnRejectOrderAction() 
+		{
+			@Override
+			public void processMessage(RejectOrderMessage msg) 
+			{
+				handleTaxiOrderRejected(msg);
+			}
+		};
+		
+		OnTaxiStatusUpdateAction onTaxiStatusUpdateAction = new OnTaxiStatusUpdateAction() 
+		{
+			@Override
+			public void processMessage(TaxiStatusUpdateMessage msg) 
+			{
+				handleTaxiStatusUpdate(msg);
+			}
+		};
+		withTaxi.init(onRegisterAction, onOrderCompleteAction, onRejectOrderAction, onTaxiStatusUpdateAction);
+	}
+	
 	@Override
 	protected void processInput(Input input) 
 	{
@@ -235,19 +289,23 @@ public class TaxiStation extends AbstractParticipant
 			}
 			else if (input instanceof RegisterAsTaxiMessage)
 			{
-				registerTaxi((RegisterAsTaxiMessage)input);
+				//registerTaxi((RegisterAsTaxiMessage)input);
+				withTaxi.handleRegisterTaxiMessage((RegisterAsTaxiMessage)input);
 			}
 			else if (input instanceof TaxiOrderCompleteMessage)
 			{
-				handleTaxiOrderComplete((TaxiOrderCompleteMessage)input);
+				//handleTaxiOrderComplete((TaxiOrderCompleteMessage)input);
+				withTaxi.handleOrderComplete((TaxiOrderCompleteMessage)input);
 			}
 			else if (input instanceof TaxiStatusUpdateMessage)
 			{
-				handleTaxiStatusUpdate((TaxiStatusUpdateMessage)input);
+				//handleTaxiStatusUpdate((TaxiStatusUpdateMessage)input);
+				withTaxi.handleTaxiStatusUpdate((TaxiStatusUpdateMessage)input);
 			}
 			else if(input instanceof RejectOrderMessage)
 			{
-				handleTaxiOrderRejected((RejectOrderMessage)input);
+				//handleTaxiOrderRejected((RejectOrderMessage)input);
+				withTaxi.handleOrderReject((RejectOrderMessage)input);
 			}
 		}
 	}
@@ -267,7 +325,20 @@ public class TaxiStation extends AbstractParticipant
 		{
 			if(taxiRequest.getFrom().equals(requestConfirmationMessage.getFrom()))
 			{
-				taxiRequest.setAsConfirmed();
+				if(taxiRequest.getCurrentState() == TaxiRequestState.CANCELED)
+				{
+					return;
+				}
+				
+				taxiRequest.setIsConfirmed();
+				if(taxiRequest.isAssigned())
+				{
+					taxiRequest.setAsReadyForService();
+				}
+				else 
+				{
+					taxiRequest.setAsPendingProcessing();
+				}
 				break;
 			}
 		}
@@ -293,14 +364,20 @@ public class TaxiStation extends AbstractParticipant
 		NetworkAddress reportingTaxiAddress = taxiOrderCompleteMessage.getFrom();
 		if(mTaxiesMap.containsKey(reportingTaxiAddress))
 		{
+			if(mFreeTaxiesList.contains(reportingTaxiAddress))
+			{
+				logger.info("handleTaxiOrderComplete() Logic error!");
+			}
+			
 			assert(mFreeTaxiesList.contains(reportingTaxiAddress) == false);
 			mFreeTaxiesList.add(reportingTaxiAddress);
 			
 			for(TaxiRequest taxiRequest : mTaxiRequests)
 			{
 				NetworkAddress taxiAddress = taxiRequest.getServicedBy();
-				if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
+				if((taxiAddress != null) && taxiAddress.equals(reportingTaxiAddress))
 				{
+					logger.info("handleTaxiOrderComplete() taxiRequest " + taxiRequest);
 					taxiRequest.setAsCompleted();
 					break;
 				}
@@ -327,12 +404,24 @@ public class TaxiStation extends AbstractParticipant
 				if (mFreeTaxiesList.contains(reportingTaxiAddress))
 				{
 					mFreeTaxiesList.remove(reportingTaxiAddress);
-					sendRevisionCompleteMessageTo(reportingTaxiAddress);
 				}
 				else
 				{
 					logger.info("handleTaxiStatusUpdate() mTaxiesMap.get(reportingTaxiAddress) " + mTaxiesMap.get(reportingTaxiAddress));
+
+					for(TaxiRequest taxiRequest : mTaxiRequests)
+					{
+						NetworkAddress taxiAddress = taxiRequest.getServicedBy();
+						if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
+						{
+							taxiRequest.setServicedBy(null);
+							taxiRequest.setAsPendingProcessing();
+							logger.info("handleTaxiStatusUpdate() clearing task of " + mTaxiesMap.get(taxiAddress));
+							break;
+						}
+					}
 				}
+				//sendRevisionCompleteMessageTo(reportingTaxiAddress);
 				break;
 			default:
 				assert(false);
@@ -342,11 +431,14 @@ public class TaxiStation extends AbstractParticipant
 	
 	private void sendRevisionCompleteMessageTo(NetworkAddress to)
 	{
+		/*
 		logger.info("sendRevisionCompleteMessageTo() to " + to);
 		
 		RevisionCompleteMessage msg = new RevisionCompleteMessage(
 				"Your revision is complete!", network.getAddress(), to);
 		network.sendMessage(msg);
+		withTaxi.sendRevisionCompleteMessage(msg);
+		*/
 	}
 	
 	private void handleTaxiOrderRejected(RejectOrderMessage msg)
@@ -361,7 +453,8 @@ public class TaxiStation extends AbstractParticipant
 				NetworkAddress taxiAddress = taxiRequest.getServicedBy();
 				if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
 				{
-					taxiRequest.setAsAwaitingService();
+					taxiRequest.setAsPendingProcessing();
+					taxiRequest.setServicedBy(null);
 					break;
 				}
 			}
@@ -369,7 +462,7 @@ public class TaxiStation extends AbstractParticipant
 		// TODO this needs to be updated to account for 
 		// all other possible reasons for which the taxi 
 		// rejected our order
-		sendRevisionCompleteMessageTo(reportingTaxiAddress);
+		//sendRevisionCompleteMessageTo(reportingTaxiAddress);
 	}
 	
 	@Override
@@ -395,12 +488,12 @@ public class TaxiStation extends AbstractParticipant
 			switch(taxiRequest.getCurrentState())
 			{
 				case PENDING_PROCESSING:
-				case AWAITING_SERVICE:
-					if(taxiRequest.getRequestData().isValid())
+					if((taxiRequest.hasTimedOut() == false) && 
+							(taxiRequest.getRequestData().isValid()))
 					{
 						pRequests.add(taxiRequest);
 					}
-					else
+					else 
 					{
 						taxiRequest.setAsCanceled();
 					}
@@ -411,7 +504,7 @@ public class TaxiStation extends AbstractParticipant
 						handleUnconfirmedRequest(taxiRequest);
 					}
 					break;
-				case CONFIRMED:
+				case READY_FOR_SERVICE:
 					handleConfirmedRequest(taxiRequest);
 					break;
 				case BEING_SERVICED:
@@ -452,23 +545,16 @@ public class TaxiStation extends AbstractParticipant
 			pendingRequests.remove(assignedRequest);
 			
 			assignedRequest.setServicedBy(taxiAddress);
-			// TODO improve this
-			if(assignedRequest.getCurrentState() == TaxiRequestState.PENDING_PROCESSING)
+		
+			if(assignedRequest.wasConfirmed())
+			{
+				assignedRequest.setAsReadyForService();
+			}
+			else
 			{
 				requestConfirmationFromUser(assignedRequest.getFrom(), 
 					mLocationService.getAgentLocation(taxiID));
 				assignedRequest.setAsAwaitingConfirmation();
-			}
-			else if (assignedRequest.getCurrentState() == TaxiRequestState.AWAITING_SERVICE)
-			{
-				if(assignedRequest.hasTimedOut())
-				{
-					assignedRequest.setAsCanceled();
-				}
-				else
-				{
-					assignedRequest.setAsConfirmed();
-				}
 			}
 			iterator.remove();
 		}
@@ -503,7 +589,10 @@ public class TaxiStation extends AbstractParticipant
 		
 		assert(mFreeTaxiesList.contains(taxiRequest.getServicedBy()) == false);
 		
-		mFreeTaxiesList.add(taxiRequest.getServicedBy());
+		if(taxiRequest.getServicedBy() != null)
+		{
+			mFreeTaxiesList.add(taxiRequest.getServicedBy());
+		}
 		taxiRequest.setAsCanceled();
 	}
 	
@@ -547,6 +636,7 @@ public class TaxiStation extends AbstractParticipant
 		Location userLocation = request.getLocation();
 		TaxiOrder taxiOrder = new TaxiOrder(userLocation, userID, authKey, userNetworkAddress);
 		TaxiOrderMessage taxiOrderMessage = new TaxiOrderMessage(taxiOrder, network.getAddress(), toTaxi);
-		network.sendMessage(taxiOrderMessage);
+		//network.sendMessage(taxiOrderMessage);
+		withTaxi.sendOrder(taxiOrderMessage);
 	}
 }

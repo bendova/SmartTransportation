@@ -5,7 +5,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 
-import conversations.protocols.user.Protocol;
+import conversations.protocols.user.ProtocolWithTaxi;
 import conversations.usertaxi.actions.DestinationReachedAction;
 import conversations.usertaxi.actions.RequestDestinationAction;
 import SmartTransportation.Simulation;
@@ -30,6 +30,7 @@ public class User extends AbstractParticipant
 	private Location mStartLocation;
 	private Location mTargetLocation;
 	private boolean mDestinationReached;
+	private boolean mLookingForTaxi;
 	private ParticipantLocationService mLocationService;
 	private NetworkAddress mMediatorAddress;
 	private TaxiServiceRequest mCurrentTaxiServiceRequest;
@@ -37,7 +38,7 @@ public class User extends AbstractParticipant
 	private Queue<RequestTaxiServiceConfirmationMessage> confirmationRequests;
 	private ArrayList<Location> mLocations; 
 	
-	private Protocol mProtocol;
+	private ProtocolWithTaxi mWithTaxi;
 	
 	public User(UUID id, String name, Location startLocation, Location targetLocation, NetworkAddress mediatorNetworkAddress) 
 	{
@@ -53,6 +54,7 @@ public class User extends AbstractParticipant
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
 		mDestinationReached = false;
+		mLookingForTaxi = true;
 		mMediatorAddress = mediatorNetworkAddress;
 		
 		confirmationRequests = new LinkedList<RequestTaxiServiceConfirmationMessage>();
@@ -93,8 +95,6 @@ public class User extends AbstractParticipant
 	
 	private void initialiseProtocol()
 	{
-		mProtocol = new Protocol(network);
-		
 		RequestDestinationAction requestDestinationAction = new RequestDestinationAction()
 		{
 			@Override
@@ -112,7 +112,8 @@ public class User extends AbstractParticipant
 			}
 		};
 		
-		mProtocol.initProtocolWithTaxi(requestDestinationAction, destinationReachedAction);
+		mWithTaxi = new ProtocolWithTaxi(network);
+		mWithTaxi.init(requestDestinationAction, destinationReachedAction);
 	}
 	
 	private void sendTaxiRequestMessageToMediator()
@@ -151,16 +152,20 @@ public class User extends AbstractParticipant
 			Input input = inputQueue.poll();
 			if(input instanceof RequestTaxiServiceConfirmationMessage)
 			{
-				confirmationRequests.add((RequestTaxiServiceConfirmationMessage)input);
+				if(mLookingForTaxi)
+				{
+					confirmationRequests.add((RequestTaxiServiceConfirmationMessage)input);
+				}
 			}
 			else
 			{
 				processInput(input);
 			}
 		}
-		if(mCurrentTaxiServiceRequest.isValid() && (confirmationRequests.size() > 0))
+		if(confirmationRequests.size() > 0)
 		{
 			handleConfirmationRequests();
+			confirmationRequests.clear();
 		}
 	}
 	
@@ -184,6 +189,7 @@ public class User extends AbstractParticipant
 		
 		logger.info("handleConfirmationRequests() Accepting offer for taxi at " + confirmedRequest.getData());
 		
+		mLookingForTaxi = false;		
 		confirmRequest(confirmedRequest);
 	}
 	
@@ -200,13 +206,13 @@ public class User extends AbstractParticipant
 			{
 				//processRequest((RequestDestinationMessage)input);
 				
-				mProtocol.withTaxi().handle((RequestDestinationMessage)input);
+				mWithTaxi.handleRequestDestination((RequestDestinationMessage)input);
 			}
 			else if(input instanceof DestinationReachedMessage)
 			{
 				//onDestinationReached((DestinationReachedMessage)input);
 				
-				mProtocol.withTaxi().handle((DestinationReachedMessage)input);
+				mWithTaxi.handleOnDestinationReached((DestinationReachedMessage)input);
 			}
 		}
 	}
@@ -218,7 +224,6 @@ public class User extends AbstractParticipant
 		TaxiServiceRequestConfirmationMessage confirmationMessage = new TaxiServiceRequestConfirmationMessage("I confirm the request",
 				network.getAddress(), requestConfirmationMessage.getFrom());
 		network.sendMessage(confirmationMessage);
-		mCurrentTaxiServiceRequest.cancel();
 	}
 	
 	private void processReply(TaxiServiceReplyMessage taxiServiceReplyMessage)
@@ -234,7 +239,9 @@ public class User extends AbstractParticipant
 				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
 						requestDestinationMessage.getFrom());
 		//network.sendMessage(destinationMessage);
-		mProtocol.withTaxi().handle(destinationMessage);
+		mWithTaxi.sendTakeMeToDestination(destinationMessage);
+		
+		mCurrentTaxiServiceRequest.cancel();
 	}
 	
 	private void onDestinationReached(DestinationReachedMessage message)
@@ -246,6 +253,11 @@ public class User extends AbstractParticipant
 	@Override
 	public void onSimulationComplete()
 	{
+		if(mDestinationReached == false)
+		{
+			logger.info("I didn't reach my destination!");
+		}
+		
 		Simulation.addUserLocations(getName(), mLocations);
 	}
 }

@@ -59,7 +59,7 @@ public class FSMProtocol extends Protocol implements TimeDriven {
 			activeConversations.add(conv);
 			conv.fsm.applyEvent(m);
 		} catch (FSMException e) {
-			// TODO log this
+			e.printStackTrace();
 		}
 	}
 

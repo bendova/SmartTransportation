@@ -187,6 +187,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	public static void setGUI(GUI instance)
 	{
+		// TODO Make this happen using Guice
 		mGUI = instance;
 	}
 	
@@ -194,10 +195,11 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		System.out.println("onSimulationComplete()");
 		
+		assert(mGUI != null);
+		
 		mGUI.setAreaSize(areaSize, areaSize);
 		mGUI.setTaxiAgentsData(taxiAgentsData);
 		mGUI.setUserAgentsData(userAgentsData);
-		mGUI.setTimeStepsCount(finishTime);
 		mGUI.setTimeStepDuration(Duration.millis(200));
 		mGUI.beginAnimation();
 	}

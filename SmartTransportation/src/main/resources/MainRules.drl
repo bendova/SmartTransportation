@@ -19,8 +19,8 @@ rule "send taxies to revisions"
         $taxi: Taxi(getDistanceTraveled() > DISTANCE_BETWEEN_REVISIONS,
         			getCurrentStatus() == Taxi.Status.AVAILABLE)
     then
-        //logger.info("MainRules::Sending to revision taxi " + $taxi + " with distance traveled " + $taxi.getDistanceTraveled());
-		//$taxi.goToRevision();
+        logger.info("MainRules::Sending to revision taxi " + $taxi + " with distance traveled " + $taxi.getDistanceTraveled());
+		$taxi.goToRevision();
 end
 
 rule "send revized taxies back to work"
@@ -28,7 +28,7 @@ rule "send revized taxies back to work"
 		$taxi: Taxi(getCurrentStatus() == Taxi.Status.IN_REVISION,
 					isRevisionComplete() == true)
 	then 
-		//logger.info("MainRules::Sending back to work taxi " + $taxi);
-		//$taxi.resetDistanceTraveled();
-		//$taxi.goToWork();
+		logger.info("MainRules::Sending back to work taxi " + $taxi);
+		$taxi.resetDistanceTraveled();
+		$taxi.goToWork();
 end

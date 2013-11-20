@@ -1,35 +1,18 @@
 package agents;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-import conversations.protocols.taxi.Protocol;
+import conversations.protocols.taxi.*;
+import conversations.taxistationtaxi.actions.*;
 import conversations.usertaxi.actions.TakeMeToDestinationAction;
 import SmartTransportation.Simulation;
-import messages.DestinationReachedMessage;
-import messages.RegisterAsTaxiMessage;
-import messages.RejectOrderMessage;
-import messages.RequestDestinationMessage;
-import messages.RevisionCompleteMessage;
-import messages.TakeMeToDestinationMessage;
-import messages.TaxiOrderCompleteMessage;
-import messages.TaxiOrderMessage;
-import messages.TaxiStatusUpdateMessage;
-import messages.messageData.TaxiData;
-import messages.messageData.TaxiOrder;
-import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
-import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
-import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
+import messages.*;
+import messages.messageData.*;
+import uk.ac.imperial.presage2.core.environment.*;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
-import uk.ac.imperial.presage2.util.location.Location;
-import uk.ac.imperial.presage2.util.location.Move;
-import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
+import uk.ac.imperial.presage2.util.location.*;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
-import uk.ac.imperial.presage2.util.protocols.ConversationSpawnEvent;
 
 public class Taxi extends AbstractParticipant
 {
@@ -45,7 +28,8 @@ public class Taxi extends AbstractParticipant
 	
 	private ArrayList<Location> mLocations; 
 	
-	private Protocol mProtocol;
+	private ProtocolWithTaxiStation mWithTaxiStation;
+	private ProtocolWithUser mWithUser;
 	
 	public enum Status
 	{
@@ -103,7 +87,10 @@ public class Taxi extends AbstractParticipant
 		
 		assert(mCurrentStatus == Status.AVAILABLE);
 		
-		mIsRevisionComplete = false;
+		// TODO Add another type of agent
+		// that dictates when our revision is
+		// complete
+		mIsRevisionComplete = true;
 		updateStatusAndNotify(Status.IN_REVISION);
 	}
 	
@@ -121,7 +108,6 @@ public class Taxi extends AbstractParticipant
 		if(newStatus != mCurrentStatus)
 		{
 			mCurrentStatus = newStatus;
-		
 			notifyStationOfStatusUpdate();
 		}
 	}
@@ -132,7 +118,7 @@ public class Taxi extends AbstractParticipant
 		super.initialise();
 		
 		initializeLocationService();
-		initialiseProtocol();
+		initialiseProtocols();
 		registerToTaxiServiceProvider();
 	}
 	
@@ -148,9 +134,14 @@ public class Taxi extends AbstractParticipant
 		}
 	}
 	
-	private void initialiseProtocol()
+	private void initialiseProtocols()
 	{
-		mProtocol = new Protocol(network);
+		initProtocolWithUser();
+		initProtocolWithTaxiStation();
+	}
+	
+	private void initProtocolWithUser()
+	{
 		TakeMeToDestinationAction action = new TakeMeToDestinationAction() 
 		{
 			@Override
@@ -159,7 +150,32 @@ public class Taxi extends AbstractParticipant
 				processOrderMessage(msg);
 			}
 		};
-		mProtocol.initProtocolWithUser(action);
+		
+		mWithUser = new ProtocolWithUser(network);
+		mWithUser.init(action);
+	}
+	
+	private void initProtocolWithTaxiStation()
+	{
+		OnReceiveOrderAction onReceiveOrderAction = new OnReceiveOrderAction()
+		{
+			@Override
+			public void processMessage(TaxiOrderMessage msg)
+			{
+				if(mCurrentStatus != Status.AVAILABLE)
+				{
+					logger.info("processInput() mCurrentStatus " + mCurrentStatus);
+					sendRejectOrderMessage(msg);
+				}
+				else
+				{				
+					processOrderMessage(msg);
+				}
+			}
+		};
+		
+		mWithTaxiStation = new ProtocolWithTaxiStation(network);
+		mWithTaxiStation.init(onReceiveOrderAction);
 	}
 	
 	private void registerToTaxiServiceProvider()
@@ -169,7 +185,8 @@ public class Taxi extends AbstractParticipant
 		TaxiData taxiData = new TaxiData(getID(), network.getAddress());
 		RegisterAsTaxiMessage registerMessage = new 
 				RegisterAsTaxiMessage(taxiData, network.getAddress(), mTaxiStationAddress);
-		network.sendMessage(registerMessage);
+		//network.sendMessage(registerMessage);
+		mWithTaxiStation.registerAsTaxi(registerMessage);
 	}
 	
 	@Override
@@ -179,6 +196,7 @@ public class Taxi extends AbstractParticipant
 		{
 			if(input instanceof TaxiOrderMessage)
 			{
+				/*
 				if(mCurrentStatus != Status.AVAILABLE)
 				{
 					logger.info("processInput() mCurrentStatus " + mCurrentStatus);
@@ -188,16 +206,19 @@ public class Taxi extends AbstractParticipant
 				{				
 					processOrderMessage((TaxiOrderMessage)input);
 				}
+				*/
+				mWithTaxiStation.handleOrderMessage((TaxiOrderMessage)input);
 			}
 			else if (input instanceof TakeMeToDestinationMessage)
 			{
 				//processOrderMessage((TakeMeToDestinationMessage)input);
 				
-				mProtocol.withUser().handle((TakeMeToDestinationMessage)input);
+				mWithUser.handleTakeMeToDestination((TakeMeToDestinationMessage)input);
 			}
 			else if (input instanceof RevisionCompleteMessage)
 			{
-				handleRevisionComplete((RevisionCompleteMessage)input);
+				//handleRevisionComplete((RevisionCompleteMessage)input);
+				mWithTaxiStation.handleRevisionCompleteMessage((RevisionCompleteMessage)input);
 			}
 		}
 	}
@@ -215,7 +236,8 @@ public class Taxi extends AbstractParticipant
 	{
 		logger.info("sendRejectOrderMessage() msg " + msg);
 		RejectOrderMessage rejectOrderMessage = new RejectOrderMessage(network.getAddress(), mTaxiStationAddress);
-		network.sendMessage(rejectOrderMessage);
+		//network.sendMessage(rejectOrderMessage);
+		mWithTaxiStation.rejectOrder(rejectOrderMessage);
 	}
 	
 	private void handleRevisionComplete(RevisionCompleteMessage msg)
@@ -326,7 +348,7 @@ public class Taxi extends AbstractParticipant
 		RequestDestinationMessage requestDestination = new RequestDestinationMessage(
 				network.getAddress(), fromUser);
 		//network.sendMessage(requestDestination);
-		mProtocol.withUser().handle(requestDestination);
+		mWithUser.requestDestination(requestDestination);
 	}
 	
 	private void processOrderMessage(TakeMeToDestinationMessage takeMeToDestinationMessage)
@@ -346,7 +368,8 @@ public class Taxi extends AbstractParticipant
 				
 		TaxiOrderCompleteMessage taxiOrderCompleteMessage = new TaxiOrderCompleteMessage
 				(getID(), network.getAddress(), mTaxiStationAddress);
-		network.sendMessage(taxiOrderCompleteMessage);
+		//network.sendMessage(taxiOrderCompleteMessage);
+		mWithTaxiStation.reportOrderComplete(taxiOrderCompleteMessage);
 	}
 	
 	private void notifyUserOfDestinationReached()
@@ -357,7 +380,7 @@ public class Taxi extends AbstractParticipant
 				"We have reached your destination, sir!", 
 				network.getAddress(), mCurrentTaxiOrder.getUserNetworkAddress());
 		//network.sendMessage(msg);
-		mProtocol.withUser().handle(msg);
+		mWithUser.reportDestinationReached(msg);
 	}
 	
 	private void notifyStationOfStatusUpdate()
@@ -366,7 +389,8 @@ public class Taxi extends AbstractParticipant
 		
 		TaxiStatusUpdateMessage msg = new TaxiStatusUpdateMessage(mCurrentStatus,
 				network.getAddress(), mTaxiStationAddress);
-		network.sendMessage(msg);
+		//network.sendMessage(msg);
+		mWithTaxiStation.sendStatusUpdate(msg);
 	}
 	
 	@Override

@@ -2,36 +2,52 @@ package gui.configurationDialog;
 
 public class SimulationConfiguration 
 {
-	private int mDuration;
+	private int mTimeStepDuration;
+	private int mTimeStepsCount;
 	private int mAreaSize;
+	private int mPixelsPerAreaPoint;
 	private int mTaxiesCount;
 	private int mUsersCount;
 	private int mTaxiStationsCount;
 	
-	public SimulationConfiguration(int duration, int areaSize, int usersCount, int taxiesCount,
+	public SimulationConfiguration(int duration, int timeStepsCount, int areaSize, int pixelsPerAreaPoint, int usersCount, int taxiesCount,
 			int taxiStationsCount)
 	{
 		assert(duration > 0);
+		assert(timeStepsCount > 0);
 		assert(areaSize > 0);
+		assert(pixelsPerAreaPoint > 0);
 		assert(taxiesCount > 0);
 		assert(usersCount > 0);
 		assert(taxiStationsCount > 0);
 		
-		mDuration = duration;
+		mTimeStepDuration = duration;
+		mTimeStepsCount = timeStepsCount;
 		mAreaSize = areaSize;
+		mPixelsPerAreaPoint = pixelsPerAreaPoint;
 		mUsersCount = usersCount;
 		mTaxiesCount = taxiesCount;
 		mTaxiStationsCount = taxiStationsCount;
 	}
 	
-	public int getDuration()
+	public int getTimeStepDuration()
 	{
-		return mDuration;
+		return mTimeStepDuration;
+	}
+	
+	public int getTimeStepsCount()
+	{
+		return mTimeStepsCount;
 	}
 	
 	public int getAreaSize()
 	{
 		return mAreaSize;
+	}
+	
+	public int getPixelsPerAreaPoint()
+	{
+		return mPixelsPerAreaPoint;
 	}
 	
 	public int getUsersCount()

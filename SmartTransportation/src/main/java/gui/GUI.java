@@ -1,9 +1,12 @@
 package gui;
 
-import gui.configurationDialog.ConfigureSimulationDialog;
+import gui.AgentData.AgentType;
+import gui.agents.AgentNodeController;
+import gui.configurationDialog.ConfigureSimulationController;
 import gui.configurationDialog.SimulationConfiguration;
-import gui.configurationDialog.SubmitConfigurationHandler;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 import SmartTransportation.Simulation;
@@ -14,33 +17,47 @@ import uk.ac.imperial.presage2.util.location.Location;
 import javafx.animation.*;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.event.*;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.JavaFXBuilderFactory;
 import javafx.scene.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.RectangleBuilder;
 import javafx.stage.Stage;
 import javafx.util.*;
 
 public class GUI extends Application
 {
-	private final double PIXELS_PER_AREA_UNIT = 70;
-	private final double TAXI_SIZE = 10;
-	private final double USER_SIZE = 10;
+	private final String LAYOUTS_PATH = "../layouts/";
+	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
+	private final String LOADING_DIALOG_LAYOUT 		 	= LAYOUTS_PATH + "LoadingDialog.fxml";
+	private final String MENU_BAR_LAYOUT 				= LAYOUTS_PATH + "MenuBar.fxml";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
 
-	private Duration mTimeStepDuration = new Duration(1000);
+	private double mPixelsPerAreaPoint = 60;
+	private int mTimeStepsCount = 0;
+	private Duration mTimeStepDuration = new Duration(200);
 	
-	private List<AgentData> mTaxiAgentsData = new LinkedList<AgentData>();
-	private List<AgentData> mUserAgentsData = new LinkedList<AgentData>();
+	private List<AgentData> mAgentsData = new LinkedList<AgentData>();
 	
 	private Group mRoot;
-	private MenuBar mMenuBar;
+	private Group mMap;
+	private Pane mMenuBar;
 	private Stage mStage;
 	private Group mAgentsGroup;
+	private ToggleButton mPlayPauseToggle;
+	private Slider mTimeLineSlider;
+	
+	private Timer mTimeLineTimer;
+	
 	private int mAgentsAnimatingCount = 0;
 	
 	enum AnimationState
@@ -49,65 +66,113 @@ public class GUI extends Application
 		PAUSED,
 		FINISHED
 	}
-	
 	private AnimationState mAnimationState = AnimationState.PAUSED;
 	
 	public static void main(String[] args)
 	{
-		System.out.println(args);
 		Application.launch(args);
 	}
 	
+	@Override
 	public void start(Stage stage)
 	{
 		System.out.println("GUI::start()");
 		
 		mStage = stage;
-		openConfigurationDialog(mStage, new SubmitConfigurationHandler() 
-		{
-			@Override
-			public void handle(SimulationConfiguration config) 
-			{
-				startSimulation(config);
-			}
-		});
+		openConfigurationDialog();
 	}
 	
-	private void openConfigurationDialog(Stage parent, SubmitConfigurationHandler submitHandler)
+	@Override
+	public void stop()
 	{
-		ConfigureSimulationDialog dialog = new ConfigureSimulationDialog(parent, submitHandler);
-		dialog.sizeToScene();
-		dialog.show();
+		mTimeLineTimer.cancel();
+	}
+	
+	private void openConfigurationDialog()
+	{
+		ConfigureSimulationController controller = 
+				(ConfigureSimulationController)loadScene(CONFIGURATION_DIALOG_LAYOUT);
+		controller.setOnStartCallback( new Callback<SimulationConfiguration, Void>() 
+		{
+			@Override
+			public Void call(SimulationConfiguration param) 
+			{
+				startSimulation(param);
+				return null;
+			}
+		});
+		mStage.setTitle("Configure Simulation");
 	}
 	
 	private void startSimulation(SimulationConfiguration config)
 	{
 		Simulation.setGUI(this);
 		
+		mTimeStepDuration = new Duration(config.getTimeStepDuration());
+		mPixelsPerAreaPoint = config.getPixelsPerAreaPoint();
+		mTimeStepsCount = config.getTimeStepsCount();
+		
 		String className = "SmartTransportation.Simulation";
-		String finishTime = "finishTime=" + config.getDuration();
+		String finishTime = "finishTime=" + mTimeStepsCount;
 		String areaSize = "areaSize=" + config.getAreaSize();
 		String usersCount = "usersCount=" + config.getUsersCount();
 		String taxiesCount = "taxiesCount=" + config.getTaxiesCount();
 		String taxiStationsCount = "taxiStationsCount=" + config.getTaxiStationsCount();
-		String[] args = {className, finishTime, areaSize, usersCount, taxiesCount, taxiStationsCount};
+		final String[] args = {className, finishTime, areaSize, usersCount, taxiesCount, taxiStationsCount};
 		try {
-			RunnableSimulation.main(args);
+			openProgressDialog(mStage);
+			Task<Void> simulation = new Task<Void>()
+			{
+				@Override
+				protected Void call() throws Exception 
+				{
+					RunnableSimulation.main(args);
+					return null;
+				}
+			};
+			simulation.setOnSucceeded(new EventHandler<WorkerStateEvent>() 
+			{
+				@Override
+				public void handle(WorkerStateEvent event) 
+				{
+					beginAnimation();
+				}
+			});
+			Thread simulationThread = new Thread(simulation);
+			simulationThread.start();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private void openProgressDialog(Stage parent)
+	{
+		loadScene(LOADING_DIALOG_LAYOUT);
+		mStage.setTitle("Simulating...");
 	}
 	
 	public void beginAnimation()
 	{
 		System.out.println("GUI::beginAnimation()");
 		
-		mStage.setTitle("Smart Transportation");
+		// TODO replace this with a Timeline
+		mTimeLineTimer = new Timer();
+		mTimeLineTimer.schedule(new TimerTask() 
+		{
+			@Override
+			public void run() 
+			{
+				updateTimeLine();
+			}
+		}, 0, (int)mTimeStepDuration.toMillis());
 		
-		mMenuBar = createMenuBar();
+		mMap = loadMap();
+		mMenuBar = loadMenuBar();
 		
 		mAgentsGroup = new Group();
-		mAgentsGroup.translateYProperty().bind(mMenuBar.heightProperty());
+		mAgentsGroup.getChildren().add(mMap);
+		mAgentsGroup.translateYProperty().bind(mMenuBar.heightProperty().add(10));
+		mAgentsGroup.translateXProperty().bind(mStage.widthProperty().subtract(mMapWidth).divide(2));
 		addAgentsToScene(mAgentsGroup.getChildren());
 		
 		mRoot = new Group();
@@ -116,54 +181,49 @@ public class GUI extends Application
 		
 		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
 		mStage.setScene(scene);
+		mStage.setTitle("Smart Transportation");
 		
 		mStage.show();
 	}
 	
-	private MenuBar createMenuBar()
+	private Group loadMap()
 	{
-		MenuBar menuBar = new MenuBar();
-		menuBar.prefWidthProperty().bind(mStage.widthProperty());
-		
-		Menu menu = new Menu("");
-		
-		/*
-		MenuItem playMenuItem = new MenuItem("");
-		
-		playMenuItem.setOnAction(new EventHandler<ActionEvent>() 
+		Group map = new Group();
+		Rectangle building;
+		for(int coordX = 0; coordX <= mMapWidth; coordX += 2 * mPixelsPerAreaPoint)
+		{
+			for(int coordY = 0; coordY <= mMapHeight; coordY += 2 * mPixelsPerAreaPoint)
+			{
+				building = RectangleBuilder.create().
+						translateX(coordX).translateY(coordY).
+						width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
+						fill(Color.GRAY).build();
+				map.getChildren().add(building);
+			}
+		}
+		return map;
+	}
+	
+	private Pane loadMenuBar()
+	{
+		MenuBarController controller = (MenuBarController)
+				(loadNode(MENU_BAR_LAYOUT)).getController();
+		controller.getBackground().widthProperty().bind(mStage.widthProperty());
+		mTimeLineSlider = controller.getTimeLineSlider();
+		mTimeLineSlider.setBlockIncrement(1);
+		mTimeLineSlider.setMax(mTimeStepsCount);
+		EventHandler<MouseEvent> timeLineEventHandler = new EventHandler<MouseEvent>() 
 		{
 			@Override
-			public void handle(ActionEvent arg0) 
+			public void handle(MouseEvent event) 
 			{
-				play();
+				jumpToKeyFrame(mTimeLineSlider.getValue());
 			}
-		});
-		menu.getItems().add(playMenuItem);
-		
-		MenuItem pauseMenuItem = new MenuItem("Pause");
-		pauseMenuItem.setOnAction(new EventHandler<ActionEvent>() 
-		{
-			@Override
-			public void handle(ActionEvent arg0) 
-			{
-				pause();
-			}
-		});
-		menu.getItems().add(pauseMenuItem);
-		
-		MenuItem replayMenuItem = new MenuItem("Replay");
-		replayMenuItem.setOnAction(new EventHandler<ActionEvent>() 
-		{
-			@Override
-			public void handle(ActionEvent arg0) 
-			{
-				replay();
-			}
-		});
-		menu.getItems().add(replayMenuItem);
-		*/
-		ToggleButton playPauseToggle = new ToggleButton("Play/Pause");
-		playPauseToggle.setOnAction(new EventHandler<ActionEvent>()
+		};
+		mTimeLineSlider.setOnMouseClicked(timeLineEventHandler);
+		mTimeLineSlider.setOnMouseDragged(timeLineEventHandler);
+		mPlayPauseToggle = controller.getPlayPauseButton();
+		mPlayPauseToggle.setOnAction(new EventHandler<ActionEvent>()
 		{
 			@Override
 			public void handle(ActionEvent event)
@@ -171,96 +231,123 @@ public class GUI extends Application
 				togglePlay();
 			}
 		});
+		return controller.getMenuBar();
+	}
+	
+	private Parent loadScene(String scenePath)
+	{
+		Parent rootGroup = null;
+		FXMLLoader loader;		
+		try 
+		{
+			loader = new FXMLLoader();
+			loader.setBuilderFactory(new JavaFXBuilderFactory());
+			loader.setLocation(getClass().getResource(scenePath));
+			InputStream inputStream = getClass().getResourceAsStream(scenePath);
+			rootGroup = (Parent)loader.load(inputStream);
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+			return null;
+		}
 		
-		menu.setGraphic(playPauseToggle);
-		menuBar.getMenus().add(menu);
-		
-		return menuBar;
+		Scene scene = new Scene(rootGroup);
+		mStage.setScene(scene);
+		mStage.show();
+		return loader.getController();
 	}
 	
 	private void addAgentsToScene(ObservableList<Node> childrenList)
 	{
-		for(AgentData agentData: mTaxiAgentsData)
+		List<AgentData> userDataList = new LinkedList<AgentData>();
+		for(AgentData agentData: mAgentsData)
 		{
-			Location startLocation = agentData.getLocations().remove(0);
-			Shape agentShape = getTaxiShape(startLocation);
-			Label label = new Label(agentData.getName());
-			HBox hBox = new HBox(5);
-			hBox.getChildren().addAll(agentShape, label);
-			addAnimations(hBox, agentData);
-			agentData.setNode(hBox);
-			
-			childrenList.add(hBox);
+			if(agentData.getType() == AgentType.TAXI_CAB)
+			{
+				Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
+				addAnimations(agentNode, agentData);
+				agentData.setNode(agentNode);
+				childrenList.add(agentNode);
+			}
+			else 
+			{
+				// the user shapes must be displayed ABOVE
+				// the taxi shapes, so add them afterwards
+				userDataList.add(agentData);
+			}
 		}
-		
-		for(AgentData agentData: mUserAgentsData)
+		for(AgentData agentData: userDataList)
 		{
-			Location startLocation = agentData.getLocations().remove(0);
-			Shape agentShape = getUserShape(startLocation);
-			Label label = new Label(agentData.getName());
-			VBox vBox = new VBox(5);
-			vBox.getChildren().addAll(agentShape, label);
-			addAnimations(vBox, agentData);
-			agentData.setNode(vBox);
-			
-			childrenList.add(vBox);
+			Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
+			addAnimations(agentNode, agentData);
+			agentData.setNode(agentNode);
+			childrenList.add(agentNode);
 		}
 	}
 	
-	private Shape getTaxiShape(Location location)
+	private Node loadAgentNode(String path, String name)
 	{
-		double agentX = location.getX() * PIXELS_PER_AREA_UNIT;
-		double agentY = location.getY() * PIXELS_PER_AREA_UNIT;
-		
-		Color taxiCabColor = new Color(	0.94901960784313725490196078431373, 
-										0.89803921568627450980392156862745, 
-										0.11372549019607843137254901960784, 
-										1);
-		Circle circle = CircleBuilder.create().
-				centerX(agentX).centerY(agentY).
-				radius(TAXI_SIZE).
-				fill(taxiCabColor).
-				build();
-		
-		return circle;
+		AgentNodeController controller = (AgentNodeController)
+				(loadNode(path)).getController();
+		controller.setTitle(name);
+		return controller.getNode();
 	}
 	
-	private Shape getUserShape(Location location)
+	private FXMLLoader loadNode(String path)
 	{
-		double agentX = location.getX() * PIXELS_PER_AREA_UNIT;
-		double agentY = location.getY() * PIXELS_PER_AREA_UNIT;
-		
-		Polygon triangle = PolygonBuilder.create().
-				points(new Double[] 
-				{
-						agentX, agentY,
-						agentX + USER_SIZE / 2, agentY + USER_SIZE,
-						agentX - USER_SIZE / 2, agentY + USER_SIZE,
-				}).
-				fill(Color.GREEN).
-				build();
-		return triangle;
+		final FXMLLoader loader;		
+		try 
+		{
+			loader = new FXMLLoader();
+			loader.setBuilderFactory(new JavaFXBuilderFactory());
+			loader.setLocation(getClass().getResource(path));
+			loader.load();
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+			return null;
+		}
+		return loader;
 	}
 	
 	private void addAnimations(final Node agentNode, AgentData agentData)
 	{
 		final String agentName = agentData.getName();
-		double currentX = agentNode.getLayoutX();
-		double currentY = agentNode.getLayoutY();
-
-		System.out.println("Plotting path for " + agentName + 
-				", startX " + currentX + ", startY " + currentX);
 
 		SequentialTransition sequentialTransition = new SequentialTransition();
 		agentData.setAnimation(sequentialTransition);
 		ArrayList<Location> locations = agentData.getLocations();
+			
+		Location startLocation = locations.remove(0);
+		double startX = startLocation.getX();
+		double startY = startLocation.getY();
+
+		System.out.println("Plotting path for " + agentName + 
+				", startX " + startX + ", startY " + startY);
+		
+		Transition startTransition = TranslateTransitionBuilder.create().
+				node(agentNode).duration(Duration.ZERO).
+				fromX(0).toX(startX).
+				fromY(0).toY(startY).
+				cycleCount(1).autoReverse(false).
+				build();
+		sequentialTransition.getChildren().add(startTransition);
+		
+		FadeTransition fadeInTransition = FadeTransitionBuilder.create().
+				node(agentNode).duration(Duration.millis(100)).
+				toValue(1).
+				build();
+		sequentialTransition.getChildren().add(fadeInTransition);
+		
 		for(Location location: locations)
 		{
-			double nextX = location.getX() * PIXELS_PER_AREA_UNIT;
-			double nextY = location.getY() * PIXELS_PER_AREA_UNIT;
+			double nextX = location.getX() * mPixelsPerAreaPoint;
+			double nextY = location.getY() * mPixelsPerAreaPoint;
 			
 			Transition transition;
-			if((nextX == currentX) && (nextY == currentY))
+			if((nextX == startX) && (nextY == startY))
 			{
 				transition = new PauseTransition(mTimeStepDuration);
 			}
@@ -270,15 +357,22 @@ public class GUI extends Application
 						", nextX " + nextX + ", nextY " + nextY);
 				transition = TranslateTransitionBuilder.create().
 						node(agentNode).duration(mTimeStepDuration).
-						fromX(currentX).toX(nextX).
-						fromY(currentY).toY(nextY).
+						fromX(startX).toX(nextX).
+						fromY(startY).toY(nextY).
 						cycleCount(1).autoReverse(false).
 						build();
-				currentX = nextX;
-				currentY = nextY;
+				startX = nextX;
+				startY = nextY;
 			}
 			sequentialTransition.getChildren().add(transition);
 		}
+		FadeTransition fadeOutTransition = FadeTransitionBuilder.create().
+				node(agentNode).duration(Duration.millis(100)).
+				toValue(0.2).
+				build();
+		
+		sequentialTransition.getChildren().add(fadeOutTransition);
+		
 		sequentialTransition.setCycleCount(1);
 		sequentialTransition.setAutoReverse(false);
 		sequentialTransition.setOnFinished(new EventHandler<ActionEvent>() 
@@ -287,13 +381,15 @@ public class GUI extends Application
 			public void handle(ActionEvent event) 
 			{
 				System.out.println("Animation completed for " + agentName);
-				
 				mAgentsAnimatingCount--;
-				agentNode.setOpacity(0.2);
+				
+				System.out.println("Animation completed mAgentsAnimatingCount " + mAgentsAnimatingCount);
+				
 				if(mAgentsAnimatingCount == 0)
 				{
 					System.out.println("Animation finished!");
 					
+					mPlayPauseToggle.setSelected(false);
 					mAnimationState = AnimationState.FINISHED;
 				}
 			}
@@ -307,26 +403,26 @@ public class GUI extends Application
 		{
 		case FINISHED:
 			replay();
-			mAnimationState = AnimationState.PLAYING;
 			break;
 		case PAUSED:
 			play();
-			mAnimationState = AnimationState.PLAYING;
 			break;
 		case PLAYING:
 			pause();
-			mAnimationState = AnimationState.PAUSED;
 			break;
 		default:
-			assert(false); // case not handled
+			// there is a case that we are not handling
+			assert false : "AnimationState case " + mAnimationState + " not handled!"; 
 			break;
 		}
 	}
 	
 	private void play()
 	{
+		System.out.println("GUI::play()");
+		
 		Animation animation;
-		for(AgentData agentData: mTaxiAgentsData)
+		for(AgentData agentData: mAgentsData)
 		{
 			animation = agentData.getAnimation();
 			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
@@ -334,39 +430,60 @@ public class GUI extends Application
 				animation.play();
 			}
 		}
-		for(AgentData agentData: mUserAgentsData)
-		{
-			animation = agentData.getAnimation();
-			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
-			{
-				animation.play();
-			}
-		}
+		mAnimationState = AnimationState.PLAYING;
 	}
 	
 	private void pause()
 	{
-		for(AgentData agentData: mTaxiAgentsData)
+		System.out.println("GUI::pause()");
+		
+		for(AgentData agentData: mAgentsData)
 		{
 			agentData.getAnimation().pause();
 		}
-		for(AgentData agentData: mUserAgentsData)
-		{
-			agentData.getAnimation().pause();
-		}
+		mAnimationState = AnimationState.PAUSED;
 	}
 	
 	private void replay()
 	{
-		for(AgentData agentData: mTaxiAgentsData)
+		System.out.println("GUI::replay()");
+		
+		mTimeLineSlider.setValue(0);
+		mAgentsAnimatingCount = mAgentsData.size();
+		for(AgentData agentData: mAgentsData)
 		{
-			agentData.getNode().setOpacity(1);
 			agentData.getAnimation().playFromStart();
 		}
-		for(AgentData agentData: mUserAgentsData)
+		mAnimationState = AnimationState.PLAYING;
+	}
+	
+	private void updateTimeLine()
+	{		
+		switch(mAnimationState)
 		{
-			agentData.getNode().setOpacity(1);
-			agentData.getAnimation().playFromStart();
+		case PLAYING:
+			mTimeLineSlider.increment();
+			break;
+		case PAUSED:
+		case FINISHED:
+			// do nothing
+			break;
+		}
+	}
+	
+	private void jumpToKeyFrame(double frame)
+	{
+		System.out.println("GUI::jumpToKeyFrame frame " + frame);
+		
+		if(mAnimationState == AnimationState.PLAYING)
+		{
+			pause();
+			mPlayPauseToggle.setSelected(false);
+		}
+		
+		for (AgentData agentData : mAgentsData) 
+		{
+			agentData.getAnimation().jumpTo(Duration.millis(frame * mTimeStepDuration.toMillis()));
 		}
 	}
 	
@@ -375,32 +492,17 @@ public class GUI extends Application
 		assert(width > 0);
 		assert(height > 0);
 		
-		mMapWidth = width * PIXELS_PER_AREA_UNIT;
-		mMapHeight = height * PIXELS_PER_AREA_UNIT;
+		mMapWidth = width * mPixelsPerAreaPoint;
+		mMapHeight = height * mPixelsPerAreaPoint;
 		
 		System.out.println("mMapWidth " + mMapWidth);
 		System.out.println("mMapHeight " + mMapHeight);
 	}
 	
-	public void setTimeStepDuration(Duration timeStepDuration)
-	{
-		assert(timeStepDuration != null);
-		assert(timeStepDuration.toMillis() != Double.NaN);
-		
-		mTimeStepDuration = timeStepDuration;		
-	}
-	
-	public void setTaxiAgentsData(List<AgentData> agentsData)
+	public void setAgentsData(List<AgentData> agentsData)
 	{
 		assert(agentsData != null);
 		
-		mTaxiAgentsData = agentsData;
-	}
-	
-	public void setUserAgentsData(List<AgentData> agentsData)
-	{
-		assert(agentsData != null);
-		
-		mUserAgentsData = agentsData;
+		mAgentsData = agentsData;
 	}
 }

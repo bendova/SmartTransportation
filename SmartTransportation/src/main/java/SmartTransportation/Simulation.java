@@ -63,8 +63,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	private int mNextUserIndex = 0;
 	private List<Taxi> mTaxies;
 	
-	private static List<AgentData> taxiAgentsData = new LinkedList<AgentData>();
-	private static List<AgentData> userAgentsData = new LinkedList<AgentData>();
+	private static List<AgentData> mAgentsData = new LinkedList<AgentData>();
 	
 	private static GUI mGUI;
 	
@@ -198,10 +197,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		assert(mGUI != null);
 		
 		mGUI.setAreaSize(areaSize, areaSize);
-		mGUI.setTaxiAgentsData(taxiAgentsData);
-		mGUI.setUserAgentsData(userAgentsData);
-		mGUI.setTimeStepDuration(Duration.millis(200));
-		mGUI.beginAnimation();
+		mGUI.setAgentsData(mAgentsData);
 	}
 	
 	public static void addTaxiLocations(String agentName, ArrayList<Location> locations)
@@ -209,7 +205,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		//System.out.println("addLocations() " + locations);
 		assert(locations != null);
 		
-		taxiAgentsData.add(new AgentData(AgentType.TAXI_CAB, agentName, locations));
+		mAgentsData.add(new AgentData(AgentType.TAXI_CAB, agentName, locations));
 	}
 	
 	public static void addUserLocations(String agentName, ArrayList<Location> locations)
@@ -217,7 +213,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		//System.out.println("addUserLocations() " + locations);
 		assert(locations != null);
 		
-		userAgentsData.add(new AgentData(AgentType.TAXI_USER, agentName, locations));
+		mAgentsData.add(new AgentData(AgentType.TAXI_USER, agentName, locations));
 	}
 	
 	/*	

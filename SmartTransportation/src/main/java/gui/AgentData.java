@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import javafx.animation.Animation;
 import javafx.scene.Node;
-import javafx.scene.shape.Shape;
 
 import uk.ac.imperial.presage2.util.location.Location;
 
@@ -16,10 +15,15 @@ public class AgentData
 		TAXI_CAB
 	}
 	
+	private final String LAYOUTS_PATH = "../layouts/";
+	private final String TAXI_SHAPE_LAYOUT = LAYOUTS_PATH + "TaxiShape.fxml";
+	private final String USER_SHAPE_LAYOUT = LAYOUTS_PATH + "UserShape.fxml";
+	
 	private String mName;
 	private ArrayList<Location> mLocations;
 	private Node mNode;
 	private Animation mAnimation;
+	private String mLayoutPath;
 	private AgentType mAgentType;
 	
 	public AgentData(AgentType type, String name, ArrayList<Location> locations)
@@ -30,6 +34,17 @@ public class AgentData
 		mName = name;
 		mAgentType = type;
 		mLocations = locations;
+		switch (mAgentType) 
+		{
+		case TAXI_CAB:
+			mLayoutPath = TAXI_SHAPE_LAYOUT;
+			break;
+		case TAXI_USER:
+			mLayoutPath = USER_SHAPE_LAYOUT;
+			break;
+		default:
+			break;
+		}
 	}
 	
 	public String getName() 
@@ -45,6 +60,11 @@ public class AgentData
 	public AgentType getType()
 	{
 		return mAgentType;
+	}
+	
+	public String getLayoutPath()
+	{
+		return mLayoutPath;
 	}
 	
 	public void setNode(Node node)

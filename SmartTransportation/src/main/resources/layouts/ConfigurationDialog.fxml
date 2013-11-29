@@ -22,13 +22,13 @@
         <Label text="Users count:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
         <Label text="Taxies count:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
         <Label text="Taxi Stations count:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-        <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="50" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-        <TextField fx:id="areaSizeTF" prefWidth="200.0" text="10" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="100" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <TextField fx:id="areaSizeTF" prefWidth="200.0" text="11" GridPane.columnIndex="1" GridPane.rowIndex="2" />
         <TextField fx:id="usersCountTF" prefWidth="200.0" text="20" GridPane.columnIndex="1" GridPane.rowIndex="3" />
         <TextField fx:id="taxiesCountTF" prefWidth="200.0" text="3" GridPane.columnIndex="1" GridPane.rowIndex="4" />
         <TextField fx:id="taxiStationsCountTF" prefWidth="200.0" text="2" GridPane.columnIndex="1" GridPane.rowIndex="5" />
         <Separator orientation="VERTICAL" prefHeight="242.0" GridPane.columnIndex="2" GridPane.rowIndex="0" GridPane.rowSpan="6" />
-        <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="200" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+        <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="100" GridPane.columnIndex="4" GridPane.rowIndex="1" />
         <Label id="timeStepDurationTF" text="Time step duration (ms):" GridPane.columnIndex="3" GridPane.rowIndex="1" />
         <Label font="$x1" prefWidth="200.0" text="GUI Parameters" GridPane.columnIndex="3" GridPane.rowIndex="0" />
         <Label text="Pixels per Area point:" GridPane.columnIndex="3" GridPane.rowIndex="2" />

@@ -32,7 +32,7 @@ import javafx.scene.shape.RectangleBuilder;
 import javafx.stage.Stage;
 import javafx.util.*;
 
-public class GUI extends Application
+public class GUI extends Application implements SimulationGUI
 {
 	private final String LAYOUTS_PATH = "../layouts/";
 	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
@@ -68,6 +68,26 @@ public class GUI extends Application
 	}
 	private AnimationState mAnimationState = AnimationState.PAUSED;
 	
+	private static GUI mInstance;
+	public static GUI getInstance()
+	{
+		return mInstance;
+	}
+	
+	private int mMapLayout[][] = {
+			{1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1}, 
+			{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1}, 
+			{1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1},
+			{1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
+			{1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+			{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0},
+			{0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0},
+			{1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0},
+			{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
+			{1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1}
+			};
+	
 	public static void main(String[] args)
 	{
 		Application.launch(args);
@@ -78,6 +98,7 @@ public class GUI extends Application
 	{
 		System.out.println("GUI::start()");
 		
+		mInstance = this;
 		mStage = stage;
 		openConfigurationDialog();
 	}
@@ -85,7 +106,10 @@ public class GUI extends Application
 	@Override
 	public void stop()
 	{
-		mTimeLineTimer.cancel();
+		if(mTimeLineTimer != null)
+		{
+			mTimeLineTimer.cancel();
+		}
 	}
 	
 	private void openConfigurationDialog()
@@ -106,12 +130,11 @@ public class GUI extends Application
 	
 	private void startSimulation(SimulationConfiguration config)
 	{
-		Simulation.setGUI(this);
-		
 		mTimeStepDuration = new Duration(config.getTimeStepDuration());
 		mPixelsPerAreaPoint = config.getPixelsPerAreaPoint();
 		mTimeStepsCount = config.getTimeStepsCount();
 		
+		Simulation.setMapConfiguration(mMapLayout);
 		String className = "SmartTransportation.Simulation";
 		String finishTime = "finishTime=" + mTimeStepsCount;
 		String areaSize = "areaSize=" + config.getAreaSize();
@@ -183,6 +206,7 @@ public class GUI extends Application
 		mStage.setScene(scene);
 		mStage.setTitle("Smart Transportation");
 		
+		mStage.setFullScreen(true);
 		mStage.show();
 	}
 	
@@ -190,17 +214,26 @@ public class GUI extends Application
 	{
 		Group map = new Group();
 		Rectangle building;
-		for(int coordX = 0; coordX <= mMapWidth; coordX += 2 * mPixelsPerAreaPoint)
+		int coordX = 0;
+		int coordY = 0;
+		for (int i = 0; i < mMapLayout.length; i++) 
 		{
-			for(int coordY = 0; coordY <= mMapHeight; coordY += 2 * mPixelsPerAreaPoint)
+			for (int j = 0; j < mMapLayout[i].length; j++) 
 			{
-				building = RectangleBuilder.create().
-						translateX(coordX).translateY(coordY).
-						width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
-						fill(Color.GRAY).build();
-				map.getChildren().add(building);
+				if(mMapLayout[i][j] == 1)
+				{
+					building = RectangleBuilder.create().
+							translateX(coordX).translateY(coordY).
+							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
+							fill(Color.GRAY).build();
+					map.getChildren().add(building);
+				}
+				coordY += mPixelsPerAreaPoint;
 			}
+			coordY = 0;
+			coordX += mPixelsPerAreaPoint;
 		}
+		
 		return map;
 	}
 	
@@ -477,13 +510,16 @@ public class GUI extends Application
 		
 		if(mAnimationState == AnimationState.PLAYING)
 		{
-			pause();
+			mAnimationState = AnimationState.PAUSED;
 			mPlayPauseToggle.setSelected(false);
 		}
 		
 		for (AgentData agentData : mAgentsData) 
 		{
+			agentData.getAnimation().pause();
 			agentData.getAnimation().jumpTo(Duration.millis(frame * mTimeStepDuration.toMillis()));
+			
+			System.out.println("GUI::jumpToKeyFrame agentData.getName() " + agentData.getName());
 		}
 	}
 	
@@ -504,5 +540,10 @@ public class GUI extends Application
 		assert(agentsData != null);
 		
 		mAgentsData = agentsData;
+	}
+	
+	public int[][] getMapConfiguration()
+	{
+		return mMapLayout;
 	}
 }

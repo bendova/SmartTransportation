@@ -3,6 +3,8 @@ package SmartTransportation;
 import gui.AgentData;
 import gui.AgentData.AgentType;
 import gui.GUI;
+import gui.GUIModule;
+import gui.SimulationGUI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Set;
 
 import javafx.util.Duration;
+
+import map.CityMap;
 
 import org.drools.runtime.StatefulKnowledgeSession;
 import org.drools.runtime.rule.FactHandle;
@@ -54,6 +58,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Parameter(name="taxiesCount")
 	public int taxiesCount;
 	
+	public static int[][] mapConfiguration;
+	
 	public static final int DISTANCE_BETWEEN_REVISIONS = 10;
 	
 	private StatefulKnowledgeSession session;
@@ -65,7 +71,10 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private static List<AgentData> mAgentsData = new LinkedList<AgentData>();
 	
-	private static GUI mGUI;
+	private SimulationGUI mGUI;
+	
+	@Inject
+	private CityMap mCityMap;
 	
 	public Simulation(Set<AbstractModule> modules)
 	{
@@ -78,17 +87,28 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		this.session = session;
 	}
 	
+	@Inject
+	public void setGUI(SimulationGUI gui)
+	{
+		mGUI = gui;
+	}
+	
+	public static void setMapConfiguration(int[][] mapConfig)
+	{
+		mapConfiguration = mapConfig;
+	}
+	
 	@Override
 	protected Set<AbstractModule> getModules() {
 		Set<AbstractModule> modules = new HashSet<AbstractModule>();
 		
-		modules.add(Area.Bind.area2D(areaSize, areaSize));
+		modules.add(CityMap.Bind.cityMap2D(areaSize, areaSize, mapConfiguration));
 		modules.add(new AbstractEnvironmentModule()
 					// TODO .addActionHandler(RequestHandler.class)
 					.addActionHandler(MoveHandler.class)
 					.addParticipantEnvironmentService(ParticipantLocationService.class));
 		modules.add(NetworkModule.fullyConnectedNetworkModule());
-		
+		modules.add(new GUIModule());
 		modules.add(new RuleModule().addClasspathDrlFile("MainRules.drl"));
 		
 		return modules;
@@ -158,6 +178,16 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		int initialX = Random.randomInt(areaSize);
 		int initialY = Random.randomInt(areaSize);
+		while(mCityMap.isValidLocation(initialX, initialY) == false)
+		{
+			initialX = Random.randomInt(areaSize);
+			initialY = Random.randomInt(areaSize);
+		}
+		
+		logger.info("initialX " + initialX);
+		logger.info("initialY " + initialY);
+		logger.info("mapConfiguration[initialX][initialY] " + mapConfiguration[initialX][initialY]);
+		
 		return new Location(initialX, initialY);
 	}
 
@@ -184,18 +214,11 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		onSimulationComplete();
 	}
 	
-	public static void setGUI(GUI instance)
-	{
-		// TODO Make this happen using Guice
-		mGUI = instance;
-	}
-	
 	private void onSimulationComplete()
 	{
 		System.out.println("onSimulationComplete()");
 		
-		assert(mGUI != null);
-		
+		assert (mGUI != null) : "mGUI is null!"; 
 		mGUI.setAreaSize(areaSize, areaSize);
 		mGUI.setAgentsData(mAgentsData);
 	}

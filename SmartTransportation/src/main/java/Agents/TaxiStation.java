@@ -34,7 +34,7 @@ public class TaxiStation extends AbstractParticipant
 	
 	private class TaxiRequest implements TimeDriven, Comparable<TaxiRequest>
 	{
-		private static final int DEFAULT_TIME_OUT = 100;
+		private static final int DEFAULT_TIME_OUT = 500;
 		
 		private TaxiRequestState mCurrentState;
 		private TaxiServiceRequestInterface mRequestData;

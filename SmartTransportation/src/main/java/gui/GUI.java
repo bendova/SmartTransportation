@@ -25,6 +25,7 @@ import javafx.fxml.JavaFXBuilderFactory;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
@@ -212,6 +213,7 @@ public class GUI extends Application implements SimulationGUI
 	
 	private Group loadMap()
 	{
+		Random random = new Random();
 		Group map = new Group();
 		Rectangle building;
 		int coordX = 0;
@@ -222,10 +224,13 @@ public class GUI extends Application implements SimulationGUI
 			{
 				if(mMapLayout[i][j] == 1)
 				{
+					random.nextDouble();
 					building = RectangleBuilder.create().
 							translateX(coordX).translateY(coordY).
 							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
-							fill(Color.GRAY).build();
+							//fill(Color.GRAY).
+							fill(new Color(random.nextDouble(), random.nextDouble(), random.nextDouble(), 1)).
+							build();
 					map.getChildren().add(building);
 				}
 				coordY += mPixelsPerAreaPoint;
@@ -357,8 +362,8 @@ public class GUI extends Application implements SimulationGUI
 		double startX = startLocation.getX();
 		double startY = startLocation.getY();
 
-		System.out.println("Plotting path for " + agentName + 
-				", startX " + startX + ", startY " + startY);
+//		System.out.println("Plotting path for " + agentName + 
+//				", startX " + startX + ", startY " + startY);
 		
 		Transition startTransition = TranslateTransitionBuilder.create().
 				node(agentNode).duration(Duration.ZERO).
@@ -386,8 +391,8 @@ public class GUI extends Application implements SimulationGUI
 			}
 			else
 			{
-				System.out.println("Plotting path for " + agentName + 
-						", nextX " + nextX + ", nextY " + nextY);
+//				System.out.println("Plotting path for " + agentName + 
+//						", nextX " + nextX + ", nextY " + nextY);
 				transition = TranslateTransitionBuilder.create().
 						node(agentNode).duration(mTimeStepDuration).
 						fromX(startX).toX(nextX).
@@ -416,7 +421,7 @@ public class GUI extends Application implements SimulationGUI
 				System.out.println("Animation completed for " + agentName);
 				mAgentsAnimatingCount--;
 				
-				System.out.println("Animation completed mAgentsAnimatingCount " + mAgentsAnimatingCount);
+//				System.out.println("Animation completed mAgentsAnimatingCount " + mAgentsAnimatingCount);
 				
 				if(mAgentsAnimatingCount == 0)
 				{

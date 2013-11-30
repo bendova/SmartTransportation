@@ -34,7 +34,7 @@ public class TaxiStation extends AbstractParticipant
 	
 	private class TaxiRequest implements TimeDriven, Comparable<TaxiRequest>
 	{
-		private static final int DEFAULT_TIME_OUT = 500;
+		private static final int DEFAULT_TIME_OUT = 5000;
 		
 		private TaxiRequestState mCurrentState;
 		private TaxiServiceRequestInterface mRequestData;
@@ -379,6 +379,7 @@ public class TaxiStation extends AbstractParticipant
 				{
 					logger.info("handleTaxiOrderComplete() taxiRequest " + taxiRequest);
 					taxiRequest.setAsCompleted();
+					taxiRequest.setServicedBy(null);
 					break;
 				}
 			}
@@ -396,13 +397,18 @@ public class TaxiStation extends AbstractParticipant
 			switch(msg.getData())
 			{
 			case AVAILABLE:
-				assert(mFreeTaxiesList.contains(reportingTaxiAddress) == false);
+				assert(mFreeTaxiesList.contains(reportingTaxiAddress) == false) : 
+					"Taxi " + msg.getFrom() + "should not already be in our free taxies list!";
+				
+				logger.info("handleTaxiStatusUpdate() adding to mFreeTaxiesList " + msg.getFrom());
 				mFreeTaxiesList.add(reportingTaxiAddress);
 				break;
 			case IN_REVISION:
 			case BROKEN:
 				if (mFreeTaxiesList.contains(reportingTaxiAddress))
 				{
+					logger.info("handleTaxiStatusUpdate() removing from mFreeTaxiesList " + msg.getFrom());
+					
 					mFreeTaxiesList.remove(reportingTaxiAddress);
 				}
 				else
@@ -474,10 +480,7 @@ public class TaxiStation extends AbstractParticipant
 		{
 			taxiRequest.incrementTime();
 		}
-		if(mTaxiRequests.isEmpty() == false)
-		{
-			processRequests();
-		}
+		processRequests();
 	}
 	
 	private void processRequests()
@@ -499,7 +502,8 @@ public class TaxiStation extends AbstractParticipant
 					}
 					break;
 				case AWAITING_CONFIRMATION:
-					if(taxiRequest.hasTimedOut())
+					if(taxiRequest.hasTimedOut() || 
+							(taxiRequest.getRequestData().isValid() == false))
 					{
 						handleUnconfirmedRequest(taxiRequest);
 					}
@@ -592,6 +596,7 @@ public class TaxiStation extends AbstractParticipant
 		if(taxiRequest.getServicedBy() != null)
 		{
 			mFreeTaxiesList.add(taxiRequest.getServicedBy());
+			taxiRequest.setServicedBy(null);
 		}
 		taxiRequest.setAsCanceled();
 	}

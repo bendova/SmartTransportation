@@ -9,7 +9,6 @@ import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.SimTime;
 import uk.ac.imperial.presage2.util.protocols.Conversation;
-import uk.ac.imperial.presage2.util.protocols.Protocol;
 import uk.ac.imperial.presage2.util.protocols.Role;
 
 public class FSMProtocol extends Protocol implements TimeDriven {
@@ -65,23 +64,30 @@ public class FSMProtocol extends Protocol implements TimeDriven {
 
 	protected Conversation spawnAsInititor() throws FSMException {
 		FSMConversation conv = new FSMConversation(description, this.name, Role.INITIATOR, network);
-		this.activeConversations.add(conv);
+		synchronized (activeConversations) 
+		{
+			this.activeConversations.add(conv);
+		}
 		return conv;
 	}
 
 	@Override
 	public void incrementTime() {
 		Timeout t = new Timeout(SimTime.get().intValue());
-		for (Iterator<Conversation> it = activeConversations.iterator(); it.hasNext();) {
+		for (Iterator<Conversation> it = activeConversations.iterator(); it.hasNext();) 
+		{
 			FSMConversation c = (FSMConversation) it.next();
 			if (c.fsm.canApplyEvent(t)) {
 				try {
 					c.fsm.applyEvent(t);
 				} catch (FSMException e) {
+					e.printStackTrace();
 				}
 			}
 			if (c.isFinished())
+			{
 				it.remove();
+			}
 		}
 	}
 

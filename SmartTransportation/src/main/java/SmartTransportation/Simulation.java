@@ -60,7 +60,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	public static int[][] mapConfiguration;
 	
-	public static final int DISTANCE_BETWEEN_REVISIONS = 10;
+	public static final int DISTANCE_BETWEEN_REVISIONS = 100;
 	
 	private StatefulKnowledgeSession session;
 	

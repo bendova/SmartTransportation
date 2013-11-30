@@ -3,6 +3,7 @@ package gui;
 import javafx.fxml.FXML;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 
@@ -16,13 +17,17 @@ public class MenuBarController
     private ToggleButton toggle;
     @FXML
     private Slider timeLineSlider;
+    @FXML
+    private HBox controlsContainer;
     
     @FXML
     private void initialize() 
     {
         assert background != null : "fx:id=\"background\" was not injected: check your FXML file 'MenuBar.fxml'.";
         assert toggle != null : "fx:id=\"toggle\" was not injected: check your FXML file 'MenuBar.fxml'.";
-        
+    
+		controlsContainer.translateXProperty().bind(background.widthProperty().
+				subtract(container.getPrefWidth()).divide(2));
     }
     @FXML
     public void startSliderDrag()

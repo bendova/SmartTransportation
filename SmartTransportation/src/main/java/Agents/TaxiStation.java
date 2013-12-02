@@ -398,7 +398,7 @@ public class TaxiStation extends AbstractParticipant
 			{
 			case AVAILABLE:
 				assert(mFreeTaxiesList.contains(reportingTaxiAddress) == false) : 
-					"Taxi " + msg.getFrom() + "should not already be in our free taxies list!";
+					"Taxi " + msg.getFrom() + " should not already be in our free taxies list!";
 				
 				logger.info("handleTaxiStatusUpdate() adding to mFreeTaxiesList " + msg.getFrom());
 				mFreeTaxiesList.add(reportingTaxiAddress);
@@ -486,6 +486,9 @@ public class TaxiStation extends AbstractParticipant
 	private void processRequests()
 	{
 		Queue<TaxiRequest> pRequests = new PriorityBlockingQueue<TaxiRequest>();
+		
+		logger.info("processRequests() mTaxiRequests.size() " + mTaxiRequests.size());
+		
 		for (TaxiRequest taxiRequest : mTaxiRequests) 
 		{
 			switch(taxiRequest.getCurrentState())
@@ -498,6 +501,8 @@ public class TaxiStation extends AbstractParticipant
 					}
 					else 
 					{
+						logger.info("processRequests() canceled request! ");
+						
 						taxiRequest.setAsCanceled();
 					}
 					break;
@@ -505,10 +510,13 @@ public class TaxiStation extends AbstractParticipant
 					if(taxiRequest.hasTimedOut() || 
 							(taxiRequest.getRequestData().isValid() == false))
 					{
+						logger.info("processRequests() unconfirmed request! ");
+						
 						handleUnconfirmedRequest(taxiRequest);
 					}
 					break;
 				case READY_FOR_SERVICE:
+					logger.info("processRequests() confirmed request! ");
 					handleConfirmedRequest(taxiRequest);
 					break;
 				case BEING_SERVICED:

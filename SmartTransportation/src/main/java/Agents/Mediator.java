@@ -1,6 +1,7 @@
 package agents;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -54,43 +55,46 @@ public class Mediator extends AbstractParticipant
 		super.incrementTime();
 		
 //		logger.info("incrementTime() " + getTime());
-		
-		if((mPendingTaxiServiceRequests.isEmpty() == false) && (mTaxiStations.isEmpty() == false))
-		{
-			for (TaxiServiceRequestMessage taxiServiceRequestMessage : mPendingTaxiServiceRequests) 
-			{
-				ForwardRequest(taxiServiceRequestMessage);
-				mPendingTaxiServiceRequests.remove(taxiServiceRequestMessage);
-			}
-		}
 	}
 	
 	private void processRequest(TaxiServiceRequestMessage taxiServiceRequestMessage)
 	{
-		if(mTaxiStations.isEmpty())
+		mPendingTaxiServiceRequests.add(taxiServiceRequestMessage);
+		if(mTaxiStations.isEmpty() == false)
 		{
-			mPendingTaxiServiceRequests.add(taxiServiceRequestMessage);
-		}
-		else
-		{
-			ForwardRequest(taxiServiceRequestMessage);
+			for (NetworkAddress toTaxiStation : mTaxiStations) 
+			{
+				forwardRequest(taxiServiceRequestMessage, toTaxiStation);
+			}
 		}
 	}
 	
-	private void processRequest(RegisterAsTaxiStationMessage taxiStationNetworkAddress)
+	private void processRequest(RegisterAsTaxiStationMessage registerMessage)
 	{
-		mTaxiStations.add(taxiStationNetworkAddress.getFrom());
+		NetworkAddress taxiStation = registerMessage.getFrom();
+		mTaxiStations.add(taxiStation);
+		if(mPendingTaxiServiceRequests.isEmpty() == false)
+		{
+			for (TaxiServiceRequestMessage taxiServiceRequestMessage : mPendingTaxiServiceRequests) 
+			{
+				if(taxiServiceRequestMessage.getData().isValid())
+				{
+					forwardRequest(taxiServiceRequestMessage, taxiStation);
+				}
+				else 
+				{
+					mPendingTaxiServiceRequests.remove(taxiServiceRequestMessage);
+				}
+			}
+		}
 	}
 	
-	private void ForwardRequest(TaxiServiceRequestMessage requestMessage)
+	private void forwardRequest(TaxiServiceRequestMessage requestMessage, NetworkAddress toTaxiStation)
 	{
 		logger.info("ForwardRequest() requestMessage " + requestMessage);
 		
-		TaxiServiceRequestMessage forwardMessage;
-		for (NetworkAddress toTaxiStation : mTaxiStations) 
-		{
-			forwardMessage = new TaxiServiceRequestMessage(requestMessage.getData(), requestMessage.getFrom(), toTaxiStation);
-			network.sendMessage(forwardMessage);
-		}
+		TaxiServiceRequestMessage forwardMessage = new TaxiServiceRequestMessage
+				(requestMessage.getData(), requestMessage.getFrom(), toTaxiStation);
+		network.sendMessage(forwardMessage);
 	}
 }

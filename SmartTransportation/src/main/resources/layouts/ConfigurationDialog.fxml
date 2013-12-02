@@ -23,7 +23,7 @@
         <Label text="Taxies count:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
         <Label text="Taxi Stations count:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
         <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="100" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-        <TextField fx:id="areaSizeTF" prefWidth="200.0" text="11" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        <TextField fx:id="areaSizeTF" prefWidth="200.0" text="22" GridPane.columnIndex="1" GridPane.rowIndex="2" />
         <TextField fx:id="usersCountTF" prefWidth="200.0" text="20" GridPane.columnIndex="1" GridPane.rowIndex="3" />
         <TextField fx:id="taxiesCountTF" prefWidth="200.0" text="3" GridPane.columnIndex="1" GridPane.rowIndex="4" />
         <TextField fx:id="taxiStationsCountTF" prefWidth="200.0" text="2" GridPane.columnIndex="1" GridPane.rowIndex="5" />
@@ -32,7 +32,7 @@
         <Label id="timeStepDurationTF" text="Time step duration (ms):" GridPane.columnIndex="3" GridPane.rowIndex="1" />
         <Label font="$x1" prefWidth="200.0" text="GUI Parameters" GridPane.columnIndex="3" GridPane.rowIndex="0" />
         <Label text="Pixels per Area point:" GridPane.columnIndex="3" GridPane.rowIndex="2" />
-        <TextField fx:id="pixelsPerAreaPointTF" prefWidth="200.0" text="60" GridPane.columnIndex="4" GridPane.rowIndex="2" />
+        <TextField fx:id="pixelsPerAreaPointTF" prefWidth="200.0" text="30" GridPane.columnIndex="4" GridPane.rowIndex="2" />
         <Button fx:id="startButton" mnemonicParsing="false" onAction="#onStart" prefWidth="134.0" text="Start" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.hgrow="NEVER" GridPane.rowIndex="6" GridPane.valignment="CENTER" />
       </children>
       <columnConstraints>

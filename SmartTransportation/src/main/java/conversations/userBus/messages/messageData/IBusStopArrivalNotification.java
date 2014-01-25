@@ -1,7 +1,5 @@
 package conversations.userBus.messages.messageData;
 
-import java.util.UUID;
-
 import conversations.busStationBus.messageData.IBusRoute;
 
 import uk.ac.imperial.presage2.util.location.Location;

@@ -12,7 +12,6 @@ import conversations.taxiStationTaxi.actions.OnRejectOrderAction;
 import conversations.taxiStationTaxi.actions.OnTaxiStatusUpdateAction;
 import conversations.taxiStationTaxi.messages.RegisterAsTaxiMessage;
 import conversations.taxiStationTaxi.messages.RejectOrderMessage;
-import conversations.taxiStationTaxi.messages.RevisionCompleteMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;

@@ -31,7 +31,7 @@ public class BusStation extends AbstractParticipant
 	private List<NetworkAddress> mFreeBuses;
 	private List<Location> mBusStops;
 	private ParticipantLocationService mLocationService;
-	private UUID mBusRoute;
+	private UUID mBusRouteID;
 	
 	@Inject
 	private CityMap mCityMap;
@@ -65,7 +65,7 @@ public class BusStation extends AbstractParticipant
 		assert(busStops.isEmpty() == false) : "BusStation::setBusRoute() busStops list is empty!";
 		
 		mBusStops = busStops;
-		mBusRoute = Random.randomUUID();
+		mBusRouteID = Random.randomUUID();
 	}
 	
 	@Override
@@ -133,7 +133,7 @@ public class BusStation extends AbstractParticipant
 		// TODO get those buses' arrival times 
 		
 		// reply to the user with the travel paths
-		BusTravelPlan travelPlan = new BusTravelPlan(startTravelPath, destinationTravelPath);
+		BusTravelPlan travelPlan = new BusTravelPlan(startTravelPath, destinationTravelPath, mBusRouteID);
 		BusTravelPlanMessage travelPlanMsg = new BusTravelPlanMessage(travelPlan, 
 				network.getAddress(), msg.getFrom());
 		network.sendMessage(travelPlanMsg);
@@ -170,7 +170,7 @@ public class BusStation extends AbstractParticipant
 	
 	private void sendRouteToBus(NetworkAddress busAddress)
 	{
-		BusRoute busRoute = new BusRoute(new ArrayList<Location>(mBusStops), mBusRoute);
+		BusRoute busRoute = new BusRoute(new ArrayList<Location>(mBusStops), mBusRouteID);
 		BusRouteMessage routeMsg = new BusRouteMessage(network.getAddress(), 
 				busAddress, busRoute); 
 		network.sendMessage(routeMsg);

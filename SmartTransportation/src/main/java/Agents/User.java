@@ -2,7 +2,13 @@ package agents;
 import java.util.*;
 
 import conversations.protocols.user.ProtocolWithTaxi;
+import conversations.userBus.messages.BoardBusRequestMessage;
+import conversations.userBus.messages.BusBoardingSuccessfulMessage;
+import conversations.userBus.messages.BusIsFullMessage;
+import conversations.userBus.messages.BusUnBoardingSuccessful;
 import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
+import conversations.userBus.messages.UnBoardBusRequestMessage;
+import conversations.userBus.messages.messageData.BoardBusRequest;
 import conversations.userBusStation.*;
 import conversations.userMediator.messages.*;
 import conversations.userTaxi.actions.*;
@@ -26,8 +32,11 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		LOOKING_FOR_TRANSPORT,
 		TRAVELING_BY_TAXI,
 		TRAVELING_TO_BUS_STOP,
+		IN_BUS_STOP,
+		WAITING_BUS_BOARD_CONFIRMATION,
 		TRAVELING_BY_BUS,
-		TRAVELING_TO_DESTINATION,
+		WAITING_BUS_UNBOARD_CONFIRMATION,
+		TRAVELING_ON_FOOT,
 		REACHED_DESTINATION
 	}
 	
@@ -154,11 +163,18 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			}
 			else
 			{
-				mCurrentState = STATE.TRAVELING_BY_BUS;
+				mCurrentState = STATE.IN_BUS_STOP;
 				mCurrentPathIndex = 0;
 			}
 			break;
-		case TRAVELING_TO_DESTINATION:
+		case IN_BUS_STOP:
+			// waiting or the bus
+			break;
+		case WAITING_BUS_BOARD_CONFIRMATION:
+			break;
+		case WAITING_BUS_UNBOARD_CONFIRMATION:
+			break;
+		case TRAVELING_ON_FOOT:
 			if(mCurrentPathIndex < mBusTravelPlan.getPathToDestination().size())
 			{
 				moveTo(mBusTravelPlan.getPathToDestination().get(mCurrentPathIndex++));
@@ -249,14 +265,10 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			}
 			else if(input instanceof RequestDestinationMessage)
 			{
-				//processRequest((RequestDestinationMessage)input);
-				
 				mWithTaxi.handleRequestDestination((RequestDestinationMessage)input);
 			}
 			else if(input instanceof DestinationReachedMessage)
 			{
-				//onDestinationReached((DestinationReachedMessage)input);
-				
 				mWithTaxi.handleOnDestinationReached((DestinationReachedMessage)input);
 			}
 			else if (input instanceof BusTravelPlanMessage)
@@ -266,6 +278,18 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			else if(input instanceof NotificationOfArrivalAtBusStop)
 			{
 				handleBusArrival((NotificationOfArrivalAtBusStop)input);
+			}
+			else if(input instanceof BusBoardingSuccessfulMessage)
+			{
+				handleBusBoardSuccesful((BusBoardingSuccessfulMessage)input);
+			}
+			else if(input instanceof BusIsFullMessage)
+			{
+				handleBusBoardFailure((BusIsFullMessage)input);
+			}
+			else if(input instanceof BusUnBoardingSuccessful)
+			{
+				handleBusUnBoarded((BusUnBoardingSuccessful)input);
 			}
 		}
 	}
@@ -318,11 +342,73 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	}
 	
 	private void handleBusArrival(NotificationOfArrivalAtBusStop notification)
-	{
-		if(notification.getData().getBusStopLocation().equals(mCurrentLocation))
+	{		
+		if(notification.getData().getBusRoute().getBusRouteID().
+				equals(mBusTravelPlan.getBusRouteID()))
 		{
-			logger.info("handleBusArrival() The bus has arrived " + notification.getFrom());
+			
+			switch (mCurrentState) 
+			{
+			case IN_BUS_STOP:
+			{
+				logger.info("handleBusArrival() The bus has arrived " + notification.getFrom());
+				
+				mCurrentState = STATE.WAITING_BUS_BOARD_CONFIRMATION;
+				
+				// send a request to board the bus
+				BoardBusRequest request = new BoardBusRequest(authkey);
+				BoardBusRequestMessage msg = new BoardBusRequestMessage(request, 
+						network.getAddress(), notification.getFrom());
+				network.sendMessage(msg);	
+			}
+			break;
+			case TRAVELING_BY_BUS:
+			{
+				Location targetBusStop = mBusTravelPlan.getPathToDestination().get(0);
+				Location currentBusStop = notification.getData().getBusStopLocation();
+				if(currentBusStop.equals(targetBusStop))
+				{
+					logger.info("handleBusArrival() I've reached my bus stop " + targetBusStop);
+					
+					mCurrentState = STATE.WAITING_BUS_UNBOARD_CONFIRMATION;
+					// send a request to unboard the bus
+					String request = "This is my stop!";
+					UnBoardBusRequestMessage msg = new UnBoardBusRequestMessage(request, 
+							network.getAddress(), notification.getFrom());
+					network.sendMessage(msg);
+				}
+			}
+			default:
+				break;
+			}
 		}
+	}
+	
+	private void handleBusBoardSuccesful(BusBoardingSuccessfulMessage msg)
+	{
+		logger.info("handleBusBoardSuccesful() I've boarded the bus " + msg.getFrom());
+		
+		assert (mCurrentState == STATE.WAITING_BUS_BOARD_CONFIRMATION);
+		
+		mCurrentState = STATE.TRAVELING_BY_BUS;
+	}
+	
+	private void handleBusBoardFailure(BusIsFullMessage msg)
+	{
+		logger.info("handleBusBoardFailure() This bus is full " + msg.getFrom());
+		
+		assert (mCurrentState == STATE.WAITING_BUS_BOARD_CONFIRMATION);
+		
+		mCurrentState = STATE.IN_BUS_STOP;
+	}
+	
+	private void handleBusUnBoarded(BusUnBoardingSuccessful msg)
+	{
+		logger.info("handleBusUnBoarded() I've got of the bus " + msg.getFrom());
+		
+		assert (mCurrentState == STATE.WAITING_BUS_UNBOARD_CONFIRMATION);
+		
+		mCurrentState = STATE.TRAVELING_ON_FOOT;
 	}
 	
 	private void moveTo(Location target)

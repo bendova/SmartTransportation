@@ -1,8 +1,8 @@
 package agents;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,7 +18,12 @@ import map.CityMap;
 import conversations.busStationBus.BusRouteMessage;
 import conversations.busStationBus.RegisterAsBusMessage;
 import conversations.busStationBus.messageData.IBusRoute;
+import conversations.userBus.messages.BoardBusRequestMessage;
+import conversations.userBus.messages.BusBoardingSuccessfulMessage;
+import conversations.userBus.messages.BusIsFullMessage;
+import conversations.userBus.messages.BusUnBoardingSuccessful;
 import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
+import conversations.userBus.messages.UnBoardBusRequestMessage;
 import conversations.userBus.messages.messageData.BusStopArrivalNotification;
 
 import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
@@ -34,14 +39,16 @@ import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
 
 public class Bus extends AbstractParticipant implements HasPerceptionRange
 {
-	enum STATE
+	enum State
 	{
 		IDLE,
 		TRAVELING_TO_FIRST_BUS_STOP,
-		FOLLOWING_ROUTE
+		FOLLOWING_ROUTE,
+		AT_BUS_STOP,
+		RETURNING_TO_ROUTE
 	}
 	
-	private STATE mCurrentState;
+	private State mCurrentState;
 	private Location mCurrentLocation;
 	private NetworkAddress mBusStationAddress;
 	private ParticipantLocationService mLocationService;
@@ -50,6 +57,16 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private int mCurrentPathIndex;
 	private ArrayList<Location> mTraveledLocations; 
 	private IBusRoute mBusRoute;
+	
+	private final static int MAX_PASSANGERS_COUNT = 2;
+	
+	// mapping of the passangers'
+	// network address(so we can talk to them) to their
+	// enviroment authentication key (so we can transport them)
+	private Map<NetworkAddress, UUID> mPassangers; 
+	
+	private final static int MAX_BUS_STOP_WAIT_TIME = 2;
+	private int mBusStopWaitTime;
 	
 	@Inject
 	private CityMap mCityMap;
@@ -60,9 +77,10 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mCurrentLocation = location;
 		mBusStationAddress = busStationAddress;
 		
-		mCurrentState = STATE.IDLE;
+		mCurrentState = State.IDLE;
 		mTraveledLocations = new ArrayList<Location>();
 		mPathToTravel = new ArrayList<Location>();
+		mPassangers = new HashMap<NetworkAddress, UUID>();
 	}
 	
 	@Override
@@ -109,18 +127,73 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		{
 			processMessage((BusRouteMessage)input);
 		}
+		else if(input instanceof BoardBusRequestMessage)
+		{
+			processMessage((BoardBusRequestMessage)input);
+		}
+		else if(input instanceof UnBoardBusRequestMessage)
+		{
+			processMessage((UnBoardBusRequestMessage)input);
+		}
 	}
 	
 	private void processMessage(BusRouteMessage routeMessage)
 	{
 		assert(routeMessage.getData().getBusStops().isEmpty() == false) : 
 			"Bus::processMessage() The bus stops list is empty!";
+		
 		if(routeMessage.getFrom().equals(mBusStationAddress))
 		{
 			mBusRoute = routeMessage.getData();
 			mBusStops = mBusRoute.getBusStops();
 			travelToFistBusStop();
-//			planPathToTravel();
+		}
+	}
+	
+	private void processMessage(BoardBusRequestMessage boardRequestMessage)
+	{
+		logger.info("processMessage() boardRequestMessage from " + boardRequestMessage.getFrom());
+		
+		if(mPassangers.size() < MAX_PASSANGERS_COUNT)
+		{
+			mPassangers.put(boardRequestMessage.getFrom(), 
+					boardRequestMessage.getData().getUserAuthKey());
+			
+			// send a reply informing that the user has boarded the bus
+			String reply = "You have boarded the bus!";
+			BusBoardingSuccessfulMessage msg = new BusBoardingSuccessfulMessage(reply, 
+					network.getAddress(), boardRequestMessage.getFrom());
+			network.sendMessage(msg);
+		}
+		else 
+		{
+			// send a reply informing that the bus is full
+			String reply = "Sorry, there is no more room on the bus!";
+			BusIsFullMessage msg = new BusIsFullMessage(reply, network.getAddress(),
+					boardRequestMessage.getFrom());
+			network.sendMessage(msg);
+		}
+	}
+	
+	private void processMessage(UnBoardBusRequestMessage unBoardRequest)
+	{
+		logger.info("processMessage() unBoardRequestMessage from " + unBoardRequest.getFrom());
+		
+		if(mCurrentState == State.AT_BUS_STOP)
+		{
+			NetworkAddress address = unBoardRequest.getFrom();
+			if(mPassangers.containsKey(unBoardRequest.getFrom()))
+			{
+				mPassangers.remove(address);
+				String reply = "You have successfully unboarded the bus.";
+				BusUnBoardingSuccessful msg = new BusUnBoardingSuccessful(reply, 
+						network.getAddress(), address);
+				network.sendMessage(msg);
+			}
+		}
+		else 
+		{
+			assert (false) : "Received unboard request while not in bus stop from " + unBoardRequest.getFrom();
 		}
 	}
 	
@@ -128,7 +201,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	{
 		// how to get to the first bus stop
 		mPathToTravel = mCityMap.getPath(mCurrentLocation, mBusStops.get(0));
-		mCurrentState = STATE.TRAVELING_TO_FIRST_BUS_STOP;
+		mCurrentState = State.TRAVELING_TO_FIRST_BUS_STOP;
 		mCurrentPathIndex = 0;
 		moveTo(mPathToTravel.get(mCurrentPathIndex++));
 	}
@@ -159,6 +232,17 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		try 
 		{
 			environment.act(move, getID(), authkey);
+			
+			if(mPassangers.size() > 0)
+			{
+				Iterator<Entry<NetworkAddress, UUID>> iterator = 
+						mPassangers.entrySet().iterator();
+				while ( iterator.hasNext() ) 
+				{
+					Entry<NetworkAddress, UUID> passenger = iterator.next();
+					environment.act(move, passenger.getKey().getId(), passenger.getValue());
+				}
+			}
 		}
 		catch (ActionHandlingException e) 
 		{
@@ -168,7 +252,8 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	
 	private boolean isBusStop(Location location)
 	{
-		for (Location busStop : mPathToTravel) 
+		List<Location> busStops = mBusRoute.getBusStops();
+		for (Location busStop : busStops) 
 		{
 			if(busStop.equals(location))
 			{
@@ -195,22 +280,38 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 			else 
 			{
 				planPathToTravel();
-				mCurrentState = STATE.FOLLOWING_ROUTE;
+				mCurrentState = State.FOLLOWING_ROUTE;
 				mCurrentPathIndex = 0;
 			}
 			break;
 		case FOLLOWING_ROUTE:
 			if(isBusStop(mCurrentLocation))
 			{
-				// TODO 
-				// notify users in bus that a bus station is reached
-				// notify users in bus station to board the bus
-				// wait 1 time step for them to unboard / board
-				// travel to next bus station
-				
 				logger.info("incrementTime() I'm at bus stop " + mCurrentLocation);
 				
+				mCurrentState = State.AT_BUS_STOP;
+				mBusStopWaitTime = 0;
+				
+				logger.info("incrementTime() I have  " + mPassangers.size() + " passengers.");
+				
+				// notify users in bus that a bus station is reached
+				if(mPassangers.size() > 0)
+				{
+					Iterator<Entry<NetworkAddress, UUID>> iterator = mPassangers.entrySet().iterator();
+					while ( iterator.hasNext() ) 
+					{
+						Entry<NetworkAddress, UUID> passenger = iterator.next();
+						
+						notifyUserOfArrivalInBusStop(passenger.getKey());
+					}
+				}
+				
+				// notify users in bus station to board the bus
 				Map<UUID, Location> users =  mLocationService.getNearbyAgents();
+				
+				logger.info("incrementTime() There are  " + users.size() 
+						+ " agents in the bus stop.");
+				
 				Iterator<Entry<UUID, Location>> iterator = users.entrySet().iterator();
 				while ( iterator.hasNext() ) 
 				{
@@ -218,10 +319,36 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 					
 					logger.info("incrementTime() I can see here " + user.getKey());
 					
-					notifyUserOfArrivalInBusStop(user.getKey());
+					NetworkAddress to = new NetworkAddress(user.getKey());
+					notifyUserOfArrivalInBusStop(to);
+				}
+				
+			}
+			else 
+			{
+				mCurrentState = State.FOLLOWING_ROUTE;
+				if(mCurrentPathIndex < mPathToTravel.size())
+				{
+					moveTo(mPathToTravel.get(mCurrentPathIndex++));
+				}
+				else
+				{
+					mCurrentPathIndex = 0;
 				}
 			}
-			
+			break;
+		case AT_BUS_STOP:
+			if(mBusStopWaitTime == MAX_BUS_STOP_WAIT_TIME)
+			{
+				mCurrentState = State.RETURNING_TO_ROUTE;
+			}
+			else 
+			{
+				++mBusStopWaitTime;
+			}
+			break;
+		case RETURNING_TO_ROUTE:
+			mCurrentState = State.FOLLOWING_ROUTE;
 			if(mCurrentPathIndex < mPathToTravel.size())
 			{
 				moveTo(mPathToTravel.get(mCurrentPathIndex++));
@@ -230,6 +357,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 			{
 				mCurrentPathIndex = 0;
 			}
+			break;
 		default:
 			break;
 		}
@@ -247,14 +375,9 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mTraveledLocations.add(currentLocation);
 	}
 	
-	private void notifyUserOfArrivalInBusStop(UUID userUuid)
+	private void notifyUserOfArrivalInBusStop(NetworkAddress to)
 	{
-		NetworkAddress from = new NetworkAddress(getID());
-		logger.info("notifyUserOfArrivalInBusStop() (from.equals(network.getAddress()) " + 
-					(from.equals(network.getAddress())));
-		
 		BusStopArrivalNotification notification = new BusStopArrivalNotification(mCurrentLocation, mBusRoute);
-		NetworkAddress to = new NetworkAddress(userUuid);
 		NotificationOfArrivalAtBusStop msg = new NotificationOfArrivalAtBusStop(notification, 
 				network.getAddress(), to);
 		network.sendMessage(msg);
@@ -269,6 +392,6 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	@Override
 	public double getPerceptionRange() 
 	{
-		return 1;
+		return 0;
 	}
 }

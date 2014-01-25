@@ -76,7 +76,7 @@ public class GUI extends Application implements SimulationGUI
 	}
 	
 	private int mMapLayout[][] = {
-			{1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1}, 
+			{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1}, 
 			{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1}, 
 			{1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1},
 			{1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
@@ -153,7 +153,9 @@ public class GUI extends Application implements SimulationGUI
 		String usersCount = "usersCount=" + config.getUsersCount();
 		String taxiesCount = "taxiesCount=" + config.getTaxiesCount();
 		String taxiStationsCount = "taxiStationsCount=" + config.getTaxiStationsCount();
-		final String[] args = {className, finishTime, areaSize, usersCount, taxiesCount, taxiStationsCount};
+		String busesCount = "busesCount=" + config.getBusesCount();
+		final String[] args = {className, finishTime, areaSize, usersCount, 
+				taxiesCount, taxiStationsCount, busesCount};
 		try {
 			openProgressDialog(mStage);
 			Task<Void> simulation = new Task<Void>()
@@ -239,7 +241,7 @@ public class GUI extends Application implements SimulationGUI
 					building = RectangleBuilder.create().
 							translateX(coordX).translateY(coordY).
 							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
-							//fill(Color.GRAY).
+//							fill(Color.GRAY).
 							fill(new Color(random.nextDouble(), random.nextDouble(), random.nextDouble(), 1)).
 							build();
 					map.getChildren().add(building);
@@ -304,7 +306,7 @@ public class GUI extends Application implements SimulationGUI
 		Scene scene = new Scene(rootGroup);
 		mStage.setScene(scene);
 		mStage.show();
-		return loader.getController();
+		return (Parent) loader.getController();
 	}
 	
 	private void addAgentsToScene(ObservableList<Node> childrenList)
@@ -312,18 +314,22 @@ public class GUI extends Application implements SimulationGUI
 		List<AgentData> userDataList = new LinkedList<AgentData>();
 		for(AgentData agentData: mAgentsData)
 		{
-			if(agentData.getType() == AgentType.TAXI_CAB)
+			switch (agentData.getType()) 
 			{
+			case TAXI_CAB:
+			case BUS:
 				Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
 				addAnimations(agentNode, agentData);
 				agentData.setNode(agentNode);
 				childrenList.add(agentNode);
-			}
-			else 
-			{
+				break;
+			case USER:
 				// the user shapes must be displayed ABOVE
-				// the taxi shapes, so add them afterwards
+				// the other shapes, so add them afterwards
 				userDataList.add(agentData);
+				break;
+			default:
+				break;
 			}
 		}
 		for(AgentData agentData: userDataList)
@@ -526,9 +532,9 @@ public class GUI extends Application implements SimulationGUI
 		
 		if(mAnimationState == AnimationState.PLAYING)
 		{
-			mAnimationState = AnimationState.PAUSED;
 			mPlayPauseToggle.setSelected(false);
 		}
+		mAnimationState = AnimationState.PAUSED;
 		
 		for (AgentData agentData : mAgentsData) 
 		{

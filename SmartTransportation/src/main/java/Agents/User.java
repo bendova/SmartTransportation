@@ -1,42 +1,50 @@
 package agents;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import conversations.protocols.user.ProtocolWithTaxi;
-import conversations.usertaxi.actions.DestinationReachedAction;
-import conversations.usertaxi.actions.RequestDestinationAction;
+import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
+import conversations.userBusStation.*;
+import conversations.userMediator.messages.*;
+import conversations.userTaxi.actions.*;
+import conversations.userTaxi.messages.*;
 import SmartTransportation.Simulation;
-import messages.DestinationReachedMessage;
-import messages.RequestDestinationMessage;
-import messages.RequestTaxiServiceConfirmationMessage;
-import messages.TakeMeToDestinationMessage;
-import messages.TaxiServiceReplyMessage;
-import messages.TaxiServiceRequestConfirmationMessage;
-import messages.TaxiServiceRequestMessage;
-import messages.messageData.taxiServiceRequest.TaxiServiceRequest;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.location.Location;
+import uk.ac.imperial.presage2.util.location.Move;
 import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
+import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
+import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
 import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 
-public class User extends AbstractParticipant
+public class User extends AbstractParticipant implements HasPerceptionRange
 {
+	enum STATE
+	{
+		LOOKING_FOR_TRANSPORT,
+		TRAVELING_BY_TAXI,
+		TRAVELING_TO_BUS_STOP,
+		TRAVELING_BY_BUS,
+		TRAVELING_TO_DESTINATION,
+		REACHED_DESTINATION
+	}
+	
+	private STATE mCurrentState;
+	
+	private Location mCurrentLocation;
 	private Location mStartLocation;
 	private Location mTargetLocation;
-	private boolean mDestinationReached;
-	private boolean mLookingForTaxi;
 	private ParticipantLocationService mLocationService;
 	private NetworkAddress mMediatorAddress;
-	private TaxiServiceRequest mCurrentTaxiServiceRequest;
+	private TransportServiceRequest mCurrentServiceRequest;
 	
-	private Queue<RequestTaxiServiceConfirmationMessage> confirmationRequests;
-	private ArrayList<Location> mLocations; 
+	private Queue<RequestTaxiConfirmationMessage> mConfirmationRequests;
+	private ArrayList<Location> mTraveledLocations; 
+	
+	private IBusTravelPlan mBusTravelPlan;
+	private int mCurrentPathIndex;
 	
 	private ProtocolWithTaxi mWithTaxi;
 	
@@ -51,21 +59,21 @@ public class User extends AbstractParticipant
 		
 		logger.info("User() id " + id);
 		
+		mCurrentState = STATE.LOOKING_FOR_TRANSPORT;
+		mCurrentLocation = startLocation;
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
-		mDestinationReached = false;
-		mLookingForTaxi = true;
 		mMediatorAddress = mediatorNetworkAddress;
 		
-		confirmationRequests = new LinkedList<RequestTaxiServiceConfirmationMessage>();
-		mLocations = new ArrayList<Location>();
+		mConfirmationRequests = new LinkedList<RequestTaxiConfirmationMessage>();
+		mTraveledLocations = new ArrayList<Location>();
 	}
 	
 	@Override
 	protected Set<ParticipantSharedState> getSharedState() 
 	{
-		Set<ParticipantSharedState> shareState =  super.getSharedState();
-		shareState.add(ParticipantLocationService.createSharedState(getID(), mStartLocation));
+		Set<ParticipantSharedState> shareState = super.getSharedState();
+		shareState.add(ParticipantLocationService.createSharedState(getID(), mCurrentLocation));
 		return shareState;
 	}
 	
@@ -78,7 +86,7 @@ public class User extends AbstractParticipant
 		
 		initializeLocationService();
 		initialiseProtocol();
-		sendTaxiRequestMessageToMediator();
+		sendRequestMessageToMediator();
 	}
 	
 	private void initializeLocationService()
@@ -116,15 +124,16 @@ public class User extends AbstractParticipant
 		mWithTaxi.init(requestDestinationAction, destinationReachedAction);
 	}
 	
-	private void sendTaxiRequestMessageToMediator()
+	private void sendRequestMessageToMediator()
 	{
 		logger.info("sendTaxiRequestMessageToMediator()");
 		
-		assert(mCurrentTaxiServiceRequest == null);
+		assert(mCurrentServiceRequest == null);
 		
-		mCurrentTaxiServiceRequest = new TaxiServiceRequest(mStartLocation, getID(), authkey);
-		TaxiServiceRequestMessage myMessage = new TaxiServiceRequestMessage(mCurrentTaxiServiceRequest, 
-				network.getAddress(), mMediatorAddress);
+		mCurrentServiceRequest = new TransportServiceRequest(mStartLocation, mTargetLocation,
+				getID(), authkey);
+		TransportServiceRequestMessage myMessage = new TransportServiceRequestMessage
+				(mCurrentServiceRequest, network.getAddress(), mMediatorAddress);
 		network.sendMessage(myMessage);
 	}
 	
@@ -133,11 +142,47 @@ public class User extends AbstractParticipant
 	{
 		super.incrementTime();
 		
-		mCurrentTaxiServiceRequest.incrementTime();
-		if(mDestinationReached == false)
+		mCurrentServiceRequest.incrementTime();
+		updateLocation();
+		
+		switch (mCurrentState) 
 		{
-			mLocations.add(mLocationService.getAgentLocation(getID()));
+		case TRAVELING_TO_BUS_STOP:
+			if(mCurrentPathIndex < mBusTravelPlan.getPathToFirstBusStop().size())
+			{
+				moveTo(mBusTravelPlan.getPathToFirstBusStop().get(mCurrentPathIndex++));
+			}
+			else
+			{
+				mCurrentState = STATE.TRAVELING_BY_BUS;
+				mCurrentPathIndex = 0;
+			}
+			break;
+		case TRAVELING_TO_DESTINATION:
+			if(mCurrentPathIndex < mBusTravelPlan.getPathToDestination().size())
+			{
+				moveTo(mBusTravelPlan.getPathToDestination().get(mCurrentPathIndex++));
+			}
+			else 
+			{
+				mCurrentState = STATE.REACHED_DESTINATION;
+			}
+			break;
+		default:
+			break;
 		}
+	}
+	
+	private void updateLocation()
+	{
+		Location currentLocation = mLocationService.getAgentLocation(getID());
+		if(mCurrentLocation.equals(currentLocation) == false)
+		{
+			logger.info("updateLocation() currentLocation " + currentLocation);
+			
+			mCurrentLocation = currentLocation;
+		}
+		mTraveledLocations.add(currentLocation);
 	}
 	
 	@Override
@@ -150,11 +195,11 @@ public class User extends AbstractParticipant
 		while (inputQueue.size() > 0) 
 		{
 			Input input = inputQueue.poll();
-			if(input instanceof RequestTaxiServiceConfirmationMessage)
+			if(input instanceof RequestTaxiConfirmationMessage)
 			{
-				if(mLookingForTaxi)
+				if(mCurrentState == STATE.LOOKING_FOR_TRANSPORT)
 				{
-					confirmationRequests.add((RequestTaxiServiceConfirmationMessage)input);
+					mConfirmationRequests.add((RequestTaxiConfirmationMessage)input);
 				}
 			}
 			else
@@ -162,10 +207,10 @@ public class User extends AbstractParticipant
 				processInput(input);
 			}
 		}
-		if(confirmationRequests.size() > 0)
+		if(mConfirmationRequests.size() > 0)
 		{
 			handleConfirmationRequests();
-			confirmationRequests.clear();
+			mConfirmationRequests.clear();
 		}
 	}
 	
@@ -175,9 +220,9 @@ public class User extends AbstractParticipant
 		
 		// let's find the offer for a taxi 
 		// that is closest to us
-		RequestTaxiServiceConfirmationMessage confirmedRequest = confirmationRequests.poll();
+		RequestTaxiConfirmationMessage confirmedRequest = mConfirmationRequests.poll();
 		double minDistance = confirmedRequest.getData().distanceTo(mStartLocation);
-		for(RequestTaxiServiceConfirmationMessage request : confirmationRequests)
+		for(RequestTaxiConfirmationMessage request : mConfirmationRequests)
 		{
 			double distance = request.getData().distanceTo(mStartLocation);
 			if(minDistance > distance)
@@ -189,7 +234,7 @@ public class User extends AbstractParticipant
 		
 		logger.info("handleConfirmationRequests() Accepting offer for taxi at " + confirmedRequest.getData());
 		
-		mLookingForTaxi = false;		
+		mCurrentState = STATE.TRAVELING_BY_TAXI;
 		confirmRequest(confirmedRequest);
 	}
 	
@@ -198,9 +243,9 @@ public class User extends AbstractParticipant
 	{
 		if(input != null)
 		{
-			if(input instanceof TaxiServiceReplyMessage)
+			if(input instanceof TaxiReplyMessage)
 			{
-				processReply((TaxiServiceReplyMessage)input);
+				processReply((TaxiReplyMessage)input);
 			}
 			else if(input instanceof RequestDestinationMessage)
 			{
@@ -214,19 +259,27 @@ public class User extends AbstractParticipant
 				
 				mWithTaxi.handleOnDestinationReached((DestinationReachedMessage)input);
 			}
+			else if (input instanceof BusTravelPlanMessage)
+			{
+				handleBusTravelPlan((BusTravelPlanMessage)input);
+			}
+			else if(input instanceof NotificationOfArrivalAtBusStop)
+			{
+				handleBusArrival((NotificationOfArrivalAtBusStop)input);
+			}
 		}
 	}
 	
-	private void confirmRequest(RequestTaxiServiceConfirmationMessage requestConfirmationMessage)
+	private void confirmRequest(RequestTaxiConfirmationMessage requestConfirmationMessage)
 	{
 		logger.info("confirmRequest()");
 		
-		TaxiServiceRequestConfirmationMessage confirmationMessage = new TaxiServiceRequestConfirmationMessage("I confirm the request",
+		TaxiRequestConfirmationMessage confirmationMessage = new TaxiRequestConfirmationMessage("I confirm the request",
 				network.getAddress(), requestConfirmationMessage.getFrom());
 		network.sendMessage(confirmationMessage);
 	}
 	
-	private void processReply(TaxiServiceReplyMessage taxiServiceReplyMessage)
+	private void processReply(TaxiReplyMessage taxiServiceReplyMessage)
 	{
 		logger.info("ProcessReply() Received reply: " + taxiServiceReplyMessage.getData().getMessage()); 
 	}
@@ -238,26 +291,67 @@ public class User extends AbstractParticipant
 		TakeMeToDestinationMessage destinationMessage = new 
 				TakeMeToDestinationMessage(mTargetLocation, network.getAddress(),
 						requestDestinationMessage.getFrom());
-		//network.sendMessage(destinationMessage);
 		mWithTaxi.sendTakeMeToDestination(destinationMessage);
 		
-		mCurrentTaxiServiceRequest.cancel();
+		mCurrentServiceRequest.cancel();
 	}
 	
 	private void onDestinationReached(DestinationReachedMessage message)
 	{
 		logger.info("onDestinationReached() " + message.getData());
-		mDestinationReached = true;
+		mCurrentState = STATE.REACHED_DESTINATION;
+	}
+	
+	private void handleBusTravelPlan(BusTravelPlanMessage msg)
+	{
+		if(mCurrentState == STATE.LOOKING_FOR_TRANSPORT)
+		{
+			mBusTravelPlan = msg.getData();
+			mCurrentPathIndex = 0;
+			
+			logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToFirstBusStop() " + mBusTravelPlan.getPathToFirstBusStop());
+			logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToDestination() " + mBusTravelPlan.getPathToDestination());
+			
+			moveTo(mBusTravelPlan.getPathToFirstBusStop().get(mCurrentPathIndex++));
+			mCurrentState = STATE.TRAVELING_TO_BUS_STOP;
+		}
+	}
+	
+	private void handleBusArrival(NotificationOfArrivalAtBusStop notification)
+	{
+		if(notification.getData().getBusStopLocation().equals(mCurrentLocation))
+		{
+			logger.info("handleBusArrival() The bus has arrived " + notification.getFrom());
+		}
+	}
+	
+	private void moveTo(Location target)
+	{
+		Move move = new Move(mCurrentLocation.getMoveTo(target));
+		try 
+		{
+			environment.act(move, getID(), authkey);
+		}
+		catch (ActionHandlingException e) 
+		{
+			logger.warn("Error while moving!", e);
+		}
 	}
 	
 	@Override
 	public void onSimulationComplete()
 	{
-		if(mDestinationReached == false)
+		if(mCurrentState != STATE.REACHED_DESTINATION)
 		{
 			logger.info("I didn't reach my destination!");
 		}
 		
-		Simulation.addUserLocations(getName(), mLocations);
+		Simulation.addUserLocations(getName(), mTraveledLocations);
+	}
+
+	@Override
+	public double getPerceptionRange() 
+	{
+		return 1;
 	}
 }

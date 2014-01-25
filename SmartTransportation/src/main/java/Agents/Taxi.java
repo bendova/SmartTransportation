@@ -5,12 +5,21 @@ import java.util.*;
 import com.google.inject.Inject;
 
 import conversations.protocols.taxi.*;
-import conversations.taxistationtaxi.actions.*;
-import conversations.usertaxi.actions.TakeMeToDestinationAction;
+import conversations.taxiStationTaxi.actions.*;
+import conversations.taxiStationTaxi.messages.RegisterAsTaxiMessage;
+import conversations.taxiStationTaxi.messages.RejectOrderMessage;
+import conversations.taxiStationTaxi.messages.RevisionCompleteMessage;
+import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
+import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
+import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;
+import conversations.userTaxi.actions.TakeMeToDestinationAction;
+import conversations.userTaxi.messages.DestinationReachedMessage;
+import conversations.userTaxi.messages.RequestDestinationMessage;
+import conversations.userTaxi.messages.TakeMeToDestinationMessage;
+import conversations.userTaxi.messages.messageData.TaxiData;
+import conversations.userTaxi.messages.messageData.TaxiOrder;
 import SmartTransportation.Simulation;
 import map.CityMap;
-import messages.*;
-import messages.messageData.*;
 import uk.ac.imperial.presage2.core.environment.*;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -19,7 +28,7 @@ import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 
 public class Taxi extends AbstractParticipant
 {
-	private Location mLocation;
+	private Location mCurrentLocation;
 	private Location mCurrentDestination;
 	private NetworkAddress mTaxiStationAddress;
 	private ParticipantLocationService mLocationService;
@@ -29,7 +38,7 @@ public class Taxi extends AbstractParticipant
 	private int mDistanceTraveled;
 	private boolean mIsRevisionComplete;
 	
-	private ArrayList<Location> mLocations; 
+	private ArrayList<Location> mTraveledLocations; 
 	
 	private ProtocolWithTaxiStation mWithTaxiStation;
 	private ProtocolWithUser mWithUser;
@@ -52,21 +61,21 @@ public class Taxi extends AbstractParticipant
 	public Taxi(UUID id, String name, Location location, NetworkAddress taxiStationNetworkAddress) 
 	{
 		super(id, name);
-		mLocation = location;
+		mCurrentLocation = location;
 		mCurrentStatus = Status.AVAILABLE;
 		mDistanceTraveled = 0;
 		mTaxiStationAddress = taxiStationNetworkAddress;
 		mIsRevisionComplete = false;
 		
-		mLocations = new ArrayList<Location>();
-		mPathToTravel = new LinkedList<Location>();
+		mTraveledLocations = new ArrayList<Location>();
+		mPathToTravel = new ArrayList<Location>();
 	}
 	
 	@Override
 	protected Set<ParticipantSharedState> getSharedState() 
 	{
 		Set<ParticipantSharedState> ss = super.getSharedState();
-		ss.add(ParticipantLocationService.createSharedState(getID(), mLocation));
+		ss.add(ParticipantLocationService.createSharedState(getID(), mCurrentLocation));
 		return ss;
 	}
 	
@@ -260,23 +269,23 @@ public class Taxi extends AbstractParticipant
 	
 	private void travelToLocation(Location targetLocation)
 	{
-		logger.info("moveToLocation() mLocation " + mLocation);
+		logger.info("moveToLocation() mLocation " + mCurrentLocation);
 		logger.info("moveToLocation() targetLocation " + targetLocation);
 		
 		mCurrentDestination = targetLocation;
-		if(mLocation.equals(targetLocation))
+		if(mCurrentLocation.equals(targetLocation))
 		{
 			onDestinationReached();
 			return;
 		}
 		
-		mPathToTravel = getPathTo(mCurrentDestination);
+		mPathToTravel = mCityMap.getPath(mCurrentLocation, mCurrentDestination);
 		moveTo(mPathToTravel.remove(0));
 	}
 	
 	private void moveTo(Location targetLocation)
 	{
-		Move move = new Move(mLocation.getMoveTo(targetLocation));
+		Move move = new Move(mCurrentLocation.getMoveTo(targetLocation));
 		try 
 		{
 			environment.act(move, getID(), authkey);
@@ -290,23 +299,23 @@ public class Taxi extends AbstractParticipant
 	
 	private void transportToLocation(Location targetLocation)
 	{
-		logger.info("transportToLocation() mLocation " + mLocation);
+		logger.info("transportToLocation() mLocation " + mCurrentLocation);
 		logger.info("transportToLocation() targetLocation " + targetLocation);
 		
 		mCurrentDestination = targetLocation;
-		if(mLocation.equals(targetLocation))
+		if(mCurrentLocation.equals(targetLocation))
 		{
 			onDestinationReached();
 			return;
 		}
 		
-		mPathToTravel = getPathTo(mCurrentDestination);
+		mPathToTravel = mCityMap.getPath(mCurrentLocation, mCurrentDestination);
 		transportTo(mPathToTravel.remove(0));
 	}
 	
 	private void transportTo(Location targetLocation)
 	{
-		Move move = new Move(mLocation.getMoveTo(targetLocation));
+		Move move = new Move(mCurrentLocation.getMoveTo(targetLocation));
 		try 
 		{
 			environment.act(move, getID(), authkey);
@@ -318,18 +327,18 @@ public class Taxi extends AbstractParticipant
 			logger.warn("Error while moving!", e);
 		}
 	}
-	
-	public List<Location> getPathTo(Location destination)
+	/*
+	public List<Location> getPathTo(Location start, Location destination)
 	{
 		HashSet<Location> evaluatedLocations = new HashSet<Location>();
 		HashMap<Location, Location> traveledPaths = new HashMap<Location, Location>();
 		HashSet<Location> locationsToEvaluate = new HashSet<Location>();
-		locationsToEvaluate.add(mLocation);
+		locationsToEvaluate.add(start);
 		
 		HashMap<Location, Integer> globalCostMap = new HashMap<Location, Integer>();
-		globalCostMap.put(mLocation, 0);
+		globalCostMap.put(start, 0);
 		HashMap<Location, Integer> estimatedCostMap = new HashMap<Location, Integer>();
-		estimatedCostMap.put(mLocation, Integer.valueOf((int)mLocation.distanceTo(destination)));
+		estimatedCostMap.put(start, Integer.valueOf((int)start.distanceTo(destination)));
 		
 		while(locationsToEvaluate.isEmpty() == false)
 		{
@@ -377,7 +386,7 @@ public class Taxi extends AbstractParticipant
 				}
 			}
 		}
-		return null;
+		return new LinkedList<Location>();
 	}
 	
 	private List<Location> getNeighboringLocations(Location location)
@@ -407,32 +416,6 @@ public class Taxi extends AbstractParticipant
 		}
 		--y;
 		
-		/*
-		if((mCityMap.isValidLocation(--x, ++y)))
-		{
-			neighbors.add(new Location(x, y));
-		}
-		++x;
-		--y;
-		if(mCityMap.isValidLocation(++x, ++y))
-		{
-			neighbors.add(new Location(x, y));
-		}
-		--x;
-		--y;
-		if((mCityMap.isValidLocation(--x, --y)))
-		{
-			neighbors.add(new Location(x, y));
-		}
-		++x;
-		++y;
-		if(mCityMap.isValidLocation(++x, --y))
-		{
-			neighbors.add(new Location(x, y));
-		}
-		--x;
-		++y;
-		*/
 		return neighbors;
 	}
 	
@@ -451,7 +434,7 @@ public class Taxi extends AbstractParticipant
 			return path;
 		}
 	}
-	
+	*/
 	@Override
 	public void incrementTime()
 	{
@@ -463,18 +446,18 @@ public class Taxi extends AbstractParticipant
 	private void updateLocation()
 	{
 		Location currentLocation = mLocationService.getAgentLocation(getID());
-		if(mLocation.equals(currentLocation) == false)
+		if(mCurrentLocation.equals(currentLocation) == false)
 		{
 			logger.info("UpdateLocation() currentLocation " + currentLocation);
 			
-			mLocation = currentLocation;
-			if((mCurrentTaxiOrder != null) && (mLocation.equals(mCurrentDestination)))
+			mCurrentLocation = currentLocation;
+			if((mCurrentTaxiOrder != null) && (mCurrentLocation.equals(mCurrentDestination)))
 			{
 				mCurrentDestination = null;
 				onDestinationReached();
 			}
 		}
-		mLocations.add(currentLocation);
+		mTraveledLocations.add(currentLocation);
 		
 		switch (mCurrentStatus) 
 		{
@@ -496,7 +479,7 @@ public class Taxi extends AbstractParticipant
 	
 	private void onDestinationReached()
 	{
-		logger.info("onDestinationReached() mLocation " + mLocation);
+		logger.info("onDestinationReached() mLocation " + mCurrentLocation);
 		
 		switch (mCurrentStatus) 
 		{
@@ -590,6 +573,6 @@ public class Taxi extends AbstractParticipant
 	@Override
 	public void onSimulationComplete()
 	{
-		Simulation.addTaxiLocations(getName(), mLocations);
+		Simulation.addTaxiLocations(getName(), mTraveledLocations);
 	}
 }

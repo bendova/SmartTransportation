@@ -2,15 +2,15 @@ package conversations.protocols.taxi;
 
 import java.util.UUID;
 
-import messages.RegisterAsTaxiMessage;
-import messages.RejectOrderMessage;
-import messages.RevisionCompleteMessage;
-import messages.TaxiOrderCompleteMessage;
-import messages.TaxiOrderMessage;
-import messages.TaxiStatusUpdateMessage;
 import conversations.commonActions.SendMessageAction;
-import conversations.taxistationtaxi.ConversationDescription;
-import conversations.taxistationtaxi.actions.*;
+import conversations.taxiStationTaxi.ConversationDescription;
+import conversations.taxiStationTaxi.actions.*;
+import conversations.taxiStationTaxi.messages.RegisterAsTaxiMessage;
+import conversations.taxiStationTaxi.messages.RejectOrderMessage;
+import conversations.taxiStationTaxi.messages.RevisionCompleteMessage;
+import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
+import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
+import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;
 import uk.ac.imperial.presage2.util.protocols.Conversation;

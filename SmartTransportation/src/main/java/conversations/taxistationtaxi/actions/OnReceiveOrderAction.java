@@ -1,6 +1,6 @@
-package conversations.taxistationtaxi.actions;
+package conversations.taxiStationTaxi.actions;
 
-import messages.TaxiOrderMessage;
+import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
 import util.protocols.Action;
 import util.protocols.Transition;
 

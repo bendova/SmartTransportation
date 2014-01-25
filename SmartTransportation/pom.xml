@@ -9,7 +9,9 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<presage.version>0.3.3</presage.version>
+		<presage.version>0.3.4</presage.version>
+		<javafx.version>2.1</javafx.version>
+		<javafx.path>C:\Program Files\Oracle\JavaFX 2.1 Runtime</javafx.path>
 	</properties>
 
 	<dependencies>
@@ -44,6 +46,13 @@
 			<artifactId>presage2-sqldb</artifactId>
 			<version>${presage.version}</version>
 		</dependency>
+		<dependency>
+	        <groupId>com.oracle</groupId>
+	        <artifactId>javafx</artifactId>
+	        <version>${javafx.version}</version>
+	        <scope>system</scope>
+	        <systemPath>${javafx.path}/lib/jfxrt.jar</systemPath>
+    	</dependency>
 	</dependencies>
 
 	<repositories>

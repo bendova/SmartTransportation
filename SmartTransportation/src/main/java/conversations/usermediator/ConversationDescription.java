@@ -1,4 +1,4 @@
-package conversations.usermediator;
+package conversations.userMediator;
 
 import util.protocols.*;
 

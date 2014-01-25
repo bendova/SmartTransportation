@@ -31,6 +31,8 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 	private TextField taxiesCountTF;
 	@FXML
 	private TextField taxiStationsCountTF;
+	@FXML
+	private TextField busesCountTF;
 	
 	private Callback<SimulationConfiguration, Void> mOnStart;
 	
@@ -66,16 +68,17 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		int usersCount = getValue(usersCountTF.getText());
 		int taxiesCount = getValue(taxiesCountTF.getText());
 		int taxiStationsCount = getValue(taxiStationsCountTF.getText());
+		int busesCount = getValue(busesCountTF.getText());
 		
 		SimulationConfiguration config = new SimulationConfiguration(timeStepDuration, 
 				timeStepsCount, areaSize, pixelsPerPoint, usersCount, taxiesCount, 
-				taxiStationsCount);
+				taxiStationsCount, busesCount);
 		return config;
 	}
 	
 	private int getValue(String text)
 	{
 		int value = Integer.parseInt(text);
-		return (value > 0) ? value : 1;
+		return (value > 0) ? value : 0;
 	}
 }

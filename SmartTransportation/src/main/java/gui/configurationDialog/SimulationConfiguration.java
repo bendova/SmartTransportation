@@ -9,17 +9,19 @@ public class SimulationConfiguration
 	private int mTaxiesCount;
 	private int mUsersCount;
 	private int mTaxiStationsCount;
+	private int mBusesCount;
 	
 	public SimulationConfiguration(int duration, int timeStepsCount, int areaSize, int pixelsPerAreaPoint, int usersCount, int taxiesCount,
-			int taxiStationsCount)
+			int taxiStationsCount, int busesCount)
 	{
-		assert(duration > 0);
-		assert(timeStepsCount > 0);
-		assert(areaSize > 0);
-		assert(pixelsPerAreaPoint > 0);
-		assert(taxiesCount > 0);
-		assert(usersCount > 0);
-		assert(taxiStationsCount > 0);
+		assert(duration >= 0);
+		assert(timeStepsCount >= 0);
+		assert(areaSize >= 0);
+		assert(pixelsPerAreaPoint >= 0);
+		assert(taxiesCount >= 0);
+		assert(usersCount >= 0);
+		assert(taxiStationsCount >= 0);
+		assert(busesCount >= 0);
 		
 		mTimeStepDuration = duration;
 		mTimeStepsCount = timeStepsCount;
@@ -28,6 +30,7 @@ public class SimulationConfiguration
 		mUsersCount = usersCount;
 		mTaxiesCount = taxiesCount;
 		mTaxiStationsCount = taxiStationsCount;
+		mBusesCount = busesCount;
 	}
 	
 	public int getTimeStepDuration()
@@ -63,5 +66,10 @@ public class SimulationConfiguration
 	public int getTaxiStationsCount()
 	{
 		return mTaxiStationsCount;
+	}
+	
+	public int getBusesCount()
+	{
+		return mBusesCount;
 	}
 }

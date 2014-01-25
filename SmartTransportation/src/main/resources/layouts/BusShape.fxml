@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+
+<HBox id="hBox" fx:id="container" prefHeight="20.0" prefWidth="200.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.agents.AgentNodeController">
+  <children>
+    <Rectangle fx:id="shape" arcHeight="5.0" arcWidth="5.0" fill="#1400ff" height="20.0" stroke="BLACK" strokeType="INSIDE" width="20.0" />
+    <Label id="userNameTF" fx:id="title" text="UserName" />
+  </children>
+</HBox>

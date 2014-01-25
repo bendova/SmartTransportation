@@ -1,6 +1,6 @@
-package conversations.usertaxi.actions;
+package conversations.userTaxi.actions;
 
-import messages.RequestDestinationMessage;
+import conversations.userTaxi.messages.RequestDestinationMessage;
 import util.protocols.*;
 
 public abstract class RequestDestinationAction implements Action

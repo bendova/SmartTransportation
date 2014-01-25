@@ -4,12 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import messages.DestinationReachedMessage;
-import messages.RequestDestinationMessage;
-import messages.TakeMeToDestinationMessage;
 import conversations.commonActions.SendMessageAction;
-import conversations.usertaxi.ConversationDescription;
-import conversations.usertaxi.actions.TakeMeToDestinationAction;
+import conversations.userTaxi.ConversationDescription;
+import conversations.userTaxi.actions.TakeMeToDestinationAction;
+import conversations.userTaxi.messages.DestinationReachedMessage;
+import conversations.userTaxi.messages.RequestDestinationMessage;
+import conversations.userTaxi.messages.TakeMeToDestinationMessage;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;

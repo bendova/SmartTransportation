@@ -1,8 +1,8 @@
-package conversations.usertaxi;
+package conversations.userTaxi;
 
-import messages.DestinationReachedMessage;
-import messages.RequestDestinationMessage;
-import messages.TakeMeToDestinationMessage;
+import conversations.userTaxi.messages.DestinationReachedMessage;
+import conversations.userTaxi.messages.RequestDestinationMessage;
+import conversations.userTaxi.messages.TakeMeToDestinationMessage;
 import util.protocols.*;
 
 public class ConversationDescription extends FSMDescription

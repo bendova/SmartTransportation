@@ -5,7 +5,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import uk.ac.imperial.presage2.core.TimeDriven;
@@ -19,7 +21,7 @@ public abstract class Protocol implements InputHandler, TimeDriven
 {
 	protected final String name;
 
-	protected List<Conversation> activeConversations = new CopyOnWriteArrayList<Conversation>();
+	protected Queue<Conversation> activeConversations = new ConcurrentLinkedQueue<Conversation>();
 
 	protected Protocol(String name) {
 		this.name = name;

@@ -1,11 +1,6 @@
-package conversations.taxistationtaxi;
+package conversations.taxiStationTaxi;
 
-import messages.RegisterAsTaxiMessage;
-import messages.RejectOrderMessage;
-import messages.RevisionCompleteMessage;
-import messages.TaxiOrderCompleteMessage;
-import messages.TaxiOrderMessage;
-import messages.TaxiStatusUpdateMessage;
+import conversations.taxiStationTaxi.messages.*;
 import util.protocols.*;
 
 public class ConversationDescription extends FSMDescription

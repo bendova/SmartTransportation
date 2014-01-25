@@ -1,31 +1,50 @@
 package agents;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
+import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import messages.*;
-import messages.messageData.UserRequest;
+import conversations.busStationMediator.RegisterAsBusServiceMessage;
+import conversations.taxiStationMediator.RegisterAsTaxiStationMessage;
+import conversations.userMediator.messages.TransportServiceRequestMessage;
+import conversations.userTaxi.messages.messageData.UserRequest;
+
+import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
+import uk.ac.imperial.presage2.util.location.Location;
+import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 
 // TODO find a better a name for this class
 public class Mediator extends AbstractParticipant
 {
-	HashSet<NetworkAddress> mTaxiStations;
-	HashMap<UserRequest, User> mUserRequestsMap;
-	Queue<TaxiServiceRequestMessage> mPendingTaxiServiceRequests;
+	private Set<NetworkAddress> mTaxiStations;
+	private Set<NetworkAddress> mBusServices;
+	private Map<UserRequest, User> mUserRequestsMap;
+	private Queue<TransportServiceRequestMessage> mPendingServiceRequests;
+	private Location mLocation = new Location(0, 0, 0);
 	
 	public Mediator(UUID id, String name) 
 	{
 		super(id, name);
 		
 		mTaxiStations = new HashSet<NetworkAddress>();
+		mBusServices = new HashSet<NetworkAddress>();
 		mUserRequestsMap = new HashMap<UserRequest, User>();
-		mPendingTaxiServiceRequests = new PriorityBlockingQueue<TaxiServiceRequestMessage>();
+		mPendingServiceRequests = new ConcurrentLinkedQueue<TransportServiceRequestMessage>();
+	}
+	
+	@Override
+	protected Set<ParticipantSharedState> getSharedState() 
+	{
+		Set<ParticipantSharedState> ss = super.getSharedState();
+		ss.add(ParticipantLocationService.createSharedState(getID(), mLocation));
+		return ss;
 	}
 	
 	@Override
@@ -33,13 +52,17 @@ public class Mediator extends AbstractParticipant
 	{
 		if(input != null)
 		{
-			if(input instanceof TaxiServiceRequestMessage)
+			if(input instanceof TransportServiceRequestMessage)
 			{
-				processRequest((TaxiServiceRequestMessage)input);
+				processRequest((TransportServiceRequestMessage)input);
 			}
 			else if (input instanceof RegisterAsTaxiStationMessage)
 			{
 				processRequest((RegisterAsTaxiStationMessage)input);
+			}
+			else if (input instanceof RegisterAsBusServiceMessage)
+			{
+				processRequest((RegisterAsBusServiceMessage)input);
 			}
 		}
 	}
@@ -57,14 +80,21 @@ public class Mediator extends AbstractParticipant
 //		logger.info("incrementTime() " + getTime());
 	}
 	
-	private void processRequest(TaxiServiceRequestMessage taxiServiceRequestMessage)
+	private void processRequest(TransportServiceRequestMessage serviceRequestMessage)
 	{
-		mPendingTaxiServiceRequests.add(taxiServiceRequestMessage);
+		mPendingServiceRequests.add(serviceRequestMessage);
 		if(mTaxiStations.isEmpty() == false)
 		{
 			for (NetworkAddress toTaxiStation : mTaxiStations) 
 			{
-				forwardRequest(taxiServiceRequestMessage, toTaxiStation);
+				forwardRequest(serviceRequestMessage, toTaxiStation);
+			}
+		}
+		if(mBusServices.isEmpty() == false)
+		{
+			for (NetworkAddress toBusStation : mBusServices) 
+			{
+				forwardRequest(serviceRequestMessage, toBusStation);
 			}
 		}
 	}
@@ -73,9 +103,9 @@ public class Mediator extends AbstractParticipant
 	{
 		NetworkAddress taxiStation = registerMessage.getFrom();
 		mTaxiStations.add(taxiStation);
-		if(mPendingTaxiServiceRequests.isEmpty() == false)
+		if(mPendingServiceRequests.isEmpty() == false)
 		{
-			for (TaxiServiceRequestMessage taxiServiceRequestMessage : mPendingTaxiServiceRequests) 
+			for (TransportServiceRequestMessage taxiServiceRequestMessage : mPendingServiceRequests) 
 			{
 				if(taxiServiceRequestMessage.getData().isValid())
 				{
@@ -83,17 +113,37 @@ public class Mediator extends AbstractParticipant
 				}
 				else 
 				{
-					mPendingTaxiServiceRequests.remove(taxiServiceRequestMessage);
+					mPendingServiceRequests.remove(taxiServiceRequestMessage);
 				}
 			}
 		}
 	}
 	
-	private void forwardRequest(TaxiServiceRequestMessage requestMessage, NetworkAddress toTaxiStation)
+	private void processRequest(RegisterAsBusServiceMessage registerMessage)
+	{
+		NetworkAddress busService = registerMessage.getFrom();
+		mBusServices.add(busService);
+		if(mPendingServiceRequests.isEmpty() == false)
+		{
+			for (TransportServiceRequestMessage request : mPendingServiceRequests) 
+			{
+				if(request.getData().isValid())
+				{
+					forwardRequest(request, busService);
+				}
+				else 
+				{
+					mPendingServiceRequests.remove(request);
+				}
+			}
+		}
+	}
+	
+	private void forwardRequest(TransportServiceRequestMessage requestMessage, NetworkAddress toTaxiStation)
 	{
 		logger.info("ForwardRequest() requestMessage " + requestMessage);
 		
-		TaxiServiceRequestMessage forwardMessage = new TaxiServiceRequestMessage
+		TransportServiceRequestMessage forwardMessage = new TransportServiceRequestMessage
 				(requestMessage.getData(), requestMessage.getFrom(), toTaxiStation);
 		network.sendMessage(forwardMessage);
 	}

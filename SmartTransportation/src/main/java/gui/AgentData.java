@@ -11,13 +11,15 @@ public class AgentData
 {
 	public enum AgentType
 	{
-		TAXI_USER,
-		TAXI_CAB
+		USER,
+		TAXI_CAB,
+		BUS
 	}
 	
 	private final String LAYOUTS_PATH = "../layouts/";
 	private final String TAXI_SHAPE_LAYOUT = LAYOUTS_PATH + "TaxiShape.fxml";
 	private final String USER_SHAPE_LAYOUT = LAYOUTS_PATH + "UserShape.fxml";
+	private final String BUS_SHAPE_LAYOUT = LAYOUTS_PATH + "BusShape.fxml";
 	
 	private String mName;
 	private ArrayList<Location> mLocations;
@@ -39,8 +41,11 @@ public class AgentData
 		case TAXI_CAB:
 			mLayoutPath = TAXI_SHAPE_LAYOUT;
 			break;
-		case TAXI_USER:
+		case USER:
 			mLayoutPath = USER_SHAPE_LAYOUT;
+			break;
+		case BUS:
+			mLayoutPath = BUS_SHAPE_LAYOUT;
 			break;
 		default:
 			break;

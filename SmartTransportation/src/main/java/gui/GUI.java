@@ -1,6 +1,5 @@
 package gui;
 
-import gui.AgentData.AgentType;
 import gui.agents.AgentNodeController;
 import gui.configurationDialog.ConfigureSimulationController;
 import gui.configurationDialog.SimulationConfiguration;
@@ -10,6 +9,8 @@ import java.io.InputStream;
 import java.util.*;
 
 import SmartTransportation.Simulation;
+import SmartTransportation.Simulation.TimeConstraint;
+import SmartTransportation.Simulation.TransportPreferenceAllocation;
 
 import uk.ac.imperial.presage2.core.simulator.RunnableSimulation;
 import uk.ac.imperial.presage2.util.location.Location;
@@ -25,7 +26,6 @@ import javafx.fxml.JavaFXBuilderFactory;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
@@ -58,9 +58,10 @@ public class GUI extends Application implements SimulationGUI
 	private Slider mTimeLineSlider;
 	
 	private Timer mTimeLineTimer;
+	private ProgressDialogController mProgressDialogController;
 	
 	private int mAgentsAnimatingCount = 0;
-	
+	private SimulationConfiguration mSimulationConfiguration;
 	enum AnimationState
 	{
 		PLAYING,
@@ -137,11 +138,29 @@ public class GUI extends Application implements SimulationGUI
 				return null;
 			}
 		});
+		
+		TransportPreferenceAllocation[] allocationTypes = TransportPreferenceAllocation.values();
+		List<String> allocationNames = new ArrayList<String>();
+		for (int i = 0; i < allocationTypes.length; ++i) 
+		{
+			allocationNames.add(allocationTypes[i].getDescription());
+		}
+		controller.setTransportAllocationTypes(allocationNames);
+		
+		TimeConstraint[] constraintTypes = TimeConstraint.values();
+		List<String> constraintNames = new ArrayList<String>();
+		for (int i = 0; i < constraintTypes.length; ++i) 
+		{
+			constraintNames.add(constraintTypes[i].getDescription());
+		}
+		controller.setsTimeConstraints(constraintNames);
+		
 		mStage.setTitle("Configure Simulation");
 	}
 	
 	private void startSimulation(SimulationConfiguration config)
 	{
+		mSimulationConfiguration = config;
 		mTimeStepDuration = new Duration(config.getTimeStepDuration());
 		mPixelsPerAreaPoint = config.getPixelsPerAreaPoint();
 		mTimeStepsCount = config.getTimeStepsCount();
@@ -150,13 +169,9 @@ public class GUI extends Application implements SimulationGUI
 		String className = "SmartTransportation.Simulation";
 		String finishTime = "finishTime=" + mTimeStepsCount;
 		String areaSize = "areaSize=" + config.getAreaSize();
-		String usersCount = "usersCount=" + config.getUsersCount();
-		String taxiesCount = "taxiesCount=" + config.getTaxiesCount();
-		String taxiStationsCount = "taxiStationsCount=" + config.getTaxiStationsCount();
-		String busesCount = "busesCount=" + config.getBusesCount();
-		final String[] args = {className, finishTime, areaSize, usersCount, 
-				taxiesCount, taxiStationsCount, busesCount};
-		try {
+		final String[] args = {className, finishTime, areaSize};
+		try 
+		{
 			openProgressDialog(mStage);
 			Task<Void> simulation = new Task<Void>()
 			{
@@ -177,15 +192,25 @@ public class GUI extends Application implements SimulationGUI
 			});
 			Thread simulationThread = new Thread(simulation);
 			simulationThread.start();
-		} catch (Exception e) {
+		}
+		catch (Exception e) 
+		{
 			e.printStackTrace();
 		}
 	}
 	
 	private void openProgressDialog(Stage parent)
 	{
-		loadScene(LOADING_DIALOG_LAYOUT);
+		mProgressDialogController = (ProgressDialogController)loadScene(LOADING_DIALOG_LAYOUT);
 		mStage.setTitle("Simulating...");
+	}
+	
+	@Override
+	public void updateSimulationProgress(double progress)
+	{
+		System.out.println("GUI::updateSimulationProgress() " + progress);
+		
+		mProgressDialogController.updateProgress(progress);
 	}
 	
 	public void beginAnimation()
@@ -567,5 +592,10 @@ public class GUI extends Application implements SimulationGUI
 	public int[][] getMapConfiguration()
 	{
 		return mMapLayout;
+	}
+	
+	public SimulationConfiguration getSimulationConfiguration()
+	{
+		return mSimulationConfiguration;
 	}
 }

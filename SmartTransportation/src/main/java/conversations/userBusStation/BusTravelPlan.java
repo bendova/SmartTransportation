@@ -9,18 +9,22 @@ public class BusTravelPlan implements IBusTravelPlan
 {
 	private List<Location> mPathToStart;
 	private List<Location> mPathFromFinalList;
+	private int mBusTravelDistance;
 	private UUID mBusRouteID;
 	
 	public BusTravelPlan(List<Location> pathToStartBusStop,
-			List<Location> pathFromFinalBusStop,
-			UUID busRouteID)
+						 List<Location> pathFromFinalBusStop,
+						 int busTravelDistance,
+						 UUID busRouteID)
 	{
 		assert(pathToStartBusStop != null);
 		assert(pathFromFinalBusStop != null);
+		assert(busTravelDistance > 0);
 		assert(busRouteID != null);
 		
 		mPathToStart = pathToStartBusStop;
 		mPathFromFinalList = pathFromFinalBusStop;
+		mBusTravelDistance = busTravelDistance;
 		mBusRouteID = busRouteID;
 	}
 
@@ -35,7 +39,13 @@ public class BusTravelPlan implements IBusTravelPlan
 	{
 		return mPathFromFinalList;
 	}
-
+	
+	@Override
+	public int getBusTravelDistance()
+	{
+		return mBusTravelDistance;
+	}
+	
 	@Override
 	public UUID getBusRouteID() 
 	{

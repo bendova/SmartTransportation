@@ -6,13 +6,17 @@ public class SimulationConfiguration
 	private int mTimeStepsCount;
 	private int mAreaSize;
 	private int mPixelsPerAreaPoint;
-	private int mTaxiesCount;
 	private int mUsersCount;
 	private int mTaxiStationsCount;
+	private int mTaxiesCount;
+	private int mBusRoutesCount;
 	private int mBusesCount;
+	private int mTransportAllocationIndex;
+	private int mTimeConstraintIndex;
 	
-	public SimulationConfiguration(int duration, int timeStepsCount, int areaSize, int pixelsPerAreaPoint, int usersCount, int taxiesCount,
-			int taxiStationsCount, int busesCount)
+	public SimulationConfiguration(int duration, int timeStepsCount, int areaSize, int pixelsPerAreaPoint, 
+			int usersCount, int taxiesCount, int taxiStationsCount, int busesCount, int busRoutesCount,
+			int transportAllocationIndex, int timeConstraintIndex)
 	{
 		assert(duration >= 0);
 		assert(timeStepsCount >= 0);
@@ -22,6 +26,9 @@ public class SimulationConfiguration
 		assert(usersCount >= 0);
 		assert(taxiStationsCount >= 0);
 		assert(busesCount >= 0);
+		assert(busRoutesCount >= 0);
+		assert(transportAllocationIndex >= 0);
+		assert(timeConstraintIndex >= 0);
 		
 		mTimeStepDuration = duration;
 		mTimeStepsCount = timeStepsCount;
@@ -31,6 +38,9 @@ public class SimulationConfiguration
 		mTaxiesCount = taxiesCount;
 		mTaxiStationsCount = taxiStationsCount;
 		mBusesCount = busesCount;
+		mBusRoutesCount = busRoutesCount;
+		mTransportAllocationIndex = transportAllocationIndex;
+		mTimeConstraintIndex = timeConstraintIndex;
 	}
 	
 	public int getTimeStepDuration()
@@ -71,5 +81,20 @@ public class SimulationConfiguration
 	public int getBusesCount()
 	{
 		return mBusesCount;
+	}
+	
+	public int getBusRoutesCount()
+	{
+		return mBusRoutesCount;
+	}
+	
+	public int getTransportAllocationIndex()
+	{
+		return mTransportAllocationIndex;
+	}
+	
+	public int getTimeConstraintIndex()
+	{
+		return mTimeConstraintIndex;
 	}
 }

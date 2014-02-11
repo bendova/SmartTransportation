@@ -6,8 +6,8 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<StackPane prefHeight="660.0" prefWidth="660.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<StackPane prefHeight="660.0" prefWidth="660.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.ProgressDialogController">
   <children>
-    <ProgressIndicator maxHeight="-Infinity" maxWidth="-Infinity" progress="-1.0" />
+    <ProgressIndicator fx:id="progressIndicator" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="95.0" prefWidth="130.0" progress="0.0" />
   </children>
 </StackPane>

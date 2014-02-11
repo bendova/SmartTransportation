@@ -5,7 +5,7 @@ import util.protocols.*;
 
 public class ConversationDescription extends FSMDescription
 {
-	public static final String PROTOCOL_NAME = "TaxiWithTaxiStationConvesationProtocol";
+	public static final String PROTOCOL_NAME = "TaxiWithTaxiStationConversationProtocol";
 	
 	public enum States
 	{

@@ -3,17 +3,27 @@ package agents;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
+import map.CityMap;
+import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
+import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
+import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
+import uk.ac.imperial.presage2.core.messaging.Input;
+import uk.ac.imperial.presage2.core.network.NetworkAddress;
+import uk.ac.imperial.presage2.util.location.Location;
+import uk.ac.imperial.presage2.util.location.Move;
+import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
+import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
+import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
 import SmartTransportation.Simulation;
 
 import com.google.inject.Inject;
-
-import map.CityMap;
 
 import conversations.busStationBus.BusRouteMessage;
 import conversations.busStationBus.RegisterAsBusMessage;
@@ -25,17 +35,6 @@ import conversations.userBus.messages.BusUnBoardingSuccessful;
 import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
 import conversations.userBus.messages.UnBoardBusRequestMessage;
 import conversations.userBus.messages.messageData.BusStopArrivalNotification;
-
-import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
-import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
-import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
-import uk.ac.imperial.presage2.core.messaging.Input;
-import uk.ac.imperial.presage2.core.network.NetworkAddress;
-import uk.ac.imperial.presage2.util.location.Location;
-import uk.ac.imperial.presage2.util.location.Move;
-import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
-import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
-import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
 
 public class Bus extends AbstractParticipant implements HasPerceptionRange
 {
@@ -60,13 +59,16 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	
 	private final static int MAX_PASSANGERS_COUNT = 2;
 	
-	// mapping of the passangers'
-	// network address(so we can talk to them) to their
-	// enviroment authentication key (so we can transport them)
+	// mapping of the passengers'
+	// network addresses(so we can talk to them) to their
+	// environment authentication keys (so we can transport them)
 	private Map<NetworkAddress, UUID> mPassangers; 
 	
 	private final static int MAX_BUS_STOP_WAIT_TIME = 2;
 	private int mBusStopWaitTime;
+	
+	private List<BoardBusRequestMessage> mBoardRequests;
+	private List<UnBoardBusRequestMessage> mUnBoardRequests;
 	
 	@Inject
 	private CityMap mCityMap;
@@ -81,6 +83,9 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mTraveledLocations = new ArrayList<Location>();
 		mPathToTravel = new ArrayList<Location>();
 		mPassangers = new HashMap<NetworkAddress, UUID>();
+		
+		mBoardRequests = new LinkedList<BoardBusRequestMessage>();
+		mUnBoardRequests = new LinkedList<UnBoardBusRequestMessage>();
 	}
 	
 	@Override
@@ -148,41 +153,165 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 			mBusStops = mBusRoute.getBusStops();
 			travelToFistBusStop();
 		}
+		else 
+		{
+			assert(false) : "Bus::processMessage() Received BusRouteMessage from someone other than " +
+					"our bus station: " + routeMessage.getFrom();
+		}
+	}
+	
+	private void travelToFistBusStop()
+	{
+		mCurrentState = State.TRAVELING_TO_FIRST_BUS_STOP;
+		
+		// how to get to the first bus stop
+		mPathToTravel = mCityMap.getPath(mCurrentLocation, mBusStops.get(0));
+		mCurrentPathIndex = 0;
+		moveTo(mPathToTravel.get(mCurrentPathIndex++));
 	}
 	
 	private void processMessage(BoardBusRequestMessage boardRequestMessage)
 	{
 		logger.info("processMessage() boardRequestMessage from " + boardRequestMessage.getFrom());
 		
-		if(mPassangers.size() < MAX_PASSANGERS_COUNT)
-		{
-			mPassangers.put(boardRequestMessage.getFrom(), 
-					boardRequestMessage.getData().getUserAuthKey());
-			
-			// send a reply informing that the user has boarded the bus
-			String reply = "You have boarded the bus!";
-			BusBoardingSuccessfulMessage msg = new BusBoardingSuccessfulMessage(reply, 
-					network.getAddress(), boardRequestMessage.getFrom());
-			network.sendMessage(msg);
-		}
-		else 
-		{
-			// send a reply informing that the bus is full
-			String reply = "Sorry, there is no more room on the bus!";
-			BusIsFullMessage msg = new BusIsFullMessage(reply, network.getAddress(),
-					boardRequestMessage.getFrom());
-			network.sendMessage(msg);
-		}
+		mBoardRequests.add(boardRequestMessage);
 	}
 	
 	private void processMessage(UnBoardBusRequestMessage unBoardRequest)
 	{
 		logger.info("processMessage() unBoardRequestMessage from " + unBoardRequest.getFrom());
 		
-		if(mCurrentState == State.AT_BUS_STOP)
+		mUnBoardRequests.add(unBoardRequest);
+	}
+	
+	@Override
+	public void incrementTime()
+	{
+		super.incrementTime();
+		
+		updateLocation();
+		
+		switch (mCurrentState) 
 		{
+		case TRAVELING_TO_FIRST_BUS_STOP:
+			if(mCurrentPathIndex < mPathToTravel.size())
+			{
+				moveTo(mPathToTravel.get(mCurrentPathIndex++));
+			}
+			else 
+			{
+				planRouteToTravel();
+				mCurrentState = State.FOLLOWING_ROUTE;
+				mCurrentPathIndex = 0;
+			}
+			break;
+		case FOLLOWING_ROUTE:
+			if(isBusStop(mCurrentLocation))
+			{				
+				mCurrentState = State.AT_BUS_STOP;
+				notifyOfBusStopArrival();
+			}
+			else 
+			{
+				followRoute();
+			}
+			break;
+		case AT_BUS_STOP:
+			handleUnBoardRequests();
+			
+			++mBusStopWaitTime;
+			if(mBusStopWaitTime >= MAX_BUS_STOP_WAIT_TIME)
+			{
+				mCurrentState = State.RETURNING_TO_ROUTE;
+				mBusStopWaitTime = 0;				
+			}
+			break;
+		case RETURNING_TO_ROUTE:			
+			handleBoardRequests();
+			
+			mCurrentState = State.FOLLOWING_ROUTE;
+			followRoute();
+			break;
+		default:
+			break;
+		}
+	}
+	
+	private void planRouteToTravel()
+	{
+		mPathToTravel = mBusRoute.getPathToTravel();
+		
+//		// the route to follow
+//		int busStopsCount = mBusStops.size();
+//		Location currentBusStop = mBusStops.get(0);
+//		for(int i = 1; i < busStopsCount; ++i)
+//		{
+//			Location nextBusStopLocation = mBusStops.get(i);
+//			mPathToTravel.addAll(mCityMap.getPath(currentBusStop, 
+//					nextBusStopLocation));
+//			currentBusStop = nextBusStopLocation;
+//		}
+//		
+//		// the route is circular
+//		Location nextBusStopLocation = mBusStops.get(0);
+//		mPathToTravel.addAll(mCityMap.getPath(currentBusStop, 
+//				nextBusStopLocation));
+	}
+	
+	private void followRoute()
+	{
+		if(mCurrentPathIndex < mPathToTravel.size())
+		{
+			moveTo(mPathToTravel.get(mCurrentPathIndex++));
+		}
+		else
+		{
+			mCurrentPathIndex = 0;
+		}
+	}
+	
+	private void notifyOfBusStopArrival()
+	{
+		logger.info("notifyOfBusStopArrival() I'm at bus stop " + mCurrentLocation);
+		
+		// notify users in bus station and passengers 
+		// that a bus stop has been reached
+		Map<UUID, Location> users = mLocationService.getNearbyAgents();
+		
+		logger.info("notifyOfBusStopArrival() I have " + mPassangers.size() + " passengers.");
+		logger.info("notifyOfBusStopArrival() There are " + users.size() 
+				+ " agents in the bus stop.");
+		
+		Iterator<Entry<UUID, Location>> iterator = users.entrySet().iterator();
+		while ( iterator.hasNext() ) 
+		{
+			Entry<UUID, Location> user = iterator.next();
+			
+			logger.info("notifyOfBusStopArrival() I can see here " + user.getKey());
+			
+			NetworkAddress to = new NetworkAddress(user.getKey());
+			notifyUserOfArrivalInBusStop(to);
+		}
+	}
+	
+	private void notifyUserOfArrivalInBusStop(NetworkAddress to)
+	{
+		BusStopArrivalNotification notification = new BusStopArrivalNotification(mCurrentLocation, mBusRoute);
+		NotificationOfArrivalAtBusStop msg = new NotificationOfArrivalAtBusStop(notification, 
+				network.getAddress(), to);
+		network.sendMessage(msg);
+	}
+	
+	private void handleUnBoardRequests()
+	{
+		logger.info("handleUnBoardRequests()  mUnBoardRequests.size() " + mUnBoardRequests.size());
+		
+		Iterator<UnBoardBusRequestMessage> iterator = mUnBoardRequests.iterator();
+		while(iterator.hasNext())
+		{
+			UnBoardBusRequestMessage unBoardRequest = iterator.next();
 			NetworkAddress address = unBoardRequest.getFrom();
-			if(mPassangers.containsKey(unBoardRequest.getFrom()))
+			if(mPassangers.containsKey(address))
 			{
 				mPassangers.remove(address);
 				String reply = "You have successfully unboarded the bus.";
@@ -190,40 +319,59 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 						network.getAddress(), address);
 				network.sendMessage(msg);
 			}
+			else 
+			{
+				assert(false): "Received unboard request from a non-passenger: " + address;
+			}
 		}
-		else 
-		{
-			assert (false) : "Received unboard request while not in bus stop from " + unBoardRequest.getFrom();
-		}
-	}
-	
-	private void travelToFistBusStop()
-	{
-		// how to get to the first bus stop
-		mPathToTravel = mCityMap.getPath(mCurrentLocation, mBusStops.get(0));
-		mCurrentState = State.TRAVELING_TO_FIRST_BUS_STOP;
-		mCurrentPathIndex = 0;
-		moveTo(mPathToTravel.get(mCurrentPathIndex++));
-	}
-	
-	private void planPathToTravel()
-	{
-		mPathToTravel.clear();
-		// how to follow the route
-		int busStopsCount = mBusStops.size();
-		Location currentBusStop = mBusStops.get(0);
-		for(int i = 1; i < busStopsCount; ++i)
-		{
-			Location nextBusStopLocation = mBusStops.get(i);
-			mPathToTravel.addAll(mCityMap.getPath(currentBusStop, 
-					nextBusStopLocation));
-			currentBusStop = nextBusStopLocation;
-		}
+		mUnBoardRequests.clear();
 		
-		// the route is circular
-		Location nextBusStopLocation = mBusStops.get(0);
-		mPathToTravel.addAll(mCityMap.getPath(currentBusStop, 
-				nextBusStopLocation));
+		logger.info("handleUnBoardRequests()  Passengers remaining after unboarding: " + mPassangers.size());
+	}
+	
+	private void handleBoardRequests()
+	{
+		logger.info("handleBoardRequests()  mBoardRequests.size() " + mBoardRequests.size());
+		
+		Iterator<BoardBusRequestMessage> iterator = mBoardRequests.iterator();
+		while(iterator.hasNext())
+		{
+			BoardBusRequestMessage boardRequestMessage = iterator.next();
+			if(mPassangers.size() < MAX_PASSANGERS_COUNT)
+			{
+				mPassangers.put(boardRequestMessage.getFrom(), 
+						boardRequestMessage.getData().getUserAuthKey());
+				
+				// send a reply informing that the user has boarded the bus
+				String reply = "You have boarded the bus!";
+				BusBoardingSuccessfulMessage msg = new BusBoardingSuccessfulMessage(reply, 
+						network.getAddress(), boardRequestMessage.getFrom());
+				network.sendMessage(msg);
+			}
+			else 
+			{
+				// send a reply informing that the bus is full
+				String reply = "Sorry, there is no more room on the bus!";
+				BusIsFullMessage msg = new BusIsFullMessage(reply, network.getAddress(),
+						boardRequestMessage.getFrom());
+				network.sendMessage(msg);
+			}
+		}
+		mBoardRequests.clear();
+		
+		logger.info("handleBoardRequests()  Passengers after boarding: " + mPassangers.size());
+	}
+	
+	private void updateLocation()
+	{
+		Location currentLocation = mLocationService.getAgentLocation(getID());
+		if(mCurrentLocation.equals(currentLocation) == false)
+		{
+			logger.info("updateLocation() currentLocation " + currentLocation);
+			
+			mCurrentLocation = currentLocation;
+		}
+		mTraveledLocations.add(currentLocation);
 	}
 	
 	private void moveTo(Location targetLocation)
@@ -261,126 +409,6 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 			}
 		}
 		return false;
-	}
-	
-	@Override
-	public void incrementTime()
-	{
-		super.incrementTime();
-		
-		updateLocation();
-		
-		switch (mCurrentState) 
-		{
-		case TRAVELING_TO_FIRST_BUS_STOP:
-			if(mCurrentPathIndex < mPathToTravel.size())
-			{
-				moveTo(mPathToTravel.get(mCurrentPathIndex++));
-			}
-			else 
-			{
-				planPathToTravel();
-				mCurrentState = State.FOLLOWING_ROUTE;
-				mCurrentPathIndex = 0;
-			}
-			break;
-		case FOLLOWING_ROUTE:
-			if(isBusStop(mCurrentLocation))
-			{
-				logger.info("incrementTime() I'm at bus stop " + mCurrentLocation);
-				
-				mCurrentState = State.AT_BUS_STOP;
-				mBusStopWaitTime = 0;
-				
-				logger.info("incrementTime() I have  " + mPassangers.size() + " passengers.");
-				
-				// notify users in bus that a bus station is reached
-				if(mPassangers.size() > 0)
-				{
-					Iterator<Entry<NetworkAddress, UUID>> iterator = mPassangers.entrySet().iterator();
-					while ( iterator.hasNext() ) 
-					{
-						Entry<NetworkAddress, UUID> passenger = iterator.next();
-						
-						notifyUserOfArrivalInBusStop(passenger.getKey());
-					}
-				}
-				
-				// notify users in bus station to board the bus
-				Map<UUID, Location> users =  mLocationService.getNearbyAgents();
-				
-				logger.info("incrementTime() There are  " + users.size() 
-						+ " agents in the bus stop.");
-				
-				Iterator<Entry<UUID, Location>> iterator = users.entrySet().iterator();
-				while ( iterator.hasNext() ) 
-				{
-					Entry<UUID, Location> user = iterator.next();
-					
-					logger.info("incrementTime() I can see here " + user.getKey());
-					
-					NetworkAddress to = new NetworkAddress(user.getKey());
-					notifyUserOfArrivalInBusStop(to);
-				}
-				
-			}
-			else 
-			{
-				mCurrentState = State.FOLLOWING_ROUTE;
-				if(mCurrentPathIndex < mPathToTravel.size())
-				{
-					moveTo(mPathToTravel.get(mCurrentPathIndex++));
-				}
-				else
-				{
-					mCurrentPathIndex = 0;
-				}
-			}
-			break;
-		case AT_BUS_STOP:
-			if(mBusStopWaitTime == MAX_BUS_STOP_WAIT_TIME)
-			{
-				mCurrentState = State.RETURNING_TO_ROUTE;
-			}
-			else 
-			{
-				++mBusStopWaitTime;
-			}
-			break;
-		case RETURNING_TO_ROUTE:
-			mCurrentState = State.FOLLOWING_ROUTE;
-			if(mCurrentPathIndex < mPathToTravel.size())
-			{
-				moveTo(mPathToTravel.get(mCurrentPathIndex++));
-			}
-			else
-			{
-				mCurrentPathIndex = 0;
-			}
-			break;
-		default:
-			break;
-		}
-	}
-	
-	private void updateLocation()
-	{
-		Location currentLocation = mLocationService.getAgentLocation(getID());
-		if(mCurrentLocation.equals(currentLocation) == false)
-		{
-			logger.info("updateLocation() currentLocation " + currentLocation);
-			
-			mCurrentLocation = currentLocation;
-		}
-		mTraveledLocations.add(currentLocation);
-	}
-	
-	private void notifyUserOfArrivalInBusStop(NetworkAddress to)
-	{
-		BusStopArrivalNotification notification = new BusStopArrivalNotification(mCurrentLocation, mBusRoute);
-		NotificationOfArrivalAtBusStop msg = new NotificationOfArrivalAtBusStop(notification, 
-				network.getAddress(), to);
-		network.sendMessage(msg);
 	}
 	
 	@Override

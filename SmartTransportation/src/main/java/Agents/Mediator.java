@@ -1,17 +1,13 @@
 package agents;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 
 import conversations.busStationMediator.RegisterAsBusServiceMessage;
 import conversations.taxiStationMediator.RegisterAsTaxiStationMessage;
 import conversations.userMediator.messages.TransportServiceRequestMessage;
-import conversations.userTaxi.messages.messageData.UserRequest;
 
 import uk.ac.imperial.presage2.core.environment.ParticipantSharedState;
 import uk.ac.imperial.presage2.core.messaging.Input;
@@ -25,7 +21,6 @@ public class Mediator extends AbstractParticipant
 {
 	private Set<NetworkAddress> mTaxiStations;
 	private Set<NetworkAddress> mBusServices;
-	private Map<UserRequest, User> mUserRequestsMap;
 	private Queue<TransportServiceRequestMessage> mPendingServiceRequests;
 	private Location mLocation = new Location(0, 0, 0);
 	
@@ -35,7 +30,6 @@ public class Mediator extends AbstractParticipant
 		
 		mTaxiStations = new HashSet<NetworkAddress>();
 		mBusServices = new HashSet<NetworkAddress>();
-		mUserRequestsMap = new HashMap<UserRequest, User>();
 		mPendingServiceRequests = new ConcurrentLinkedQueue<TransportServiceRequestMessage>();
 	}
 	
@@ -139,12 +133,12 @@ public class Mediator extends AbstractParticipant
 		}
 	}
 	
-	private void forwardRequest(TransportServiceRequestMessage requestMessage, NetworkAddress toTaxiStation)
+	private void forwardRequest(TransportServiceRequestMessage requestMessage, NetworkAddress toTransportStation)
 	{
 		logger.info("ForwardRequest() requestMessage " + requestMessage);
 		
 		TransportServiceRequestMessage forwardMessage = new TransportServiceRequestMessage
-				(requestMessage.getData(), requestMessage.getFrom(), toTaxiStation);
+				(requestMessage.getData(), requestMessage.getFrom(), toTransportStation);
 		network.sendMessage(forwardMessage);
 	}
 }

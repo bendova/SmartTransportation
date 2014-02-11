@@ -509,7 +509,7 @@ public class TaxiStation extends AbstractParticipant
 			{
 				case PENDING_PROCESSING:
 					if((taxiRequest.hasTimedOut() == false) && 
-							(taxiRequest.getRequestData().isValid()))
+					   (taxiRequest.getRequestData().isValid()))
 					{
 						pendingRequests.add(taxiRequest);
 					}
@@ -522,7 +522,7 @@ public class TaxiStation extends AbstractParticipant
 					break;
 				case AWAITING_CONFIRMATION:
 					if(taxiRequest.hasTimedOut() || 
-							(taxiRequest.getRequestData().isValid() == false))
+					  (taxiRequest.getRequestData().isValid() == false))
 					{
 						logger.info("processRequests() unconfirmed request! ");
 						
@@ -662,7 +662,6 @@ public class TaxiStation extends AbstractParticipant
 		Location userLocation = request.getStartLocation();
 		TaxiOrder taxiOrder = new TaxiOrder(userLocation, userID, authKey, userNetworkAddress);
 		TaxiOrderMessage taxiOrderMessage = new TaxiOrderMessage(taxiOrder, network.getAddress(), toTaxi);
-		//network.sendMessage(taxiOrderMessage);
 		withTaxi.sendOrder(taxiOrderMessage);
 	}
 }

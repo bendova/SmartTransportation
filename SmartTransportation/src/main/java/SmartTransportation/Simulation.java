@@ -5,6 +5,7 @@ import gui.AgentData.AgentType;
 import gui.GUI;
 import gui.GUIModule;
 import gui.SimulationGUI;
+import gui.configurationDialog.SimulationConfiguration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,8 +30,11 @@ import agents.User;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.sun.javafx.collections.MappingChange.Map;
 
+import uk.ac.imperial.presage2.core.IntegerTime;
+import uk.ac.imperial.presage2.core.Time;
 import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
@@ -51,19 +55,57 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Parameter(name="areaSize")
 	public int areaSize;
 	
-	@Parameter(name="usersCount")
-	public int usersCount;
+	private int mUsersCount;
+	private int mTaxiStationsCount;
+	private int mTaxiesCount;
+	private int mBusesCount;
+	private int mBusRoutesCount;
+	private TransportPreferenceAllocation mTransportPrefAllocation;
+	private TimeConstraint mTravelTimeConstraint;
 	
-	@Parameter(name="taxiStationsCount")
-	public int taxiStationsCount;
+	public enum TransportPreferenceAllocation
+	{
+		RANDOM				("Random"),
+		ALL_PREFER_WALKING	("All prefer walking"),
+		ALL_PREFER_BUS		("All prefer bus"),
+		ALL_PREFER_TAXI		("All prefer taxi");
+		
+		private String mDescription;
+		private TransportPreferenceAllocation(String description)
+		{
+			mDescription = description;
+		}
+		public String getDescription()
+		{
+			return mDescription;
+		}
+	}
 	
-	@Parameter(name="taxiesCount")
-	public int taxiesCount;
+	public enum TimeConstraint
+	{
+		CONSTRAINT_1(2, "x2"),
+		CONSTRAINT_2(3, "x3"),
+		CONSTRAINT_3(5, "x5"),
+		CONSTRAINT_4(10, "x10");
+		
+		private double mValue;
+		private String mDescription;
+		private TimeConstraint(double value, String description)
+		{
+			mValue = value;
+			mDescription = description;
+		}
+		public double getValue()
+		{
+			return mValue;
+		}
+		public String getDescription()
+		{
+			return mDescription;
+		}
+	}
 	
-	@Parameter(name="busesCount")
-	public int busesCount;
-	
-	public static int[][] mapConfiguration;
+	private static int[][] mMapConfiguration;
 	
 	public static final int DISTANCE_BETWEEN_REVISIONS = 100;
 	
@@ -83,9 +125,12 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private List<Location> mBusStops;
 	
+	private static int mSimDuration = 100;
+	
 	public Simulation(Set<AbstractModule> modules)
 	{
 		super(modules);
+		
 		mTaxies = new LinkedList<Taxi>();
 		
 		mBusStops = new ArrayList<Location>();
@@ -108,14 +153,14 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	public static void setMapConfiguration(int[][] mapConfig)
 	{
-		mapConfiguration = mapConfig;
+		mMapConfiguration = mapConfig;
 	}
 	
 	@Override
 	protected Set<AbstractModule> getModules() {
 		Set<AbstractModule> modules = new HashSet<AbstractModule>();
 		
-		modules.add(CityMap.Bind.cityMap2D(areaSize, areaSize, mapConfiguration));
+		modules.add(CityMap.Bind.cityMap2D(areaSize, areaSize, mMapConfiguration));
 		modules.add(new AbstractEnvironmentModule()
 					// TODO .addActionHandler(RequestHandler.class)
 					.addActionHandler(MoveHandler.class)
@@ -130,14 +175,30 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Override
 	protected void addToScenario(Scenario s) 
 	{
+		initParameters();
+		
 		addMediator(s);
 		addUsers(s);
 		addTaxiStations(s);
-		addBusService(s);
+		addBusStation(s);
 		s.addTimeDriven(this);
+		
+		mSimDuration = s.getFinishTime().intValue();
 		
 		session.setGlobal("logger", logger);
 		session.setGlobal("DISTANCE_BETWEEN_REVISIONS", DISTANCE_BETWEEN_REVISIONS);
+	}
+	
+	private void initParameters()
+	{
+		SimulationConfiguration config = mGUI.getSimulationConfiguration();
+		mUsersCount = config.getUsersCount();
+		mTaxiStationsCount = config.getTaxiesCount();
+		mTaxiesCount = config.getTaxiesCount();
+		mBusesCount = config.getBusesCount();
+		mBusRoutesCount = config.getBusRoutesCount();
+		mTransportPrefAllocation = TransportPreferenceAllocation.values()[config.getTransportAllocationIndex()];
+		mTravelTimeConstraint = TimeConstraint.values()[config.getTimeConstraintIndex()];
 	}
 	
 	private void addMediator(Scenario s)
@@ -151,9 +212,9 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		for(int i = 0; i < usersCount; ++i)
+		for(int i = 0; i < mUsersCount; ++i)
 		{
-			User newUser = new User(Random.randomUUID(), "TaxiUser"+(mNextUserIndex++), 
+			User newUser = new User(Random.randomUUID(), "User"+(mNextUserIndex++), 
 					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress);
 			s.addParticipant(newUser);
 			session.insert(newUser);
@@ -164,7 +225,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		for(int i = 0; i < taxiStationsCount; ++i)
+		for(int i = 0; i < mTaxiStationsCount; ++i)
 		{
 			String stationName = "TaxiStation"+i;
 			TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
@@ -177,7 +238,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	private void addTaxies(Scenario s, NetworkAddress taxiStationNetworkAddress, 
 			String taxiStationName)
 	{
-		for(int i = 0; i < taxiesCount; ++i)
+		for(int i = 0; i < mTaxiesCount; ++i)
 		{
 			String taxiName = taxiStationName + "_TaxiCab"+i;
 			Taxi newTaxi = new Taxi(Random.randomUUID(), taxiName, getRandomLocation(),
@@ -188,11 +249,11 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		}
 	}
 	
-	private void addBusService(Scenario s)
+	private void addBusStation(Scenario s)
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		String busStationName = "BusService";
+		String busStationName = "BusStation";
 		BusStation busStation = new BusStation(Random.randomUUID(), busStationName, 
 				getRandomLocation(), mMediatorNetworkAddress);
 		busStation.setBusRoute(mBusStops);
@@ -202,7 +263,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private void addBuses(Scenario s, NetworkAddress busStationAddress, String busStationName)
 	{
-		for(int i = 0; i < busesCount; ++i)
+		for(int i = 0; i < mBusesCount; ++i)
 		{
 			String name = busStationName + "_Bus" + i;
 			Bus bus = new Bus(Random.randomUUID(), name, getRandomLocation(), 
@@ -221,17 +282,19 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			initialY = Random.randomInt(areaSize);
 		}
 		
-		logger.info("initialX " + initialX);
-		logger.info("initialY " + initialY);
-		logger.info("mapConfiguration[initialX][initialY] " + mapConfiguration[initialX][initialY]);
-		
 		return new Location(initialX, initialY);
 	}
 
 	@Override
 	public void incrementTime() 
 	{
-		logger.info("incrementTime() " + getSimulator().getCurrentSimulationTime());
+		logger.info("incrementTime() " + getSimluationPercentComplete());
+		
+		double progress = (double)(getCurrentSimulationTime().intValue() + 1)
+							/ getSimulationFinishTime().intValue();
+		mGUI.updateSimulationProgress(progress);
+		
+//		spawnUsersRandom(mScenario);
 		updateTaxiesInSession();
 		session.fireAllRules();
 	}
@@ -255,7 +318,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		System.out.println("onSimulationComplete()");
 		
-		assert (mGUI != null) : "mGUI is null!"; 
+		assert (mGUI != null) : "mGUI is null!";
 		mGUI.setAreaSize(areaSize, areaSize);
 		mGUI.setAgentsData(mAgentsData);
 	}
@@ -273,7 +336,22 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		//System.out.println("addUserLocations() " + locations);
 		assert(locations != null);
 		
-		mAgentsData.add(new AgentData(AgentType.USER, agentName, locations));
+		if(locations.size() == mSimDuration)
+		{
+			mAgentsData.add(new AgentData(AgentType.USER, agentName, locations));
+		}
+		else if(locations.size() < mSimDuration)
+		{
+			// this user was spawned later
+			ArrayList<Location> filledLocations = new ArrayList<Location>();
+			int difference = mSimDuration - locations.size();
+			for(int i = 0; i < difference; ++i)
+			{
+				filledLocations.add(new Location(0, 0));
+			}
+			filledLocations.addAll(locations);
+			mAgentsData.add(new AgentData(AgentType.USER, agentName, filledLocations));
+		}
 	}
 	
 	public static void addBusLocations(String agentName, ArrayList<Location> locations)
@@ -285,21 +363,37 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	}
 	
 	/*	
-	 * FIXME fix this to be able to add a random number of users
-	 * each round
+	 * FIXME We get some probably-concurrency-related NullPointerExceptions
+	 * when adding users in this manner
 	*/
-//	private void AddUsers(Scenario s)
+//	private void spawnUsersRandom(Scenario s)
 //	{
 //		int usersToAdd = Random.randomInt(usersCount);
 //		for(int i = 0; i < usersToAdd; i++)
 //		{
-//			User user = new User(Random.randomUUID(), "TaxiUser"+(mNextUserIndex++), 
+//			User user = new User(Random.randomUUID(), "User"+(mNextUserIndex++), 
 //					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress);
-//			Injector injector = this.getInjector();
-//			injector.injectMembers(user);
-//			user.initialiseTime(getSimulator().getCurrentSimulationTime());
-//			user.initialise();
 //			s.addParticipant(user);
+//			Time currentTime = getSimulator().getCurrentSimulationTime().clone();
+//			user.initialiseTime(currentTime);
+//			user.initialise();
+//		}
+//	}
+	
+	/*	
+	 * FIXME We get some probably-concurrency-related NullPointerExceptions
+	 * when adding users in this manner
+	*/
+//	private void spawnUsersAtInterval(Scenario s)
+//	{
+//		if(getSimulator().getCurrentSimulationTime().intValue() % 10 == 0)
+//		{
+//			User user = new User(Random.randomUUID(), "User"+(mNextUserIndex++), 
+//					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress);
+//			s.addParticipant(user);
+//			Time currentTime = getSimulator().getCurrentSimulationTime().clone();
+//			user.initialiseTime(currentTime);
+//			user.initialise();
 //		}
 //	}
 }

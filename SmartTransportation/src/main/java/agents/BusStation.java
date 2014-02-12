@@ -35,12 +35,17 @@ public class BusStation extends AbstractParticipant
 	private ParticipantLocationService mLocationService;
 	private UUID mBusRouteID;
 	
-	@Inject
 	private CityMap mCityMap;
 	
-	public BusStation(UUID id, String name, Location location, NetworkAddress mediatorNetworkAddress) 
+	public BusStation(UUID id, String name, CityMap cityMap, Location location, NetworkAddress mediatorNetworkAddress) 
 	{
 		super(id, name);
+		
+		assert(cityMap != null);
+		assert(location != null);
+		assert(mediatorNetworkAddress != null);
+		
+		mCityMap = cityMap;
 		mLocation = location;
 		mMediatorAddress = mediatorNetworkAddress;
 		

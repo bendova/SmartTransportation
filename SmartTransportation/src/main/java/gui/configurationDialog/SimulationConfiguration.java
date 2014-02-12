@@ -13,10 +13,13 @@ public class SimulationConfiguration
 	private int mBusesCount;
 	private int mTransportAllocationIndex;
 	private int mTimeConstraintIndex;
+	private boolean mIsWalkingEnabled;
+	private boolean mAreTaxiesEnabled;
+	private boolean mAreBusesEnabled;
 	
 	public SimulationConfiguration(int duration, int timeStepsCount, int areaSize, int pixelsPerAreaPoint, 
-			int usersCount, int taxiesCount, int taxiStationsCount, int busesCount, int busRoutesCount,
-			int transportAllocationIndex, int timeConstraintIndex)
+			int usersCount, boolean areTaxiesEnabled, int taxiesCount, int taxiStationsCount, boolean areBusesEnabled, 
+			int busesCount, int busRoutesCount, boolean isWalkingEnabled, int transportAllocationIndex, int timeConstraintIndex)
 	{
 		assert(duration >= 0);
 		assert(timeStepsCount >= 0);
@@ -35,10 +38,13 @@ public class SimulationConfiguration
 		mAreaSize = areaSize;
 		mPixelsPerAreaPoint = pixelsPerAreaPoint;
 		mUsersCount = usersCount;
+		mAreTaxiesEnabled = areTaxiesEnabled;
 		mTaxiesCount = taxiesCount;
 		mTaxiStationsCount = taxiStationsCount;
+		mAreBusesEnabled = areBusesEnabled;
 		mBusesCount = busesCount;
 		mBusRoutesCount = busRoutesCount;
+		mIsWalkingEnabled = isWalkingEnabled;
 		mTransportAllocationIndex = transportAllocationIndex;
 		mTimeConstraintIndex = timeConstraintIndex;
 	}
@@ -68,6 +74,16 @@ public class SimulationConfiguration
 		return mUsersCount;
 	}
 	
+	public boolean isWalkingEnabled()
+	{
+		return mIsWalkingEnabled;
+	}
+	
+	public boolean areTaxiesEnabled()
+	{
+		return mAreTaxiesEnabled;
+	}
+	
 	public int getTaxiesCount()
 	{
 		return mTaxiesCount;
@@ -76,6 +92,11 @@ public class SimulationConfiguration
 	public int getTaxiStationsCount()
 	{
 		return mTaxiStationsCount;
+	}
+	
+	public boolean areBusesEnabled()
+	{
+		return mAreBusesEnabled;
 	}
 	
 	public int getBusesCount()

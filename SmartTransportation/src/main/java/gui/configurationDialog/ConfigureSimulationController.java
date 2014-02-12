@@ -116,16 +116,19 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		int timeStepsCount = getValue(timeStepsCountTF.getText());
 		int areaSize = getValue(areaSizeTF.getText());
 		int usersCount = getValue(usersCountTF.getText());
+		boolean isWalkingEnabled = walkingCheckBox.isSelected();
 		int taxiesCount = 0;
 		int taxiStationsCount = 0;
-		if(taxiesCheckBox.isSelected())
+		boolean areTaxiesEnabled = taxiesCheckBox.isSelected();
+		if(areTaxiesEnabled)
 		{
 			taxiesCount = getValue(taxiesCountTF.getText());
 			taxiStationsCount = getValue(taxiStationsCountTF.getText());
 		}
 		int busesCount = 0;
 		int busRoutesCount = 0;
-		if(busesCheckBox.isSelected())
+		boolean areBusesEnabled = busesCheckBox.isSelected();
+		if(areBusesEnabled)
 		{
 			busesCount = getValue(busesCountTF.getText());
 			busRoutesCount = getValue(busRoutesCountTF.getText());
@@ -134,8 +137,9 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		int timeConstraintIndex = timeContraintChoiceBox.getSelectionModel().getSelectedIndex();
 		
 		SimulationConfiguration config = new SimulationConfiguration(timeStepDuration, 
-				timeStepsCount, areaSize, pixelsPerPoint, usersCount, taxiesCount, 
-				taxiStationsCount, busesCount, busRoutesCount, transportAllocationIndex, timeConstraintIndex);
+				timeStepsCount, areaSize, pixelsPerPoint, usersCount, areTaxiesEnabled, taxiesCount, 
+				taxiStationsCount, areBusesEnabled, busesCount, busRoutesCount, isWalkingEnabled, 
+				transportAllocationIndex, timeConstraintIndex);
 		return config;
 	}
 	

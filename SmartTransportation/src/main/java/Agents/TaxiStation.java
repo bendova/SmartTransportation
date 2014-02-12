@@ -18,6 +18,7 @@ import conversations.userMediator.messages.ITransportServiceRequest;
 import conversations.userMediator.messages.TransportServiceRequestMessage;
 import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiReplyMessage;
+import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
@@ -46,7 +47,7 @@ public class TaxiStation extends AbstractParticipant
 	
 	private class TaxiRequest implements TimeDriven, Comparable<TaxiRequest>
 	{
-		private static final int DEFAULT_TIME_OUT = 5000;
+		private static final int DEFAULT_TIME_OUT = 500;
 		
 		private TaxiRequestState mCurrentState;
 		private ITransportServiceRequest mRequestData;
@@ -307,6 +308,10 @@ public class TaxiStation extends AbstractParticipant
 			{
 				processRequestConfirmation((TaxiRequestConfirmationMessage)input);
 			}
+			else if(input instanceof TaxiRequestCancelMessage)
+			{
+				processRequestCancel((TaxiRequestCancelMessage)input);
+			}
 			else if (input instanceof RegisterAsTaxiMessage)
 			{
 				withTaxi.handleRegisterTaxiMessage((RegisterAsTaxiMessage)input);
@@ -355,6 +360,30 @@ public class TaxiStation extends AbstractParticipant
 				{
 					taxiRequest.setAsPendingProcessing();
 				}
+				break;
+			}
+		}
+	}
+	
+	private void processRequestCancel(TaxiRequestCancelMessage requestCancel)
+	{
+		logger.info("processRequestCancel() " + requestCancel);
+		
+		for(TaxiRequest taxiRequest : mTaxiRequests)
+		{
+			if(taxiRequest.getFrom().equals(requestCancel.getFrom()))
+			{
+				if(taxiRequest.getCurrentState() == TaxiRequestState.CANCELED)
+				{
+					return;
+				}
+				
+				if(taxiRequest.isAssigned())
+				{
+					mFreeTaxiesSet.add(taxiRequest.getServicedBy());
+					taxiRequest.setServicedBy(null);
+				}
+				taxiRequest.setAsCanceled();
 				break;
 			}
 		}

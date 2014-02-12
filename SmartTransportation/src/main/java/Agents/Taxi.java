@@ -45,7 +45,6 @@ public class Taxi extends AbstractParticipant
 	
 	private List<Location> mPathToTravel;
 	
-	@Inject
 	private CityMap mCityMap;
 	
 	public enum Status
@@ -58,9 +57,15 @@ public class Taxi extends AbstractParticipant
 		BROKEN
 	}
 	
-	public Taxi(UUID id, String name, Location location, NetworkAddress taxiStationNetworkAddress) 
+	public Taxi(UUID id, String name, CityMap cityMap, Location location, NetworkAddress taxiStationNetworkAddress) 
 	{
 		super(id, name);
+		
+		assert(cityMap != null);
+		assert(location != null);
+		assert(taxiStationNetworkAddress != null);
+		
+		mCityMap = cityMap;
 		mCurrentLocation = location;
 		mCurrentStatus = Status.AVAILABLE;
 		mDistanceTraveled = 0;

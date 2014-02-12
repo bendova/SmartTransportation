@@ -27,6 +27,8 @@ import agents.Mediator;
 import agents.Taxi;
 import agents.TaxiStation;
 import agents.User;
+import agents.User.TransportMethodSpeed;
+import agents.User.TransportPreference;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -56,8 +58,11 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	public int areaSize;
 	
 	private int mUsersCount;
+	private boolean mIsWalkingEnabled;
+	private boolean mAreTaxiesEnabled;
 	private int mTaxiStationsCount;
 	private int mTaxiesCount;
+	private boolean mAreBusesEnabled;
 	private int mBusesCount;
 	private int mBusRoutesCount;
 	private TransportPreferenceAllocation mTransportPrefAllocation;
@@ -83,19 +88,19 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	public enum TimeConstraint
 	{
-		CONSTRAINT_1(2, "x2"),
-		CONSTRAINT_2(3, "x3"),
-		CONSTRAINT_3(5, "x5"),
-		CONSTRAINT_4(10, "x10");
+		CONSTRAINT_1(5, "x5"),
+		CONSTRAINT_2(7, "x7"),
+		CONSTRAINT_3(11, "x11"),
+		CONSTRAINT_4(23, "x23");
 		
-		private double mValue;
+		private int mValue;
 		private String mDescription;
-		private TimeConstraint(double value, String description)
+		private TimeConstraint(int value, String description)
 		{
 			mValue = value;
 			mDescription = description;
 		}
-		public double getValue()
+		public int getValue()
 		{
 			return mValue;
 		}
@@ -115,7 +120,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private int mNextUserIndex = 0;
 	private List<Taxi> mTaxies;
-	
+	private double mMaxSpeed;
 	private static List<AgentData> mAgentsData = new LinkedList<AgentData>();
 	
 	private SimulationGUI mGUI;
@@ -192,13 +197,18 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	private void initParameters()
 	{
 		SimulationConfiguration config = mGUI.getSimulationConfiguration();
-		mUsersCount = config.getUsersCount();
-		mTaxiStationsCount = config.getTaxiesCount();
-		mTaxiesCount = config.getTaxiesCount();
-		mBusesCount = config.getBusesCount();
-		mBusRoutesCount = config.getBusRoutesCount();
-		mTransportPrefAllocation = TransportPreferenceAllocation.values()[config.getTransportAllocationIndex()];
-		mTravelTimeConstraint = TimeConstraint.values()[config.getTimeConstraintIndex()];
+		mUsersCount 		= config.getUsersCount();
+		mIsWalkingEnabled 	= config.isWalkingEnabled();
+		mAreTaxiesEnabled 	= config.areTaxiesEnabled();
+		mTaxiStationsCount 	= config.getTaxiStationsCount();
+		mTaxiesCount 		= config.getTaxiesCount();
+		mAreBusesEnabled 	= config.areBusesEnabled();
+		mBusesCount 		= config.getBusesCount();
+		mBusRoutesCount 	= config.getBusRoutesCount();
+		mTransportPrefAllocation 	= TransportPreferenceAllocation.values()[config.getTransportAllocationIndex()];
+		mTravelTimeConstraint 		= TimeConstraint.values()[config.getTimeConstraintIndex()];
+		
+		mMaxSpeed = getMaximumSpeed();
 	}
 	
 	private void addMediator(Scenario s)
@@ -214,8 +224,15 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		for(int i = 0; i < mUsersCount; ++i)
 		{
-			User newUser = new User(Random.randomUUID(), "User"+(mNextUserIndex++), 
-					getRandomLocation(), getRandomLocation(), mMediatorNetworkAddress);
+			Location startLocation = getRandomLocation();
+			Location destination = getRandomLocation();
+			double timeConstraint = getTimeConstraintForPath(startLocation, destination);
+			User newUser = new User(Random.randomUUID(), "User"+(mNextUserIndex++), mCityMap,
+					startLocation, destination, timeConstraint, mMediatorNetworkAddress, 
+					getTransportPreference());
+			newUser.enableWalking(mIsWalkingEnabled);
+			newUser.enableBusUse(mAreBusesEnabled);
+			newUser.enableTaxiUse(mAreTaxiesEnabled);
 			s.addParticipant(newUser);
 			session.insert(newUser);
 		}
@@ -225,27 +242,33 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		for(int i = 0; i < mTaxiStationsCount; ++i)
+		if(mAreTaxiesEnabled)
 		{
-			String stationName = "TaxiStation"+i;
-			TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
-					stationName, getRandomLocation(), mMediatorNetworkAddress);
-			s.addParticipant(taxiStation);
-			addTaxies(s, taxiStation.getNetworkAddress(), stationName);
+			for(int i = 0; i < mTaxiStationsCount; ++i)
+			{
+				String stationName = "TaxiStation"+i;
+				TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
+						stationName, getRandomLocation(), mMediatorNetworkAddress);
+				s.addParticipant(taxiStation);
+				addTaxies(s, taxiStation.getNetworkAddress(), stationName);
+			}
 		}
 	}
 	
 	private void addTaxies(Scenario s, NetworkAddress taxiStationNetworkAddress, 
 			String taxiStationName)
 	{
-		for(int i = 0; i < mTaxiesCount; ++i)
+		if(mAreTaxiesEnabled)
 		{
-			String taxiName = taxiStationName + "_TaxiCab"+i;
-			Taxi newTaxi = new Taxi(Random.randomUUID(), taxiName, getRandomLocation(),
-					taxiStationNetworkAddress);
-			s.addParticipant(newTaxi);
-			session.insert(newTaxi);
-			mTaxies.add(newTaxi);
+			for(int i = 0; i < mTaxiesCount; ++i)
+			{
+				String taxiName = taxiStationName + "_TaxiCab"+i;
+				Taxi newTaxi = new Taxi(Random.randomUUID(), taxiName, mCityMap,
+						getRandomLocation(), taxiStationNetworkAddress);
+				s.addParticipant(newTaxi);
+				session.insert(newTaxi);
+				mTaxies.add(newTaxi);
+			}
 		}
 	}
 	
@@ -253,38 +276,31 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		assert(mMediatorNetworkAddress != null);
 		
-		String busStationName = "BusStation";
-		BusStation busStation = new BusStation(Random.randomUUID(), busStationName, 
-				getRandomLocation(), mMediatorNetworkAddress);
-		busStation.setBusRoute(mBusStops);
-		s.addParticipant(busStation);
-		addBuses(s, busStation.getNetworkAddress(), busStationName);
+		if(mAreBusesEnabled)
+		{
+			String busStationName = "BusStation";
+			BusStation busStation = new BusStation(Random.randomUUID(), busStationName, 
+					mCityMap, getRandomLocation(), mMediatorNetworkAddress);
+			busStation.setBusRoute(mBusStops);
+			s.addParticipant(busStation);
+			addBuses(s, busStation.getNetworkAddress(), busStationName);
+		}
 	}
 	
 	private void addBuses(Scenario s, NetworkAddress busStationAddress, String busStationName)
 	{
-		for(int i = 0; i < mBusesCount; ++i)
+		if(mAreBusesEnabled)
 		{
-			String name = busStationName + "_Bus" + i;
-			Bus bus = new Bus(Random.randomUUID(), name, getRandomLocation(), 
-					busStationAddress);
-			s.addParticipant(bus);
+			for(int i = 0; i < mBusesCount; ++i)
+			{
+				String name = busStationName + "_Bus" + i;
+				Bus bus = new Bus(Random.randomUUID(), name, mCityMap, getRandomLocation(), 
+						busStationAddress);
+				s.addParticipant(bus);
+			}
 		}
 	}
 	
-	private Location getRandomLocation()
-	{
-		int initialX = Random.randomInt(areaSize);
-		int initialY = Random.randomInt(areaSize);
-		while(mCityMap.isValidLocation(initialX, initialY) == false)
-		{
-			initialX = Random.randomInt(areaSize);
-			initialY = Random.randomInt(areaSize);
-		}
-		
-		return new Location(initialX, initialY);
-	}
-
 	@Override
 	public void incrementTime() 
 	{
@@ -360,6 +376,76 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		assert(locations != null);
 		
 		mAgentsData.add(new AgentData(AgentType.BUS, agentName, locations));
+	}
+	
+	private Location getRandomLocation()
+	{
+		int initialX = Random.randomInt(areaSize);
+		int initialY = Random.randomInt(areaSize);
+		while(mCityMap.isValidLocation(initialX, initialY) == false)
+		{
+			initialX = Random.randomInt(areaSize);
+			initialY = Random.randomInt(areaSize);
+		}
+		
+		return new Location(initialX, initialY);
+	}
+
+	private double getTimeConstraintForPath(Location start, Location end)
+	{
+		List<Location> path = mCityMap.getPath(start, end);
+		double constraint = Math.ceil((double)path.size() / mMaxSpeed);
+		return constraint * mTravelTimeConstraint.getValue();
+	}
+	
+	private int getMaximumSpeed()
+	{
+		int taxiSpeed = Integer.MAX_VALUE;
+		if(mAreTaxiesEnabled)
+		{
+			taxiSpeed = TransportMethodSpeed.TAXI_SPEED.getSpeed();
+		}
+		int busSpeed = Integer.MAX_VALUE;
+		if(mAreBusesEnabled)
+		{
+			busSpeed = TransportMethodSpeed.BUS_SPEED.getSpeed();
+		}
+		int walkingSpeed = Integer.MAX_VALUE;
+		if(mIsWalkingEnabled)
+		{
+			walkingSpeed = TransportMethodSpeed.WALKING_SPEED.getSpeed();
+		}
+		if((taxiSpeed >= busSpeed) && (taxiSpeed >= walkingSpeed))
+		{
+			return taxiSpeed;
+		}
+		else if ((busSpeed > taxiSpeed) && (busSpeed >= walkingSpeed))
+		{
+			return busSpeed;
+		}
+		else
+		{
+			return walkingSpeed;
+		}
+	}
+	
+	private TransportPreference getTransportPreference()
+	{
+		switch (mTransportPrefAllocation) 
+		{
+		case RANDOM:
+			TransportPreference[] values = TransportPreference.values();
+			return values[Random.randomInt(values.length)];
+		case ALL_PREFER_BUS:
+			return TransportPreference.BUS_PREFERENCE;
+		case ALL_PREFER_TAXI:
+			return TransportPreference.TAXI_PREFERENCE;
+		case ALL_PREFER_WALKING:
+			return TransportPreference.WALKING_PREFERENCE;
+		default:
+			assert(false) : "getTransportPreference() Allocation method not handled " + mTransportPrefAllocation;
+			return null;
+		}
 	}
 	
 	/*	

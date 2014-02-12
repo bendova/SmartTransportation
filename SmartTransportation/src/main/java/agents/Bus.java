@@ -70,12 +70,17 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private List<BoardBusRequestMessage> mBoardRequests;
 	private List<UnBoardBusRequestMessage> mUnBoardRequests;
 	
-	@Inject
 	private CityMap mCityMap;
 	
-	public Bus(UUID id, String name, Location location, NetworkAddress busStationAddress) 
-	{
+	public Bus(UUID id, String name, CityMap cityMap, Location location, NetworkAddress busStationAddress) 
+	{		
 		super(id, name);
+		
+		assert(cityMap != null);
+		assert(location != null);
+		assert(busStationAddress != null);
+		
+		mCityMap = cityMap;
 		mCurrentLocation = location;
 		mBusStationAddress = busStationAddress;
 		

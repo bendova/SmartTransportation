@@ -35,7 +35,7 @@
                       </font>
                     </Label>
                     <Label id="timeStepDurationTF" text="Time step duration (ms):" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="150" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="200" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <Label text="Pixels per Area point:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                     <TextField fx:id="pixelsPerAreaPointTF" prefWidth="200.0" text="30" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   </children>
@@ -146,7 +146,7 @@
                     <Label text="Buses count:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                     <TextField fx:id="busesCountTF" prefWidth="200.0" text="1" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                     <Label text="Bus Routes count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <TextField fx:id="busRoutesCountTF" prefWidth="200.0" text="1" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField fx:id="busRoutesCountTF" prefWidth="200.0" text="2" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                   </children>
                   <columnConstraints>
                     <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />

@@ -18,6 +18,8 @@ import conversations.userTaxi.messages.RequestDestinationMessage;
 import conversations.userTaxi.messages.TakeMeToDestinationMessage;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
+import dataStores.SimulationDataStore;
+import dataStores.TaxiDataStore;
 import SmartTransportation.Simulation;
 import map.CityMap;
 import uk.ac.imperial.presage2.core.environment.*;
@@ -38,7 +40,7 @@ public class Taxi extends AbstractParticipant
 	private int mDistanceTraveled;
 	private boolean mIsRevisionComplete;
 	
-	private ArrayList<Location> mTraveledLocations; 
+	private ArrayList<Location> mPathTraveled; 
 	
 	private ProtocolWithTaxiStation mWithTaxiStation;
 	private ProtocolWithUser mWithUser;
@@ -46,6 +48,7 @@ public class Taxi extends AbstractParticipant
 	private List<Location> mPathToTravel;
 	
 	private CityMap mCityMap;
+	private SimulationDataStore mSimulationDataStore;
 	
 	public enum Status
 	{
@@ -72,8 +75,14 @@ public class Taxi extends AbstractParticipant
 		mTaxiStationAddress = taxiStationNetworkAddress;
 		mIsRevisionComplete = false;
 		
-		mTraveledLocations = new ArrayList<Location>();
+		mPathTraveled = new ArrayList<Location>();
 		mPathToTravel = new ArrayList<Location>();
+	}
+	
+	public void setDataStore(SimulationDataStore dataStore) 
+	{
+		assert(dataStore != null);
+		mSimulationDataStore = dataStore;
 	}
 	
 	@Override
@@ -462,7 +471,7 @@ public class Taxi extends AbstractParticipant
 				onDestinationReached();
 			}
 		}
-		mTraveledLocations.add(currentLocation);
+		mPathTraveled.add(currentLocation);
 		
 		switch (mCurrentStatus) 
 		{
@@ -578,6 +587,8 @@ public class Taxi extends AbstractParticipant
 	@Override
 	public void onSimulationComplete()
 	{
-		Simulation.addTaxiLocations(getName(), mTraveledLocations);
+		TaxiDataStore dataStore = new TaxiDataStore(getName(), getID());
+		dataStore.setPathTraveled(mPathTraveled);
+		mSimulationDataStore.addTaxiDataStore(getID(), dataStore);
 	}
 }

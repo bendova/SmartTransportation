@@ -1,12 +1,24 @@
 package gui;
 
+import gui.AgentDataForMap.AgentType;
+import gui.XYChartWindow.XYChartWindow;
 import gui.agents.AgentNodeController;
 import gui.configurationDialog.ConfigureSimulationController;
 import gui.configurationDialog.SimulationConfiguration;
+import gui.pieChartWindow.PieChartWindow;
+import gui.tableWindow.UserTableData;
+import gui.tableWindow.UserTableWindow;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+
+import agents.User.TransportMode;
+
+import dataStores.BusDataStore;
+import dataStores.SimulationDataStore;
+import dataStores.TaxiDataStore;
+import dataStores.UserDataStore;
 
 import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TimeConstraint;
@@ -17,6 +29,7 @@ import uk.ac.imperial.presage2.util.location.Location;
 
 import javafx.animation.*;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
@@ -39,6 +52,7 @@ public class GUI extends Application implements SimulationGUI
 	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
 	private final String LOADING_DIALOG_LAYOUT 		 	= LAYOUTS_PATH + "LoadingDialog.fxml";
 	private final String MENU_BAR_LAYOUT 				= LAYOUTS_PATH + "MenuBar.fxml";
+	private final String CHARTS_MENU_LAYOUT 			= LAYOUTS_PATH + "ChartsMenu.fxml";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
@@ -47,15 +61,25 @@ public class GUI extends Application implements SimulationGUI
 	private int mTimeStepsCount = 0;
 	private Duration mTimeStepDuration = new Duration(200);
 	
-	private List<AgentData> mAgentsData = new LinkedList<AgentData>();
+	private SimulationDataStore mSimulationDataStore;
+	private List<AgentDataForMap> mAgentsDataForMap = new LinkedList<AgentDataForMap>();
 	
 	private Group mRoot;
 	private Group mMap;
-	private Pane mMenuBar;
+	private Pane mTimeLinePane;
+	private Pane mChartsMenuPane;
 	private Stage mStage;
 	private Group mAgentsGroup;
 	private ToggleButton mPlayPauseToggle;
 	private Slider mTimeLineSlider;
+	
+	// charts
+	private PieChartWindow mTransportModesUseChart;
+	private XYChartWindow mTravelTimesChart;
+	
+	private UserTableWindow mUserTableWindow;
+	
+	private List<Window> mWindowsList;
 	
 	private Timer mTimeLineTimer;
 	private ProgressDialogController mProgressDialogController;
@@ -71,11 +95,6 @@ public class GUI extends Application implements SimulationGUI
 	private AnimationState mAnimationState = AnimationState.PAUSED;
 	
 	private static GUI mInstance;
-	public static GUI getInstance()
-	{
-		return mInstance;
-	}
-	
 	private int mMapLayout[][] = {
 			{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1}, 
 			{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1}, 
@@ -100,6 +119,21 @@ public class GUI extends Application implements SimulationGUI
 			{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
 			{1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1}
 			};
+	
+	public static GUI getInstance()
+	{
+		return mInstance;
+	}
+	
+	public int[][] getMapConfiguration()
+	{
+		return mMapLayout;
+	}
+	
+	public SimulationConfiguration getSimulationConfiguration()
+	{
+		return mSimulationConfiguration;
+	}
 	
 	public static void main(String[] args)
 	{
@@ -229,23 +263,23 @@ public class GUI extends Application implements SimulationGUI
 		}, 0, (int)mTimeStepDuration.toMillis());
 		
 		mMap = loadMap();
-		mMenuBar = loadMenuBar();
-		
+		mTimeLinePane = loadTimeLine();
+		mChartsMenuPane = loadChartsMenu();
 		mAgentsGroup = new Group();
 		mAgentsGroup.getChildren().add(mMap);
-		mAgentsGroup.translateYProperty().bind(mMenuBar.heightProperty().add(10));
+		mAgentsGroup.translateYProperty().bind(mTimeLinePane.heightProperty().add(10));
 		mAgentsGroup.translateXProperty().bind(mStage.widthProperty().subtract(mMapWidth).divide(2));
-		addAgentsToScene(mAgentsGroup.getChildren());
+		addAgentsToGroup(mAgentsGroup.getChildren());
 		
 		mRoot = new Group();
-		mRoot.getChildren().add(mMenuBar);
+		mRoot.getChildren().add(mTimeLinePane);
 		mRoot.getChildren().add(mAgentsGroup);
-		
+		mRoot.getChildren().add(mChartsMenuPane);
 		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
 		mStage.setScene(scene);
 		mStage.setTitle("Smart Transportation");
 		
-//		mStage.setFullScreen(true);
+		mStage.centerOnScreen();
 		mStage.show();
 	}
 	
@@ -256,13 +290,12 @@ public class GUI extends Application implements SimulationGUI
 		Rectangle building;
 		int coordX = 0;
 		int coordY = 0;
-		for (int i = 0; i < mMapLayout.length; i++) 
+		for (int i = 0; i < mMapLayout.length; ++i) 
 		{
-			for (int j = 0; j < mMapLayout[i].length; j++) 
+			for (int j = 0; j < mMapLayout[i].length; ++j) 
 			{
 				if(mMapLayout[i][j] == 1)
 				{
-					random.nextDouble();
 					building = RectangleBuilder.create().
 							translateX(coordX).translateY(coordY).
 							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
@@ -280,9 +313,9 @@ public class GUI extends Application implements SimulationGUI
 		return map;
 	}
 	
-	private Pane loadMenuBar()
+	private Pane loadTimeLine()
 	{
-		MenuBarController controller = (MenuBarController)
+		TimeLineController controller = (TimeLineController)
 				(loadNode(MENU_BAR_LAYOUT)).getController();
 		controller.getBackground().widthProperty().bind(mStage.widthProperty());
 		mTimeLineSlider = controller.getTimeLineSlider();
@@ -310,6 +343,41 @@ public class GUI extends Application implements SimulationGUI
 		return controller.getMenuBar();
 	}
 	
+	private Pane loadChartsMenu()
+	{
+		ChartsMenuController chartsMenuController = (ChartsMenuController)
+				(loadNode(CHARTS_MENU_LAYOUT)).getController();
+		chartsMenuController.showTransportMethodsUsed.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent event) 
+			{
+				toggleWindow(mTransportModesUseChart);
+			}
+		});
+		chartsMenuController.showUserTransportResults.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent event) 
+			{
+				toggleWindow(mTravelTimesChart);
+			}
+		});
+		chartsMenuController.showUserDataTable.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent event) 
+			{
+				toggleWindow(mUserTableWindow);
+			}
+		});
+		Pane container = chartsMenuController.container;
+		container.translateXProperty().set(0);
+		container.translateYProperty().bind(
+				mStage.heightProperty().subtract(container.heightProperty()).divide(2));
+		return container;
+	}
+	
 	private Parent loadScene(String scenePath)
 	{
 		Parent rootGroup = null;
@@ -334,10 +402,10 @@ public class GUI extends Application implements SimulationGUI
 		return (Parent) loader.getController();
 	}
 	
-	private void addAgentsToScene(ObservableList<Node> childrenList)
+	private void addAgentsToGroup(ObservableList<Node> childrenList)
 	{
-		List<AgentData> userDataList = new LinkedList<AgentData>();
-		for(AgentData agentData: mAgentsData)
+		List<AgentDataForMap> userDataList = new LinkedList<AgentDataForMap>();
+		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
 			switch (agentData.getType()) 
 			{
@@ -357,7 +425,7 @@ public class GUI extends Application implements SimulationGUI
 				break;
 			}
 		}
-		for(AgentData agentData: userDataList)
+		for(AgentDataForMap agentData: userDataList)
 		{
 			Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
 			addAnimations(agentNode, agentData);
@@ -392,13 +460,13 @@ public class GUI extends Application implements SimulationGUI
 		return loader;
 	}
 	
-	private void addAnimations(final Node agentNode, AgentData agentData)
+	private void addAnimations(final Node agentNode, AgentDataForMap agentData)
 	{
 		final String agentName = agentData.getName();
 
 		SequentialTransition sequentialTransition = new SequentialTransition();
 		agentData.setAnimation(sequentialTransition);
-		ArrayList<Location> locations = agentData.getLocations();
+		List<Location> locations = agentData.getLocations();
 			
 		Location startLocation = locations.remove(0);
 		double startX = startLocation.getX();
@@ -502,7 +570,7 @@ public class GUI extends Application implements SimulationGUI
 		System.out.println("GUI::play()");
 		
 		Animation animation;
-		for(AgentData agentData: mAgentsData)
+		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
 			animation = agentData.getAnimation();
 			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
@@ -517,7 +585,7 @@ public class GUI extends Application implements SimulationGUI
 	{
 		System.out.println("GUI::pause()");
 		
-		for(AgentData agentData: mAgentsData)
+		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
 			agentData.getAnimation().pause();
 		}
@@ -529,8 +597,8 @@ public class GUI extends Application implements SimulationGUI
 		System.out.println("GUI::replay()");
 		
 		mTimeLineSlider.setValue(0);
-		mAgentsAnimatingCount = mAgentsData.size();
-		for(AgentData agentData: mAgentsData)
+		mAgentsAnimatingCount = mAgentsDataForMap.size();
+		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
 			agentData.getAnimation().playFromStart();
 		}
@@ -561,7 +629,7 @@ public class GUI extends Application implements SimulationGUI
 		}
 		mAnimationState = AnimationState.PAUSED;
 		
-		for (AgentData agentData : mAgentsData) 
+		for (AgentDataForMap agentData : mAgentsDataForMap) 
 		{
 			agentData.getAnimation().pause();
 			agentData.getAnimation().jumpTo(Duration.millis(frame * mTimeStepDuration.toMillis()));
@@ -582,20 +650,148 @@ public class GUI extends Application implements SimulationGUI
 		System.out.println("mMapHeight " + mMapHeight);
 	}
 	
-	public void setAgentsData(List<AgentData> agentsData)
+	public void setSimulationData(SimulationDataStore agentsData)
 	{
 		assert(agentsData != null);
 		
-		mAgentsData = agentsData;
+		mSimulationDataStore = agentsData;
+		initCharts();
+		initMapData();
 	}
 	
-	public int[][] getMapConfiguration()
+	private void initCharts()
 	{
-		return mMapLayout;
+		initTransportModesUseChart();
+		initTravelTimesChart();
+		initUserDataTable();
+		
+		mWindowsList = new ArrayList<Window>();
+		mWindowsList.add(mTransportModesUseChart);
+		mWindowsList.add(mTravelTimesChart);
+		mWindowsList.add(mUserTableWindow);
 	}
 	
-	public SimulationConfiguration getSimulationConfiguration()
+	private void initTransportModesUseChart()
 	{
-		return mSimulationConfiguration;
+		mTransportModesUseChart = new PieChartWindow();
+		
+		TransportMode[] transportModes = TransportMode.values();
+		int[] transportModeUse = new int[transportModes.length];
+		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
+		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			UserDataStore data = iterator.next().getValue();
+			++transportModeUse[data.getTransportMethodUsed().ordinal()];
+		}
+		Map<String, Double> pieData = new HashMap<String, Double>();
+		for (int i = 0; i < transportModeUse.length; ++i) 
+		{
+			pieData.put(transportModes[i].getName(), (double)transportModeUse[i]);
+		}
+		mTransportModesUseChart.setData(pieData);
+	}
+	
+	private void initTravelTimesChart()
+	{
+		mTravelTimesChart = new XYChartWindow();
+		TreeMap<Number, Number> chartData = new TreeMap<Number, Number>();
+		
+		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
+		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			UserDataStore data = iterator.next().getValue();
+			int deltaTravelTime = (int)(data.getTravelTime() - data.getTravelTimeTarget());
+			Number usersCount = chartData.get(deltaTravelTime);
+			if(usersCount != null)
+			{
+				chartData.put(deltaTravelTime, usersCount.intValue()+1);
+			}
+			else 
+			{
+				chartData.put(deltaTravelTime, 1);
+			}
+		}
+		
+		mTravelTimesChart.setData(chartData);
+	}
+	
+	private void initUserDataTable()
+	{
+		ObservableList<UserTableData> userTableDataList = FXCollections.observableArrayList();
+		
+		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
+		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			UserDataStore data = iterator.next().getValue();
+			
+			userTableDataList.add(new UserTableData(data.getName(), data.getID(), data.getHasReachedDestination(), 
+					data.getTravelTime(), data.getTravelTimeTarget(), data.getTransportPreference(), data.getTransportMethodUsed()));
+		}
+		
+		mUserTableWindow = new UserTableWindow();
+		mUserTableWindow.setData(userTableDataList);
+	}
+	
+	private void initMapData()
+	{
+		mAgentsDataForMap = new LinkedList<AgentDataForMap>();
+		fillUserLocations();
+		fillTaxiesLocations();
+		fillBusesLocations();
+	}
+	
+	private void fillUserLocations()
+	{
+		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
+		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			UserDataStore data = iterator.next().getValue();
+			List<Location> traveledPath = data.getPathTraveled();
+			mAgentsDataForMap.add(new AgentDataForMap(AgentType.USER, data.getName(), traveledPath));
+		}
+	}
+	
+	private void fillTaxiesLocations()
+	{
+		Map<UUID, TaxiDataStore> taxiDataStores = mSimulationDataStore.getTaxiDataStores();
+		Iterator<Map.Entry<UUID, TaxiDataStore>> iterator = taxiDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			TaxiDataStore data = iterator.next().getValue();
+			List<Location> traveledPath = data.getPathTraveled();
+			mAgentsDataForMap.add(new AgentDataForMap(AgentType.TAXI_CAB, data.getName(), traveledPath));
+		}
+	}
+	
+	private void fillBusesLocations()
+	{
+		Map<UUID, BusDataStore> busDataStores = mSimulationDataStore.getBusDataStores();
+		Iterator<Map.Entry<UUID, BusDataStore>> iterator = busDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			BusDataStore data = iterator.next().getValue();
+			List<Location> traveledPath = data.getPathTraveled();
+			mAgentsDataForMap.add(new AgentDataForMap(AgentType.BUS, data.getName(), traveledPath));
+		}
+	}
+
+	private void toggleWindow(Window window)
+	{
+		if(window.isIconified())
+		{
+			window.maximize();
+		}
+		else if(window.isShowing())
+		{
+			window.close();
+		}
+		else 
+		{
+			window.show();
+		}
 	}
 }

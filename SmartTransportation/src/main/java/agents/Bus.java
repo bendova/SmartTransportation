@@ -35,6 +35,8 @@ import conversations.userBus.messages.BusUnBoardingSuccessful;
 import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
 import conversations.userBus.messages.UnBoardBusRequestMessage;
 import conversations.userBus.messages.messageData.BusStopArrivalNotification;
+import dataStores.BusDataStore;
+import dataStores.SimulationDataStore;
 
 public class Bus extends AbstractParticipant implements HasPerceptionRange
 {
@@ -54,7 +56,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private List<Location> mBusStops;
 	private List<Location> mPathToTravel;
 	private int mCurrentPathIndex;
-	private ArrayList<Location> mTraveledLocations; 
+	private ArrayList<Location> mPathTraveled; 
 	private IBusRoute mBusRoute;
 	
 	private final static int MAX_PASSANGERS_COUNT = 2;
@@ -71,6 +73,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private List<UnBoardBusRequestMessage> mUnBoardRequests;
 	
 	private CityMap mCityMap;
+	private SimulationDataStore mSimulationDataStore;
 	
 	public Bus(UUID id, String name, CityMap cityMap, Location location, NetworkAddress busStationAddress) 
 	{		
@@ -85,12 +88,18 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mBusStationAddress = busStationAddress;
 		
 		mCurrentState = State.IDLE;
-		mTraveledLocations = new ArrayList<Location>();
+		mPathTraveled = new ArrayList<Location>();
 		mPathToTravel = new ArrayList<Location>();
 		mPassangers = new HashMap<NetworkAddress, UUID>();
 		
 		mBoardRequests = new LinkedList<BoardBusRequestMessage>();
 		mUnBoardRequests = new LinkedList<UnBoardBusRequestMessage>();
+	}
+	
+	public void setDataStore(SimulationDataStore dataStore) 
+	{
+		assert(dataStore != null);
+		mSimulationDataStore = dataStore;
 	}
 	
 	@Override
@@ -149,13 +158,13 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	
 	private void processMessage(BusRouteMessage routeMessage)
 	{
-		assert(routeMessage.getData().getBusStops().isEmpty() == false) : 
+		assert(routeMessage.getData().getBusStopsLocations().isEmpty() == false) : 
 			"Bus::processMessage() The bus stops list is empty!";
 		
 		if(routeMessage.getFrom().equals(mBusStationAddress))
 		{
 			mBusRoute = routeMessage.getData();
-			mBusStops = mBusRoute.getBusStops();
+			mBusStops = mBusRoute.getBusStopsLocations();
 			travelToFistBusStop();
 		}
 		else 
@@ -376,7 +385,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 			
 			mCurrentLocation = currentLocation;
 		}
-		mTraveledLocations.add(currentLocation);
+		mPathTraveled.add(currentLocation);
 	}
 	
 	private void moveTo(Location targetLocation)
@@ -405,7 +414,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	
 	private boolean isBusStop(Location location)
 	{
-		List<Location> busStops = mBusRoute.getBusStops();
+		List<Location> busStops = mBusRoute.getBusStopsLocations();
 		for (Location busStop : busStops) 
 		{
 			if(busStop.equals(location))
@@ -419,7 +428,9 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	@Override
 	public void onSimulationComplete()
 	{
-		Simulation.addBusLocations(getName(), mTraveledLocations);
+		BusDataStore dataStore = new BusDataStore(getName(), getID());
+		dataStore.setPathTraveled(mPathTraveled);
+		mSimulationDataStore.addBusDataStore(getID(), dataStore);
 	}
 
 	@Override

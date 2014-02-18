@@ -1,11 +1,8 @@
 package agents;
 
 import java.util.*;
-import java.util.Map.Entry;
 
 import map.CityMap;
-
-import com.google.inject.Inject;
 
 import conversations.busStationBus.BusRouteMessage;
 import conversations.busStationBus.RegisterAsBusMessage;
@@ -25,15 +22,16 @@ import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 
 public class BusStation extends AbstractParticipant
-{
+{	
 	private Location mLocation;
 	private NetworkAddress mMediatorAddress;
 	private Map<NetworkAddress, UUID> mBusesMap;
 	private List<NetworkAddress> mFreeBuses;
-	private List<Location> mBusStops;
-	private Map<Location, List<Location>> mPathsBetweenBusStops;
+	
+	private List<List<Location>> mBusRoutesList;
+	private Map<UUID, BusRoute> mBusRoutes;
+	
 	private ParticipantLocationService mLocationService;
-	private UUID mBusRouteID;
 	
 	private CityMap mCityMap;
 	
@@ -51,6 +49,9 @@ public class BusStation extends AbstractParticipant
 		
 		mBusesMap = new HashMap<NetworkAddress, UUID>();
 		mFreeBuses = new LinkedList<NetworkAddress>();
+		
+		mBusRoutesList = new ArrayList<List<Location>>();
+		mBusRoutes = new HashMap<UUID, BusRoute>();
 	}
 	
 	public NetworkAddress getNetworkAddress() 
@@ -66,33 +67,12 @@ public class BusStation extends AbstractParticipant
 		return ss;
 	}
 	
-	public void setBusRoute(List<Location> busStops)
+	public void addBusRoute(List<Location> busStops)
 	{
 		assert(busStops != null) : "BusStation::setBusRoute() busStops is null!";
 		assert(busStops.isEmpty() == false) : "BusStation::setBusRoute() busStops list is empty!";
 		
-		mBusStops = busStops;
-		mBusRouteID = Random.randomUUID();
-	}
-	
-	private void initPathsBetweenBusStops()
-	{
-		mPathsBetweenBusStops = new HashMap<Location, List<Location>>();
-		
-		int busStopsCount = mBusStops.size();
-		Location currentBusStop = mBusStops.get(0);
-		for(int i = 1; i < busStopsCount; ++i)
-		{
-			Location nextBusStopLocation = mBusStops.get(i);
-			mPathsBetweenBusStops.put(currentBusStop, 
-					mCityMap.getPath(currentBusStop, nextBusStopLocation));
-			currentBusStop = nextBusStopLocation;
-		}
-		
-		// the route is circular
-		Location nextBusStopLocation = mBusStops.get(0);
-		mPathsBetweenBusStops.put(currentBusStop, 
-				mCityMap.getPath(currentBusStop, nextBusStopLocation));
+		mBusRoutesList.add(busStops);
 	}
 	
 	@Override
@@ -103,7 +83,41 @@ public class BusStation extends AbstractParticipant
 		registerAsBusServiceProvider();
 		initializeLocationService();
 		//initializeProtocols();
-		initPathsBetweenBusStops();
+		initBusRoutes();
+	}
+	
+	private void initBusRoutes()
+	{
+		Iterator<List<Location>> iterator = mBusRoutesList.iterator();
+		while(iterator.hasNext())
+		{
+			UUID busRouteID = Random.randomUUID();
+			
+			HashMap<Location, List<Location>> pathsBetweenBusStops = new HashMap<Location, List<Location>>();
+			List<Location> pathToTravel = new ArrayList<Location>();
+			
+			List<Location> busStopsList = iterator.next();
+			int busStopsCount = busStopsList.size();
+			Location currentBusStop = busStopsList.get(0);
+			List<Location> pathList;
+			for(int i = 1; i < busStopsCount; ++i)
+			{	
+				Location nextBusStopLocation = busStopsList.get(i);
+				pathList = mCityMap.getPath(currentBusStop, nextBusStopLocation);
+				pathsBetweenBusStops.put(currentBusStop, pathList);
+				pathToTravel.addAll(pathList);
+				currentBusStop = nextBusStopLocation;
+			}
+			
+			// the route is circular
+			Location nextBusStopLocation = busStopsList.get(0);
+			pathList = mCityMap.getPath(currentBusStop, nextBusStopLocation);
+			pathsBetweenBusStops.put(currentBusStop, pathList);
+			pathToTravel.addAll(pathList);
+			
+			BusRoute busRoute = new BusRoute(busRouteID, busStopsList, pathToTravel, pathsBetweenBusStops);
+			mBusRoutes.put(busRouteID, busRoute);
+		}
 	}
 	
 	private void registerAsBusServiceProvider()
@@ -151,46 +165,99 @@ public class BusStation extends AbstractParticipant
 			return;
 		}
 		
-		// find nearest bus station to start location
-		Location start = msg.getData().getStartLocation();
-		Location startBusStop = getNearestBusStopTo(start);
+		List<Location> selectedStartTravelPath = null;
+		List<Location> selectedDestinationTravelPath = null;
+		UUID selectedBusRouteID = null;
+		int minBusTravelDistance = Integer.MAX_VALUE;
 		
-		// find nearest bus station to destination
-		Location destination = msg.getData().getDestination();
-		Location finalBusStop = getNearestBusStopTo(destination);
-		
-		if(startBusStop.equals(finalBusStop) == false)
+		Iterator<Map.Entry<UUID, BusRoute>> busRouteIterator = mBusRoutes.entrySet().iterator();
+		while(busRouteIterator.hasNext())
 		{
-			List<Location> startTravelPath = getPath(start, startBusStop);
-			List<Location> destinationTravelPath = getPath(destination, finalBusStop); 
+			BusRoute busRoute = busRouteIterator.next().getValue();
+			UUID busRouteID = busRoute.getBusRouteID();
+			// find nearest bus station to start location
+			Location start = msg.getData().getStartLocation();
+			Location startBusStopLocation = getNearestBusStopLocationTo(busRouteID, start);
+			
+			// find nearest bus station to destination
+			Location destination = msg.getData().getDestination();
+			Location finalBusStopLocation = getNearestBusStopLocationTo(busRouteID, destination);
+			
+			if(startBusStopLocation.equals(finalBusStopLocation))
+			{
+				finalBusStopLocation = getNextBusStopAfter(busRouteID, finalBusStopLocation);
+			}
+			List<Location> startTravelPath = getPath(busRouteID, start, startBusStopLocation);
+			List<Location> destinationTravelPath = getPath(busRouteID, destination, finalBusStopLocation); 
 			Collections.reverse(destinationTravelPath);
 			
-			int busTravelDistance = getBusTravelDistanceBetween(startBusStop, finalBusStop);
+			int busTravelDistance = getBusTravelDistanceBetween(busRouteID, 
+					startBusStopLocation, finalBusStopLocation);
+			
+			logger.info("replyToRequest() With the bus route " + busRouteID + " the distance is " + busTravelDistance);
+			
+			if(busTravelDistance < minBusTravelDistance)
+			{
+				selectedStartTravelPath = startTravelPath;
+				selectedDestinationTravelPath = destinationTravelPath;
+				selectedBusRouteID = busRouteID;
+				minBusTravelDistance = busTravelDistance;
+			}
+		}
+		
+		if(selectedBusRouteID != null)
+		{
+			logger.info("replyToRequest() Replying to " + msg.getFrom() + " with the bus route " + selectedBusRouteID);
 			
 			// reply to the user with the travel paths
-			BusTravelPlan travelPlan = new BusTravelPlan(startTravelPath, destinationTravelPath, 
-					busTravelDistance, mBusRouteID);
+			BusTravelPlan travelPlan = new BusTravelPlan(selectedStartTravelPath, selectedDestinationTravelPath, 
+					minBusTravelDistance, selectedBusRouteID);
 			BusTravelPlanMessage travelPlanMsg = new BusTravelPlanMessage(travelPlan, 
 					network.getAddress(), msg.getFrom());
 			network.sendMessage(travelPlanMsg);
 		}
 	}
 	
-	private int getBusTravelDistanceBetween(Location startBusStop, Location finalBusStop)
+	private Location getNearestBusStopLocationTo(UUID busRouteID, Location location)
 	{
+		Location nearestBusStopLocation = null;
+		double minDistance = Double.MAX_VALUE;
+		
+		BusRoute busRoute = mBusRoutes.get(busRouteID);
+		List<Location> busStops = busRoute.getBusStopsLocations();
+		for (Iterator<Location> iterator = busStops.iterator(); iterator.hasNext();) 
+		{
+			Location busStop = iterator.next();
+			double distance = busStop.distanceTo(location);
+			if(distance < minDistance)
+			{
+				nearestBusStopLocation = busStop;
+				minDistance = distance;
+			}
+		}
+		return nearestBusStopLocation;
+	}
+	
+	private int getBusTravelDistanceBetween(UUID busRouteID, Location startBusStop, Location finalBusStop)
+	{
+		Map<Location, List<Location>> pathsBetweenBusStops = mBusRoutes.get(busRouteID).getPathsBetweenBusStops();
+		
 		int totalDistance = 0;
 		while(startBusStop.equals(finalBusStop) == false)
 		{
-			totalDistance += mPathsBetweenBusStops.get(startBusStop).size();
-			startBusStop = getNextBusStopAfter(startBusStop);
+			totalDistance += pathsBetweenBusStops.get(startBusStop).size();
+			startBusStop = getNextBusStopAfter(busRouteID, startBusStop);
 		}
 		return totalDistance;
 	}
 	
-	private Location getNextBusStopAfter(Location busStop)
+	private Location getNextBusStopAfter(UUID busRouteID, Location busStop)
 	{
 		Location nextBusStop = null;
-		for (Iterator<Location> iterator = mBusStops.iterator(); iterator.hasNext();) 
+		
+		BusRoute busRoute = mBusRoutes.get(busRouteID);
+		List<Location> busStopsLocations = busRoute.getBusStopsLocations();
+		for (Iterator<Location> iterator = busStopsLocations.iterator(); iterator.hasNext();) 
 		{
 			nextBusStop = iterator.next();
 			if(nextBusStop.equals(busStop))
@@ -201,7 +268,7 @@ public class BusStation extends AbstractParticipant
 				}
 				else 
 				{
-					nextBusStop = mBusStops.get(0);
+					nextBusStop = busStopsLocations.get(0);
 				}
 				break;
 			}
@@ -226,49 +293,32 @@ public class BusStation extends AbstractParticipant
 	
 	private void dispatchBuses()
 	{
-		if(mFreeBuses.isEmpty() == false)
+		Set<Map.Entry<UUID, BusRoute>> busRoutes = mBusRoutes.entrySet();
+		if((mFreeBuses.isEmpty() == false) && (busRoutes.size() > 0))
 		{
-			for (Iterator<NetworkAddress> iterator = mFreeBuses.iterator(); 
-					iterator.hasNext();) 
+			Iterator<Map.Entry<UUID, BusRoute>> iteratorBusRoutes = busRoutes.iterator();
+			for (Iterator<NetworkAddress> iteratorBuses = mFreeBuses.iterator(); 
+					iteratorBuses.hasNext();) 
 			{
-				sendRouteToBus(iterator.next());
-				//Collections.reverse(mBusStops);
-				iterator.remove();
+				if(iteratorBusRoutes.hasNext() == false)
+				{
+					iteratorBusRoutes = busRoutes.iterator();
+				}
+				UUID busRouteID = iteratorBusRoutes.next().getKey(); 
+				sendRouteToBus(iteratorBuses.next(), busRouteID);
+				iteratorBuses.remove();
 			}
 		}
 	}
 	
-	private void sendRouteToBus(NetworkAddress busAddress)
+	private void sendRouteToBus(NetworkAddress busAddress, UUID busRouteID)
 	{
-		List<Location> pathToTravel = new ArrayList<Location>();
-		for(Location busStop: mBusStops)
-		{
-			pathToTravel.addAll(mPathsBetweenBusStops.get(busStop));
-		}
-		
-		BusRoute busRoute = new BusRoute(new ArrayList<Location>(mBusStops), pathToTravel, mBusRouteID);
 		BusRouteMessage routeMsg = new BusRouteMessage(network.getAddress(), 
-				busAddress, busRoute); 
+				busAddress, mBusRoutes.get(busRouteID)); 
 		network.sendMessage(routeMsg);
 	}
-	
-	private Location getNearestBusStopTo(Location location)
-	{
-		Location targetBusStop = null;
-		double minDistance = Double.MAX_VALUE;
-		for (Iterator<Location> iterator = mBusStops.iterator(); iterator.hasNext();) 
-		{
-			Location busStop = iterator.next();
-			if(busStop.distanceTo(location) < minDistance)
-			{
-				targetBusStop = busStop;
-				minDistance = busStop.distanceTo(location);
-			}
-		}
-		return targetBusStop;
-	}
-	
-	public List<Location> getPath(Location start, Location destination)
+
+	public List<Location> getPath(UUID busRouteID, Location start, Location destination)
 	{
 		Set<Location> evaluatedLocations = new HashSet<Location>();
 		Map<Location, Location> traveledPaths = new HashMap<Location, Location>();
@@ -300,7 +350,7 @@ public class BusStation extends AbstractParticipant
 			}
 			
 			// check if our destination is still the best one
-			Location bestBusStop = getNearestBusStopTo(currentLocation);
+			Location bestBusStop = getNearestBusStopLocationTo(busRouteID, currentLocation).getLocation();
 			if(bestBusStop.equals(destination) == false)
 			{
 				// change of plans

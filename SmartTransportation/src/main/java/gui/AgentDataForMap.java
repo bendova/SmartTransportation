@@ -1,13 +1,13 @@
 package gui;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import javafx.animation.Animation;
 import javafx.scene.Node;
 
 import uk.ac.imperial.presage2.util.location.Location;
 
-public class AgentData 
+public class AgentDataForMap 
 {
 	public enum AgentType
 	{
@@ -22,13 +22,13 @@ public class AgentData
 	private final String BUS_SHAPE_LAYOUT = LAYOUTS_PATH + "BusShape.fxml";
 	
 	private String mName;
-	private ArrayList<Location> mLocations;
+	private List<Location> mLocations;
 	private Node mNode;
 	private Animation mAnimation;
 	private String mLayoutPath;
 	private AgentType mAgentType;
 	
-	public AgentData(AgentType type, String name, ArrayList<Location> locations)
+	public AgentDataForMap(AgentType type, String name, List<Location> locations)
 	{
 		assert(name != null);
 		assert(locations != null);
@@ -57,7 +57,7 @@ public class AgentData
 		return mName; 
 	}
 	
-	public ArrayList<Location> getLocations() 
+	public List<Location> getLocations() 
 	{
 		return mLocations;
 	}

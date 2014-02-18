@@ -2,11 +2,12 @@ package gui;
 
 import gui.configurationDialog.SimulationConfiguration;
 
-import java.util.List;
+import dataStores.SimulationDataStore;
 
-public interface SimulationGUI {
+public interface SimulationGUI 
+{
 	void setAreaSize(int width, int height);
-	void setAgentsData(List<AgentData> agentData);
+	void setSimulationData(SimulationDataStore agentData);
 	void updateSimulationProgress(double progress);
 	SimulationConfiguration getSimulationConfiguration();
 	int[][] getMapConfiguration();

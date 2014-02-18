@@ -1,25 +1,19 @@
 package SmartTransportation;
 
-import gui.AgentData;
-import gui.AgentData.AgentType;
-import gui.GUI;
 import gui.GUIModule;
 import gui.SimulationGUI;
 import gui.configurationDialog.SimulationConfiguration;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import javafx.util.Duration;
-
 import map.CityMap;
 
 import org.drools.runtime.StatefulKnowledgeSession;
-import org.drools.runtime.rule.FactHandle;
 
 import agents.Bus;
 import agents.BusStation;
@@ -32,11 +26,9 @@ import agents.User.TransportPreference;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.sun.javafx.collections.MappingChange.Map;
 
-import uk.ac.imperial.presage2.core.IntegerTime;
-import uk.ac.imperial.presage2.core.Time;
+import dataStores.SimulationDataStore;
+
 import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
@@ -47,7 +39,6 @@ import uk.ac.imperial.presage2.util.environment.AbstractEnvironmentModule;
 import uk.ac.imperial.presage2.util.location.Location;
 import uk.ac.imperial.presage2.util.location.MoveHandler;
 import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
-import uk.ac.imperial.presage2.util.location.area.Area;
 import uk.ac.imperial.presage2.util.network.NetworkModule;
 import uk.ac.imperial.presage2.core.util.random.Random;
 
@@ -57,16 +48,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Parameter(name="areaSize")
 	public int areaSize;
 	
-	private int mUsersCount;
-	private boolean mIsWalkingEnabled;
-	private boolean mAreTaxiesEnabled;
-	private int mTaxiStationsCount;
-	private int mTaxiesCount;
-	private boolean mAreBusesEnabled;
-	private int mBusesCount;
-	private int mBusRoutesCount;
-	private TransportPreferenceAllocation mTransportPrefAllocation;
-	private TimeConstraint mTravelTimeConstraint;
 	
 	public enum TransportPreferenceAllocation
 	{
@@ -110,6 +91,17 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		}
 	}
 	
+	private int mUsersCount;
+	private boolean mIsWalkingEnabled;
+	private boolean mAreTaxiesEnabled;
+	private int mTaxiStationsCount;
+	private int mTaxiesCount;
+	private boolean mAreBusesEnabled;
+	private int mBusesCount;
+	private int mBusRoutesCount;
+	private TransportPreferenceAllocation mTransportPrefAllocation;
+	private TimeConstraint mTravelTimeConstraint;
+	
 	private static int[][] mMapConfiguration;
 	
 	public static final int DISTANCE_BETWEEN_REVISIONS = 100;
@@ -121,14 +113,15 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	private int mNextUserIndex = 0;
 	private List<Taxi> mTaxies;
 	private double mMaxSpeed;
-	private static List<AgentData> mAgentsData = new LinkedList<AgentData>();
 	
 	private SimulationGUI mGUI;
+	private SimulationDataStore mSimulationDataStore;
 	
 	@Inject
 	private CityMap mCityMap;
 	
-	private List<Location> mBusStops;
+	private List<Location> mBusRoute1;
+	private List<Location> mBusRoute2;
 	
 	private static int mSimDuration = 100;
 	
@@ -138,11 +131,16 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		mTaxies = new LinkedList<Taxi>();
 		
-		mBusStops = new ArrayList<Location>();
-		mBusStops.add(new Location(3, 5));
-		mBusStops.add(new Location(20, 5));
-		mBusStops.add(new Location(20, 16));
-		mBusStops.add(new Location(3, 16));
+		mBusRoute1 = new ArrayList<Location>();
+		mBusRoute1.add(new Location(3, 5));
+		mBusRoute1.add(new Location(20, 5));
+		mBusRoute1.add(new Location(20, 16));
+		mBusRoute1.add(new Location(3, 16));		
+		mBusRoute2 = new ArrayList<Location>();
+		mBusRoute2.add(new Location(3, 16));		
+		mBusRoute2.add(new Location(20, 16));
+		mBusRoute2.add(new Location(20, 5));
+		mBusRoute2.add(new Location(3, 5));
 	}
 	
 	@Inject
@@ -209,6 +207,9 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		mTravelTimeConstraint 		= TimeConstraint.values()[config.getTimeConstraintIndex()];
 		
 		mMaxSpeed = getMaximumSpeed();
+		
+		mSimulationDataStore = new SimulationDataStore();
+		mSimulationDataStore.setSimulationConfiguration(config);
 	}
 	
 	private void addMediator(Scenario s)
@@ -233,6 +234,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			newUser.enableWalking(mIsWalkingEnabled);
 			newUser.enableBusUse(mAreBusesEnabled);
 			newUser.enableTaxiUse(mAreTaxiesEnabled);
+			newUser.setDataStore(mSimulationDataStore);
 			s.addParticipant(newUser);
 			session.insert(newUser);
 		}
@@ -265,6 +267,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 				String taxiName = taxiStationName + "_TaxiCab"+i;
 				Taxi newTaxi = new Taxi(Random.randomUUID(), taxiName, mCityMap,
 						getRandomLocation(), taxiStationNetworkAddress);
+				newTaxi.setDataStore(mSimulationDataStore);
 				s.addParticipant(newTaxi);
 				session.insert(newTaxi);
 				mTaxies.add(newTaxi);
@@ -281,7 +284,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			String busStationName = "BusStation";
 			BusStation busStation = new BusStation(Random.randomUUID(), busStationName, 
 					mCityMap, getRandomLocation(), mMediatorNetworkAddress);
-			busStation.setBusRoute(mBusStops);
+			busStation.addBusRoute(mBusRoute1);
+			busStation.addBusRoute(mBusRoute2);			
 			s.addParticipant(busStation);
 			addBuses(s, busStation.getNetworkAddress(), busStationName);
 		}
@@ -296,6 +300,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 				String name = busStationName + "_Bus" + i;
 				Bus bus = new Bus(Random.randomUUID(), name, mCityMap, getRandomLocation(), 
 						busStationAddress);
+				bus.setDataStore(mSimulationDataStore);
 				s.addParticipant(bus);
 			}
 		}
@@ -336,46 +341,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		assert (mGUI != null) : "mGUI is null!";
 		mGUI.setAreaSize(areaSize, areaSize);
-		mGUI.setAgentsData(mAgentsData);
-	}
-	
-	public static void addTaxiLocations(String agentName, ArrayList<Location> locations)
-	{
-		//System.out.println("addLocations() " + locations);
-		assert(locations != null);
-		
-		mAgentsData.add(new AgentData(AgentType.TAXI_CAB, agentName, locations));
-	}
-	
-	public static void addUserLocations(String agentName, ArrayList<Location> locations)
-	{
-		//System.out.println("addUserLocations() " + locations);
-		assert(locations != null);
-		
-		if(locations.size() == mSimDuration)
-		{
-			mAgentsData.add(new AgentData(AgentType.USER, agentName, locations));
-		}
-		else if(locations.size() < mSimDuration)
-		{
-			// this user was spawned later
-			ArrayList<Location> filledLocations = new ArrayList<Location>();
-			int difference = mSimDuration - locations.size();
-			for(int i = 0; i < difference; ++i)
-			{
-				filledLocations.add(new Location(0, 0));
-			}
-			filledLocations.addAll(locations);
-			mAgentsData.add(new AgentData(AgentType.USER, agentName, filledLocations));
-		}
-	}
-	
-	public static void addBusLocations(String agentName, ArrayList<Location> locations)
-	{
-		//System.out.println("addUserLocations() " + locations);
-		assert(locations != null);
-		
-		mAgentsData.add(new AgentData(AgentType.BUS, agentName, locations));
+		mGUI.setSimulationData(mSimulationDataStore);
 	}
 	
 	private Location getRandomLocation()
@@ -400,17 +366,17 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private int getMaximumSpeed()
 	{
-		int taxiSpeed = Integer.MAX_VALUE;
+		int taxiSpeed = Integer.MIN_VALUE;
 		if(mAreTaxiesEnabled)
 		{
 			taxiSpeed = TransportMethodSpeed.TAXI_SPEED.getSpeed();
 		}
-		int busSpeed = Integer.MAX_VALUE;
+		int busSpeed = Integer.MIN_VALUE;
 		if(mAreBusesEnabled)
 		{
 			busSpeed = TransportMethodSpeed.BUS_SPEED.getSpeed();
 		}
-		int walkingSpeed = Integer.MAX_VALUE;
+		int walkingSpeed = Integer.MIN_VALUE;
 		if(mIsWalkingEnabled)
 		{
 			walkingSpeed = TransportMethodSpeed.WALKING_SPEED.getSpeed();

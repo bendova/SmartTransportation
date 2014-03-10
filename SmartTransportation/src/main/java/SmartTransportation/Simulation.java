@@ -21,7 +21,6 @@ import agents.Mediator;
 import agents.Taxi;
 import agents.TaxiStation;
 import agents.User;
-import agents.User.TransportMethodSpeed;
 import agents.User.TransportPreference;
 
 import com.google.inject.AbstractModule;
@@ -48,7 +47,38 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Parameter(name="areaSize")
 	public int areaSize;
 	
-	
+	public enum TransportMethodCost
+	{
+		WALKING_COST	(1),
+		BUS_COST		(1),
+		TAXI_COST		(4);
+		
+		private int mCost;
+		private TransportMethodCost(int cost)
+		{
+			mCost = cost;
+		}
+		public int getCost()
+		{
+			return mCost;
+		}
+	}
+	public enum TransportMethodSpeed
+	{
+		WALKING_SPEED	(1), 	// equivalent to 5 km/h
+		BUS_SPEED		(8),	// equivalent to 40 km/h
+		TAXI_SPEED		(10);	// equivalent to 50 km/h
+		
+		private int mSpeed;
+		private TransportMethodSpeed(int speed)
+		{
+			mSpeed = speed;
+		}
+		public int getSpeed()
+		{
+			return mSpeed;
+		}
+	}
 	public enum TransportPreferenceAllocation
 	{
 		RANDOM				("Random"),
@@ -250,7 +280,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			{
 				String stationName = "TaxiStation"+i;
 				TaxiStation taxiStation = new TaxiStation(Random.randomUUID(), 
-						stationName, getRandomLocation(), mMediatorNetworkAddress);
+						stationName, getRandomLocation(), mCityMap, mMediatorNetworkAddress);
 				s.addParticipant(taxiStation);
 				addTaxies(s, taxiStation.getNetworkAddress(), stationName);
 			}

@@ -3,6 +3,11 @@ package agents;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import SmartTransportation.Simulation.TransportMethodCost;
+import SmartTransportation.Simulation.TransportMethodSpeed;
+
+import map.CityMap;
+
 import conversations.protocols.taxistation.ProtocolWithTaxi;
 import conversations.taxiStationMediator.RegisterAsTaxiStationMessage;
 import conversations.taxiStationTaxi.actions.OnOrderCompleteAction;
@@ -20,6 +25,8 @@ import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiReplyMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
+import conversations.userTaxi.messages.messageData.ConfirmationRequest;
+import conversations.userTaxi.messages.messageData.IConfirmationRequest;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
 import conversations.userTaxi.messages.messageData.TaxiServiceReply;
@@ -192,6 +199,7 @@ public class TaxiStation extends AbstractParticipant
 	}
 	
 	private Location mLocation;
+	private CityMap mCityMap;
 	private NetworkAddress mMediatorAddress;
 	private Queue<TaxiRequest> mTaxiRequests;
 	private Map<NetworkAddress, UUID> mTaxiesMap;
@@ -199,10 +207,11 @@ public class TaxiStation extends AbstractParticipant
 	private ParticipantLocationService mLocationService;
 	private ProtocolWithTaxi withTaxi;
 	
-	public TaxiStation(UUID id, String name, Location location, NetworkAddress mediatorNetworkAddress) 
+	public TaxiStation(UUID id, String name, Location location, CityMap cityMap, NetworkAddress mediatorNetworkAddress) 
 	{
 		super(id, name);
 		mLocation = location;
+		mCityMap = cityMap;
 		mMediatorAddress = mediatorNetworkAddress;
 		
 		mTaxiesMap = new HashMap<NetworkAddress, UUID>();
@@ -608,8 +617,7 @@ public class TaxiStation extends AbstractParticipant
 			}
 			else
 			{
-				requestConfirmationFromUser(assignedRequest.getFrom(), 
-					mLocationService.getAgentLocation(taxiID));
+				requestConfirmationFromUser(assignedRequest, taxiLocation);
 				assignedRequest.setAsAwaitingConfirmation();
 			}
 			iterator.remove();
@@ -663,13 +671,30 @@ public class TaxiStation extends AbstractParticipant
 		taxiRequest.setAsBeingServiced();
 	}
 		
-	private void requestConfirmationFromUser(NetworkAddress fromUser, Location taxiLocation)
+	private void requestConfirmationFromUser(TaxiRequest taxiRequest, Location taxiLocation)
 	{
-		logger.info("RequestConfirmationFromUser() fromUser " + fromUser);
+		logger.info("RequestConfirmationFromUser() fromUser " + taxiRequest.getFrom());
 		
-		RequestTaxiConfirmationMessage message = new RequestTaxiConfirmationMessage(taxiLocation,
-				network.getAddress(), fromUser);
+		IConfirmationRequest confirmationRequest = createTaxiConfirmationRequest(taxiRequest.getRequestData(), 
+				taxiLocation);
+		
+		RequestTaxiConfirmationMessage message = new RequestTaxiConfirmationMessage(confirmationRequest,
+				network.getAddress(), taxiRequest.getFrom());
 		network.sendMessage(message);
+	}
+	
+	private IConfirmationRequest createTaxiConfirmationRequest(ITransportServiceRequest taxiRequest, 
+			Location taxiLocation)
+	{
+		int travelToUserDistance = mCityMap.getPath(taxiLocation, taxiRequest.getStartLocation()).size();
+		int travelToDestinationDistance = mCityMap.getPath(taxiRequest.getStartLocation(), 
+				taxiRequest.getDestination()).size();
+		double totalTravelTime = (double)(travelToUserDistance + travelToDestinationDistance) 
+				/ TransportMethodSpeed.TAXI_SPEED.getSpeed();
+		double travelCost = (double)travelToDestinationDistance 
+				* TransportMethodCost.TAXI_COST.getCost();
+		
+		return new ConfirmationRequest(totalTravelTime, travelCost);
 	}
 	
 	private void sendReplyToUser(NetworkAddress toUser, UUID taxiID)

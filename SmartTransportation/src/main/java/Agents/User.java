@@ -2,6 +2,9 @@ package agents;
 
 import java.util.*;
 
+import SmartTransportation.Simulation.TransportMethodCost;
+import SmartTransportation.Simulation.TransportMethodSpeed;
+
 import map.CityMap;
 
 import conversations.protocols.user.ProtocolWithTaxi;
@@ -45,38 +48,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		REACHED_DESTINATION
 	}
 	
-	private enum TransportMethodCost
-	{
-		WALKING_COST	(1),
-		BUS_COST		(1),
-		TAXI_COST		(4);
-		
-		private int mCost;
-		private TransportMethodCost(int cost)
-		{
-			mCost = cost;
-		}
-		public int getCost()
-		{
-			return mCost;
-		}
-	}
-	public enum TransportMethodSpeed
-	{
-		WALKING_SPEED	(1), 	// equivalent to 5 km/h
-		BUS_SPEED		(8),	// equivalent to 40 km/h
-		TAXI_SPEED		(10);	// equivalent to 50 km/h
-		
-		private int mSpeed;
-		private TransportMethodSpeed(int speed)
-		{
-			mSpeed = speed;
-		}
-		public int getSpeed()
-		{
-			return mSpeed;
-		}
-	}
 	public enum TransportPreference
 	{
 		NO_PREFERENCE 		(1, 1, 1),
@@ -251,7 +222,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mTaxiConfirmationRequests = new LinkedList<RequestTaxiConfirmationMessage>();
 		mBusTravelPlanMessages = new LinkedList<BusTravelPlanMessage>();
 		mPathTraveled = new ArrayList<Location>();
-		mTravelTime = 0;
+		mTravelTime = 0.0;
 		
 		mWalkingTravelPlan = mCityMap.getPath(mStartLocation, mTargetLocation);
 		
@@ -362,13 +333,13 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			++mTravelTime;
 			break;
 		case TRAVELING_BY_TAXI:
-			mTravelTime += 1 / TransportMethodSpeed.TAXI_SPEED.getSpeed();
+			mTravelTime += 1.0 / TransportMethodSpeed.TAXI_SPEED.getSpeed();
 			break;
 		case TRAVELING_TO_BUS_STOP:
 			if(mCurrentPathIndex < mBusTravelPlan.getPathToFirstBusStop().size())
 			{
 				moveTo(mBusTravelPlan.getPathToFirstBusStop().get(mCurrentPathIndex++));
-				mTravelTime += 1 / TransportMethodSpeed.BUS_SPEED.getSpeed();
+				mTravelTime += 1.0 / TransportMethodSpeed.BUS_SPEED.getSpeed();
 			}
 			else
 			{
@@ -380,7 +351,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			if(mCurrentPathIndex < mOnFootTravelPath.size())
 			{
 				moveTo(mOnFootTravelPath.get(mCurrentPathIndex++));
-				mTravelTime += 1 / TransportMethodSpeed.TAXI_SPEED.getSpeed();
+				mTravelTime += 1.0 / TransportMethodSpeed.TAXI_SPEED.getSpeed();
 			}
 			else 
 			{
@@ -485,12 +456,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			{
 				logger.info("decideTransportMethod() taxiOffer " + taxiOffer);
 				
-				int taxiArrivalDistance = mCityMap.getPath(taxiOffer.getData().getLocation(), mStartLocation).size();
-				int taxiTravelDistance = mWalkingTravelPlan.size();
-				int taxiTotalTravelDistance = taxiArrivalDistance + taxiTravelDistance;
-				double taxiTravelTime = (double)taxiTotalTravelDistance / TransportMethodSpeed.TAXI_SPEED.getSpeed();
-				// this is how much we pay
-				double taxiTravelCost = (double)taxiTravelDistance * TransportMethodCost.TAXI_COST.getCost();
+				double taxiTravelTime = taxiOffer.getData().getTotalTravelTime();
+				double taxiTravelCost = taxiOffer.getData().getTravelCost();
 				taxiTravelCost *= mTransportPreference.mTaxiCostScaling;
 				
 				TransportOffer taxi = new TransportOffer(TransportMode.TAKE_TAXI);
@@ -533,22 +500,21 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			Collections.sort(transportOffers);
 			
 			logger.info("decideTransportMethod() I need to get there in: " + mTravelTimeTarget + " time units.");
-			for (int i = 0; i < transportOffers.size(); ++i) 
-			{
-				TransportOffer offer = transportOffers.get(i);
-				logger.info("decideTransportMethod() " + offer.getOfferType() + 
-						" costs: " + offer.getCost() + " currency units");
-				logger.info("decideTransportMethod() " + offer.getOfferType() + 
-						" takes: " + offer.getTimeTaken() + " time units");
-			}
+			logTransportOffers(transportOffers);
 			
 			TransportOffer selectedTransportOffer = transportOffers.get(0);
-			for (int i = 0; i < transportOffers.size(); ++i) 
+			double minTravelTime = selectedTransportOffer.getTimeTaken();
+			for (int i = 1; i < transportOffers.size(); ++i) 
 			{
-				if(transportOffers.get(i).getTimeTaken() <= mTravelTimeTarget)
+				double travelTime = transportOffers.get(i).getTimeTaken();
+				if(travelTime < minTravelTime)
 				{
 					selectedTransportOffer = transportOffers.get(i);
-					break;
+					minTravelTime = travelTime;
+					if(minTravelTime <= mTravelTimeTarget)
+					{
+						break;
+					}
 				}
 			}
 			
@@ -607,7 +573,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			double minDistance = Double.MAX_VALUE;
 			for(RequestTaxiConfirmationMessage request : confirmationRequests)
 			{
-				double distance = request.getData().distanceTo(mStartLocation);
+				double distance = request.getData().getTotalTravelTime();
 				if(minDistance > distance)
 				{
 					confirmedRequest = request;
@@ -642,6 +608,18 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			return bestTravelPlanMessage;
 		}
 		return null;
+	}
+	
+	private void logTransportOffers(List<TransportOffer> transportOffers)
+	{
+		for (int i = 0; i < transportOffers.size(); ++i) 
+		{
+			TransportOffer offer = transportOffers.get(i);
+			logger.info("decideTransportMethod() " + offer.getOfferType() + 
+					" costs: " + offer.getCost() + " currency units");
+			logger.info("decideTransportMethod() " + offer.getOfferType() + 
+					" takes: " + offer.getTimeTaken() + " time units");
+		}
 	}
 	
 	@Override
@@ -841,7 +819,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mUserDataStore.setTransportPreference(mTransportPreference);
 		mUserDataStore.setTransportMethodUsed(mTransportModeUsed);
 		mUserDataStore.setTravelTimeTarget(mTravelTimeTarget);
-		mUserDataStore.setTravelTime(mTravelTime);
+		mUserDataStore.setTravelTime(Math.round(mTravelTime));
 		
 		mSimulationDataStore.addUserDataStore(getID(), mUserDataStore);
 	}

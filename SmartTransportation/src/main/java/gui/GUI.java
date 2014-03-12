@@ -1,6 +1,5 @@
 package gui;
 
-import gui.AgentDataForMap.AgentType;
 import gui.XYChartWindow.XYChartWindow;
 import gui.agents.AgentNodeController;
 import gui.configurationDialog.ConfigureSimulationController;
@@ -15,10 +14,12 @@ import java.util.*;
 
 import agents.User.TransportMode;
 
-import dataStores.BusDataStore;
+import dataStores.AgentMoveData;
+import dataStores.MoveData;
 import dataStores.SimulationDataStore;
-import dataStores.TaxiDataStore;
+import dataStores.AgentDataStore;
 import dataStores.UserDataStore;
+import dataStores.AgentMoveData.MoveDataType;
 
 import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TimeConstraint;
@@ -26,6 +27,7 @@ import SmartTransportation.Simulation.TransportPreferenceAllocation;
 
 import uk.ac.imperial.presage2.core.simulator.RunnableSimulation;
 import uk.ac.imperial.presage2.util.location.Location;
+import util.movement.Movement;
 
 import javafx.animation.*;
 import javafx.application.Application;
@@ -466,20 +468,17 @@ public class GUI extends Application implements SimulationGUI
 
 		SequentialTransition sequentialTransition = new SequentialTransition();
 		agentData.setAnimation(sequentialTransition);
-		List<Location> locations = agentData.getLocations();
 			
-		Location startLocation = locations.remove(0);
-		double startX = startLocation.getX();
-		double startY = startLocation.getY();
+		Location startLocation = agentData.getStartLocation();
+		double currentX = startLocation.getX() * mPixelsPerAreaPoint;
+		double currentY = startLocation.getY() * mPixelsPerAreaPoint;
 
-//		System.out.println("Plotting path for " + agentName + 
-//				", startX " + startX + ", startY " + startY);
-		
 		Transition startTransition = TranslateTransitionBuilder.create().
-				node(agentNode).duration(Duration.ZERO).
-				fromX(0).toX(startX).
-				fromY(0).toY(startY).
+				node(agentNode).duration(Duration.millis(100)).
+				fromX(0).toX(currentX).
+				fromY(0).toY(currentY).
 				cycleCount(1).autoReverse(false).
+				interpolator(Interpolator.LINEAR).
 				build();
 		sequentialTransition.getChildren().add(startTransition);
 		
@@ -489,30 +488,39 @@ public class GUI extends Application implements SimulationGUI
 				build();
 		sequentialTransition.getChildren().add(fadeInTransition);
 		
-		for(Location location: locations)
+		System.out.println("addAnimations() for " + agentName);
+		
+		List<Movement> movements = agentData.getMoveData();
+		int currentTime = 0;
+		for(Movement movement: movements)
 		{
+			int movementStartTime = movement.getStartTime();
+			
+			if(currentTime < movementStartTime)
+			{
+				Transition pauseTransition = new PauseTransition(mTimeStepDuration.
+						multiply((movementStartTime - currentTime)));
+				currentTime = movementStartTime;
+				sequentialTransition.getChildren().add(pauseTransition);
+			}
+			
+			Location location = movement.getLocation();
 			double nextX = location.getX() * mPixelsPerAreaPoint;
 			double nextY = location.getY() * mPixelsPerAreaPoint;
 			
-			Transition transition;
-			if((nextX == startX) && (nextY == startY))
-			{
-				transition = new PauseTransition(mTimeStepDuration);
-			}
-			else
-			{
-//				System.out.println("Plotting path for " + agentName + 
-//						", nextX " + nextX + ", nextY " + nextY);
-				transition = TranslateTransitionBuilder.create().
-						node(agentNode).duration(mTimeStepDuration).
-						fromX(startX).toX(nextX).
-						fromY(startY).toY(nextY).
-						cycleCount(1).autoReverse(false).
-						build();
-				startX = nextX;
-				startY = nextY;
-			}
-			sequentialTransition.getChildren().add(transition);
+			int timeTakenPerUnitDistance = movement.getTimeTakenPerUnitDistance();
+			currentTime += timeTakenPerUnitDistance;
+			
+			Transition moveTransition = TranslateTransitionBuilder.create().
+					node(agentNode).duration(mTimeStepDuration.multiply(timeTakenPerUnitDistance)).
+					fromX(currentX).toX(nextX).
+					fromY(currentY).toY(nextY).
+					interpolator(Interpolator.LINEAR).
+					cycleCount(1).autoReverse(false).
+					build();
+			currentX = nextX;
+			currentY = nextY;
+			sequentialTransition.getChildren().add(moveTransition);
 		}
 		FadeTransition fadeOutTransition = FadeTransitionBuilder.create().
 				node(agentNode).duration(Duration.millis(100)).
@@ -523,6 +531,7 @@ public class GUI extends Application implements SimulationGUI
 		
 		sequentialTransition.setCycleCount(1);
 		sequentialTransition.setAutoReverse(false);
+		sequentialTransition.setInterpolator(Interpolator.LINEAR);
 		sequentialTransition.setOnFinished(new EventHandler<ActionEvent>() 
 		{
 			@Override
@@ -530,8 +539,6 @@ public class GUI extends Application implements SimulationGUI
 			{
 				System.out.println("Animation completed for " + agentName);
 				mAgentsAnimatingCount--;
-				
-//				System.out.println("Animation completed mAgentsAnimatingCount " + mAgentsAnimatingCount);
 				
 				if(mAgentsAnimatingCount == 0)
 				{
@@ -702,7 +709,7 @@ public class GUI extends Application implements SimulationGUI
 		while(iterator.hasNext())
 		{
 			UserDataStore data = iterator.next().getValue();
-			int deltaTravelTime = (int)(data.getTravelTime() - data.getTravelTimeTarget());
+			int deltaTravelTime = (int)(data.getActualTravelTime() - data.getTargetTravelTime());
 			Number usersCount = chartData.get(deltaTravelTime);
 			if(usersCount != null)
 			{
@@ -727,8 +734,10 @@ public class GUI extends Application implements SimulationGUI
 		{
 			UserDataStore data = iterator.next().getValue();
 			
-			userTableDataList.add(new UserTableData(data.getName(), data.getID(), data.getHasReachedDestination(), 
-					data.getTravelTime(), data.getTravelTimeTarget(), data.getTransportPreference(), data.getTransportMethodUsed()));
+			userTableDataList.add(new UserTableData(data.getName(), data.getID(), 
+					data.getHasReachedDestination(), data.getActualTravelTime(), 
+					data.getTargetTravelTime(), data.getTransportPreference(), 
+					data.getTransportMethodUsed()));
 		}
 		
 		mUserTableWindow = new UserTableWindow();
@@ -738,44 +747,18 @@ public class GUI extends Application implements SimulationGUI
 	private void initMapData()
 	{
 		mAgentsDataForMap = new LinkedList<AgentDataForMap>();
-		fillUserLocations();
-		fillTaxiesLocations();
-		fillBusesLocations();
+		fillAgentsDataForMap();
 	}
 	
-	private void fillUserLocations()
+	private void fillAgentsDataForMap()
 	{
-		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		Map<UUID, AgentDataStore> agentDataStores = mSimulationDataStore.getAgentsDataStores();
+		Iterator<Map.Entry<UUID, AgentDataStore>> iterator = agentDataStores.entrySet().iterator();
 		while(iterator.hasNext())
 		{
-			UserDataStore data = iterator.next().getValue();
-			List<Location> traveledPath = data.getPathTraveled();
-			mAgentsDataForMap.add(new AgentDataForMap(AgentType.USER, data.getName(), traveledPath));
-		}
-	}
-	
-	private void fillTaxiesLocations()
-	{
-		Map<UUID, TaxiDataStore> taxiDataStores = mSimulationDataStore.getTaxiDataStores();
-		Iterator<Map.Entry<UUID, TaxiDataStore>> iterator = taxiDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			TaxiDataStore data = iterator.next().getValue();
-			List<Location> traveledPath = data.getPathTraveled();
-			mAgentsDataForMap.add(new AgentDataForMap(AgentType.TAXI_CAB, data.getName(), traveledPath));
-		}
-	}
-	
-	private void fillBusesLocations()
-	{
-		Map<UUID, BusDataStore> busDataStores = mSimulationDataStore.getBusDataStores();
-		Iterator<Map.Entry<UUID, BusDataStore>> iterator = busDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			BusDataStore data = iterator.next().getValue();
-			List<Location> traveledPath = data.getPathTraveled();
-			mAgentsDataForMap.add(new AgentDataForMap(AgentType.BUS, data.getName(), traveledPath));
+			AgentDataStore data = iterator.next().getValue();
+			mAgentsDataForMap.add(new AgentDataForMap(data.getAgentType(), data.getName(), 
+					data.getMovements(), data.getStartLocation()));
 		}
 	}
 

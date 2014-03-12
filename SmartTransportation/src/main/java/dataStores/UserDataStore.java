@@ -1,65 +1,47 @@
 package dataStores;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import gui.AgentDataForMap.AgentType;
 
-import javafx.beans.property.StringProperty;
+import java.util.UUID;
 
 import agents.User.TransportMode;
 import agents.User.TransportPreference;
 
 import uk.ac.imperial.presage2.util.location.Location;
 
-public class UserDataStore 
+public class UserDataStore extends AgentDataStore
 {
-	private String mUserName;
-	private UUID mUserID;
-	private double mTravelTimeTarget;
-	private double mTravelTime;
+	private double mTargetTravelTime;
+	private double mActualTravelTime;
 	private boolean mHasReachedDestination;
-	private List<Location> mUserPath;
 	private TransportPreference mTransportPreference;
 	private TransportMode mTransportModeUsed;
 	
-	public UserDataStore(String userName, UUID userID)
+	public UserDataStore(String agentName, UUID agentID, Location startLocation)
 	{
-		assert(userName != null);
-		assert(userID != null);
+		super(agentName, agentID, AgentType.USER, startLocation);
 		
-		mUserName = userName;
-		mUserID = userID;
-		
-		mTravelTimeTarget = 0;
-		mTravelTime = 0;
+		mTargetTravelTime = 0;
+		mActualTravelTime = 0;
 		mHasReachedDestination = false;
-		mUserPath = new ArrayList<Location>();
 		mTransportPreference = TransportPreference.NO_PREFERENCE;
 		mTransportModeUsed = TransportMode.NONE;
 	}
-	public String getName()
+	public void setTargetTravelTime(double target)
 	{
-		return mUserName;
+		mTargetTravelTime = target;
 	}
-	public UUID getID()
+	public double getTargetTravelTime()
 	{
-		return mUserID;
+		return mTargetTravelTime;
 	}
-	public void setTravelTimeTarget(double target)
+	public void setActualTravelTime(double travelTime)
 	{
-		mTravelTimeTarget = target;
+		mActualTravelTime = travelTime;
 	}
-	public double getTravelTimeTarget()
+	public double getActualTravelTime()
 	{
-		return mTravelTimeTarget;
-	}
-	public void setTravelTime(double travelTime)
-	{
-		mTravelTime = travelTime;
-	}
-	public double getTravelTime()
-	{
-		return mTravelTime;
+		return mActualTravelTime;
 	}
 	public void setHasReachedDestination(boolean value)
 	{
@@ -68,14 +50,6 @@ public class UserDataStore
 	public boolean getHasReachedDestination()
 	{
 		return mHasReachedDestination;
-	}
-	public void setPathTraveled(List<Location> path)
-	{
-		mUserPath = path;
-	}
-	public List<Location> getPathTraveled()
-	{
-		return mUserPath;
 	}
 	public void setTransportPreference(TransportPreference pref)
 	{

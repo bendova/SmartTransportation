@@ -53,7 +53,9 @@ public class CityMap extends Area
 			
 			if(currentLocation.equals(destination))
 			{
-				return reconstructPath(traveledPaths, destination);
+				List<Location> pathList = reconstructPath(traveledPaths, destination);
+				pathList.remove(0);
+				return pathList;
 			}
 			
 			locationsToEvaluate.remove(currentLocation);

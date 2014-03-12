@@ -19,8 +19,8 @@ import conversations.taxiStationTaxi.messages.RejectOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;
-import conversations.userMediator.messages.ITransportServiceRequest;
 import conversations.userMediator.messages.TransportServiceRequestMessage;
+import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiReplyMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
@@ -77,7 +77,7 @@ public class TaxiStation extends AbstractParticipant
 			assert(requestMessage != null);
 			
 			mRequestData = requestMessage.getData();
-			mFromUserAddress = requestMessage.getFrom();
+			mFromUserAddress = mRequestData.getUserNetworkAddress();
 			mCurrentState = TaxiRequestState.PENDING_PROCESSING;
 			
 			mCurrentTime = currentTime;
@@ -104,8 +104,16 @@ public class TaxiStation extends AbstractParticipant
 		
 		public void setServicedBy(NetworkAddress taxiAddress)
 		{
+			assert(taxiAddress != null);
+			
 			mServicedByTaxi = taxiAddress;
-			mIsAssigned = (mServicedByTaxi != null);
+			mIsAssigned = true;
+		}
+		
+		public void clearServicedBy()
+		{
+			mServicedByTaxi = null;
+			mIsAssigned = false;
 		}
 		
 		public NetworkAddress getServicedBy()
@@ -390,7 +398,7 @@ public class TaxiStation extends AbstractParticipant
 				if(taxiRequest.isAssigned())
 				{
 					mFreeTaxiesSet.add(taxiRequest.getServicedBy());
-					taxiRequest.setServicedBy(null);
+					taxiRequest.clearServicedBy();
 				}
 				taxiRequest.setAsCanceled();
 				break;
@@ -433,7 +441,7 @@ public class TaxiStation extends AbstractParticipant
 				{
 					logger.info("handleTaxiOrderComplete() taxiRequest " + taxiRequest);
 					taxiRequest.setAsCompleted();
-					taxiRequest.setServicedBy(null);
+					taxiRequest.clearServicedBy();
 					break;
 				}
 			}
@@ -474,7 +482,7 @@ public class TaxiStation extends AbstractParticipant
 						NetworkAddress taxiAddress = taxiRequest.getServicedBy();
 						if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
 						{
-							taxiRequest.setServicedBy(null);
+							taxiRequest.clearServicedBy();
 							taxiRequest.setAsPendingProcessing();
 							logger.info("handleTaxiStatusUpdate() clearing task of " + mTaxiesMap.get(taxiAddress));
 							break;
@@ -487,18 +495,6 @@ public class TaxiStation extends AbstractParticipant
 				assert(false);
 			}
 		}
-	}
-	
-	private void sendRevisionCompleteMessageTo(NetworkAddress to)
-	{
-		/*
-		logger.info("sendRevisionCompleteMessageTo() to " + to);
-		
-		RevisionCompleteMessage msg = new RevisionCompleteMessage(
-				"Your revision is complete!", network.getAddress(), to);
-		network.sendMessage(msg);
-		withTaxi.sendRevisionCompleteMessage(msg);
-		*/
 	}
 	
 	private void handleTaxiOrderRejected(RejectOrderMessage msg)
@@ -514,15 +510,11 @@ public class TaxiStation extends AbstractParticipant
 				if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
 				{
 					taxiRequest.setAsPendingProcessing();
-					taxiRequest.setServicedBy(null);
+					taxiRequest.clearServicedBy();
 					break;
 				}
 			}
 		}
-		// TODO this needs to be updated to account for 
-		// all other possible reasons for which the taxi 
-		// rejected our order
-		//sendRevisionCompleteMessageTo(reportingTaxiAddress);
 	}
 	
 	@Override
@@ -654,7 +646,7 @@ public class TaxiStation extends AbstractParticipant
 		if(taxiRequest.getServicedBy() != null)
 		{
 			mFreeTaxiesSet.add(taxiRequest.getServicedBy());
-			taxiRequest.setServicedBy(null);
+			taxiRequest.clearServicedBy();
 		}
 		taxiRequest.setAsCanceled();
 	}
@@ -673,13 +665,13 @@ public class TaxiStation extends AbstractParticipant
 		
 	private void requestConfirmationFromUser(TaxiRequest taxiRequest, Location taxiLocation)
 	{
-		logger.info("RequestConfirmationFromUser() fromUser " + taxiRequest.getFrom());
+		logger.info("requestConfirmationFromUser() fromUser " + taxiRequest.getFrom());
 		
 		IConfirmationRequest confirmationRequest = createTaxiConfirmationRequest(taxiRequest.getRequestData(), 
 				taxiLocation);
 		
 		RequestTaxiConfirmationMessage message = new RequestTaxiConfirmationMessage(confirmationRequest,
-				network.getAddress(), taxiRequest.getFrom());
+				network.getAddress(), mMediatorAddress);
 		network.sendMessage(message);
 	}
 	
@@ -690,11 +682,11 @@ public class TaxiStation extends AbstractParticipant
 		int travelToDestinationDistance = mCityMap.getPath(taxiRequest.getStartLocation(), 
 				taxiRequest.getDestination()).size();
 		double totalTravelTime = (double)(travelToUserDistance + travelToDestinationDistance) 
-				/ TransportMethodSpeed.TAXI_SPEED.getSpeed();
+				* TransportMethodSpeed.TAXI_SPEED.getTimeTakenPerUnitDistance();
 		double travelCost = (double)travelToDestinationDistance 
 				* TransportMethodCost.TAXI_COST.getCost();
 		
-		return new ConfirmationRequest(totalTravelTime, travelCost);
+		return new ConfirmationRequest(taxiRequest.getUserNetworkAddress(), totalTravelTime, travelCost);
 	}
 	
 	private void sendReplyToUser(NetworkAddress toUser, UUID taxiID)

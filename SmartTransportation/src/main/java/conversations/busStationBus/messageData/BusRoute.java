@@ -9,19 +9,17 @@ import uk.ac.imperial.presage2.util.location.Location;
 public class BusRoute implements IBusRoute
 {
 	private List<Location> mBusStops;
-	private List<Location> mPathToTravel;
 	private Map<Location, List<Location>> mPathsBetweenBusStops;
 	private UUID mBusRouteID;
 	
-	public BusRoute(UUID busRouteID, List<Location> busStops, List<Location> pathToTravel, 
+	public BusRoute(UUID busRouteID, List<Location> busStops, 
 			Map<Location, List<Location>> pathsBetweenBusStops)
 	{
-		assert(busStops != null);
-		assert(pathToTravel != null);
 		assert(busRouteID != null);
+		assert(busStops != null);
+		assert(pathsBetweenBusStops != null);
 		
 		mBusStops = busStops;
-		mPathToTravel = pathToTravel;
 		mPathsBetweenBusStops = pathsBetweenBusStops;
 		mBusRouteID = busRouteID;
 	}
@@ -37,13 +35,8 @@ public class BusRoute implements IBusRoute
 	{
 		return mBusRouteID;
 	}
-
-	@Override
-	public List<Location> getPathToTravel() 
-	{
-		return mPathToTravel;
-	}
 	
+	@Override
 	public Map<Location, List<Location>> getPathsBetweenBusStops()
 	{
 		return mPathsBetweenBusStops;

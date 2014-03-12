@@ -1,11 +1,17 @@
 package gui;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import dataStores.AgentMoveData;
+
+import SmartTransportation.Simulation.TransportMethodSpeed;
 
 import javafx.animation.Animation;
 import javafx.scene.Node;
 
 import uk.ac.imperial.presage2.util.location.Location;
+import util.movement.Movement;
 
 public class AgentDataForMap 
 {
@@ -22,20 +28,33 @@ public class AgentDataForMap
 	private final String BUS_SHAPE_LAYOUT = LAYOUTS_PATH + "BusShape.fxml";
 	
 	private String mName;
-	private List<Location> mLocations;
+	private List<Movement> mMovements;
 	private Node mNode;
 	private Animation mAnimation;
 	private String mLayoutPath;
 	private AgentType mAgentType;
+	private Location mStartLocation;
 	
-	public AgentDataForMap(AgentType type, String name, List<Location> locations)
+	public AgentDataForMap(AgentType type, String name, List<Movement> movements,
+			Location startLocation)
 	{
+		assert(type != null);
 		assert(name != null);
-		assert(locations != null);
+		assert(startLocation != null);
 		
 		mName = name;
 		mAgentType = type;
-		mLocations = locations;
+		mStartLocation = startLocation;
+		
+		if(movements != null)
+		{
+			mMovements = movements;
+		}
+		else
+		{
+			mMovements = new ArrayList<Movement>(0);
+		}
+		
 		switch (mAgentType) 
 		{
 		case TAXI_CAB:
@@ -48,6 +67,7 @@ public class AgentDataForMap
 			mLayoutPath = BUS_SHAPE_LAYOUT;
 			break;
 		default:
+			assert(false) : "Case not handled for mAgentType " + mAgentType;
 			break;
 		}
 	}
@@ -57,9 +77,9 @@ public class AgentDataForMap
 		return mName; 
 	}
 	
-	public List<Location> getLocations() 
+	public List<Movement> getMoveData() 
 	{
-		return mLocations;
+		return mMovements;
 	}
 	
 	public AgentType getType()
@@ -94,5 +114,10 @@ public class AgentDataForMap
 	public Animation getAnimation()
 	{
 		return mAnimation;
+	}
+	
+	public Location getStartLocation()
+	{
+		return mStartLocation;
 	}
 }

@@ -3,6 +3,7 @@ package conversations.userBusStation;
 import java.util.List;
 import java.util.UUID;
 
+import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.location.Location;
 
 public class BusTravelPlan implements IBusTravelPlan
@@ -11,21 +12,25 @@ public class BusTravelPlan implements IBusTravelPlan
 	private List<Location> mPathFromFinalList;
 	private int mBusTravelDistance;
 	private UUID mBusRouteID;
+	private NetworkAddress mUserAddress;
 	
 	public BusTravelPlan(List<Location> pathToStartBusStop,
 						 List<Location> pathFromFinalBusStop,
 						 int busTravelDistance,
-						 UUID busRouteID)
+						 UUID busRouteID,
+						 NetworkAddress userAddress)
 	{
 		assert(pathToStartBusStop != null);
 		assert(pathFromFinalBusStop != null);
 		assert(busTravelDistance > 0);
 		assert(busRouteID != null);
+		assert(userAddress != null);
 		
 		mPathToStart = pathToStartBusStop;
 		mPathFromFinalList = pathFromFinalBusStop;
 		mBusTravelDistance = busTravelDistance;
 		mBusRouteID = busRouteID;
+		mUserAddress = userAddress;
 	}
 
 	@Override
@@ -50,5 +55,11 @@ public class BusTravelPlan implements IBusTravelPlan
 	public UUID getBusRouteID() 
 	{
 		return mBusRouteID;
+	}
+
+	@Override
+	public NetworkAddress getUserAddress() 
+	{
+		return mUserAddress;
 	}
 }

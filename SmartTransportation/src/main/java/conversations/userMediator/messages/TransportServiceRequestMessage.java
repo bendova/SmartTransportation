@@ -1,5 +1,6 @@
 package conversations.userMediator.messages;
 
+import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 import uk.ac.imperial.presage2.core.messaging.Performative;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;

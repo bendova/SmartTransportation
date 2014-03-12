@@ -94,7 +94,6 @@ public class BusStation extends AbstractParticipant
 			UUID busRouteID = Random.randomUUID();
 			
 			HashMap<Location, List<Location>> pathsBetweenBusStops = new HashMap<Location, List<Location>>();
-			List<Location> pathToTravel = new ArrayList<Location>();
 			
 			List<Location> busStopsList = iterator.next();
 			int busStopsCount = busStopsList.size();
@@ -105,7 +104,6 @@ public class BusStation extends AbstractParticipant
 				Location nextBusStopLocation = busStopsList.get(i);
 				pathList = mCityMap.getPath(currentBusStop, nextBusStopLocation);
 				pathsBetweenBusStops.put(currentBusStop, pathList);
-				pathToTravel.addAll(pathList);
 				currentBusStop = nextBusStopLocation;
 			}
 			
@@ -113,9 +111,8 @@ public class BusStation extends AbstractParticipant
 			Location nextBusStopLocation = busStopsList.get(0);
 			pathList = mCityMap.getPath(currentBusStop, nextBusStopLocation);
 			pathsBetweenBusStops.put(currentBusStop, pathList);
-			pathToTravel.addAll(pathList);
 			
-			BusRoute busRoute = new BusRoute(busRouteID, busStopsList, pathToTravel, pathsBetweenBusStops);
+			BusRoute busRoute = new BusRoute(busRouteID, busStopsList, pathsBetweenBusStops);
 			mBusRoutes.put(busRouteID, busRoute);
 		}
 	}
@@ -211,9 +208,9 @@ public class BusStation extends AbstractParticipant
 			
 			// reply to the user with the travel paths
 			BusTravelPlan travelPlan = new BusTravelPlan(selectedStartTravelPath, selectedDestinationTravelPath, 
-					minBusTravelDistance, selectedBusRouteID);
+					minBusTravelDistance, selectedBusRouteID, msg.getData().getUserNetworkAddress());
 			BusTravelPlanMessage travelPlanMsg = new BusTravelPlanMessage(travelPlan, 
-					network.getAddress(), msg.getFrom());
+					network.getAddress(), mMediatorAddress);
 			network.sendMessage(travelPlanMsg);
 		}
 	}
@@ -346,7 +343,9 @@ public class BusStation extends AbstractParticipant
 			
 			if(currentLocation.equals(destination))
 			{
-				return reconstructPath(traveledPaths, currentLocation);
+				List<Location> pathList = reconstructPath(traveledPaths, destination);
+				pathList.remove(0);
+				return pathList;
 			}
 			
 			// check if our destination is still the best one

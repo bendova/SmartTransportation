@@ -3,20 +3,21 @@ package dataStores;
 import gui.configurationDialog.SimulationConfiguration;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import util.movement.Movement;
 
 public class SimulationDataStore 
 {
 	private SimulationConfiguration mSimulationConfiguration;
 	private Map<UUID, UserDataStore> mUserDataStores;
-	private Map<UUID, TaxiDataStore> mTaxiDataStores;
-	private Map<UUID, BusDataStore> mBusDataStores;
+	private Map<UUID, AgentDataStore> mAgentsDataStores;
 	public SimulationDataStore()
 	{
 		mUserDataStores = new HashMap<UUID, UserDataStore>();
-		mTaxiDataStores = new HashMap<UUID, TaxiDataStore>();
-		mBusDataStores = new HashMap<UUID, BusDataStore>();
+		mAgentsDataStores = new HashMap<UUID, AgentDataStore>();
 	}
 	
 	public void setSimulationConfiguration(SimulationConfiguration config)
@@ -30,25 +31,24 @@ public class SimulationDataStore
 	public void addUserDataStore(UUID userID, UserDataStore userDataStore)
 	{
 		mUserDataStores.put(userID, userDataStore);
+		addAgentDataStore(userID, userDataStore);
 	}
 	public Map<UUID, UserDataStore> getUserDataStores()
 	{
 		return mUserDataStores;
 	}
-	public void addTaxiDataStore(UUID taxiID, TaxiDataStore taxiDataStore)
+	
+	public void addAgentDataStore(UUID agentID, AgentDataStore agentDataStore)
 	{
-		mTaxiDataStores.put(taxiID, taxiDataStore);
+		mAgentsDataStores.put(agentID, agentDataStore);
 	}
-	public Map<UUID, TaxiDataStore> getTaxiDataStores()
+	public Map<UUID, AgentDataStore> getAgentsDataStores()
 	{
-		return mTaxiDataStores;
+		return mAgentsDataStores;
 	}
-	public void addBusDataStore(UUID busID, BusDataStore busDataStore)
+	
+	public void addAgentMovements(UUID agentID, List<Movement> movements)
 	{
-		mBusDataStores.put(busID, busDataStore);
-	}
-	public Map<UUID, BusDataStore> getBusDataStores()
-	{
-		return mBusDataStores;
+		mAgentsDataStores.get(agentID).setMovements(movements);
 	}
 }

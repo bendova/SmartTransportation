@@ -4,8 +4,6 @@ import gui.AgentDataForMap.AgentType;
 
 import java.util.*;
 
-import com.google.inject.Inject;
-
 import conversations.protocols.taxi.*;
 import conversations.taxiStationTaxi.actions.*;
 import conversations.taxiStationTaxi.messages.RegisterAsTaxiMessage;
@@ -20,11 +18,8 @@ import conversations.userTaxi.messages.RequestDestinationMessage;
 import conversations.userTaxi.messages.TakeMeToDestinationMessage;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
-import dataStores.AgentMoveData;
-import dataStores.MoveData;
 import dataStores.SimulationDataStore;
 import dataStores.AgentDataStore;
-import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 import map.CityMap;
 import uk.ac.imperial.presage2.core.environment.*;

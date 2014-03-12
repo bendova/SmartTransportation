@@ -2,7 +2,6 @@ package agents;
 
 import java.util.*;
 
-import SmartTransportation.Simulation.TransportMethodCost;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 
 import map.CityMap;
@@ -131,7 +130,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	
 	private CityMap mCityMap;
 	private SimulationDataStore mSimulationDataStore;
-	private boolean mCanMove;
 	
 	public User(UUID id, String name, CityMap cityMap, Location startLocation, Location targetLocation, 
 			int travelTimeTarget, NetworkAddress mediatorNetworkAddress, TransportPreference transportPreference) 
@@ -163,7 +161,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		mTravelTime = 0;
 		mTimeTakenPerUnitDistance = TransportMethodSpeed.WALKING_SPEED.getTimeTakenPerUnitDistance();
-		mCanMove = true;
 	}
 	
 	public void setDataStore(SimulationDataStore dataStore) 
@@ -340,7 +337,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			// walk there
 			mTransportModeUsed = TransportMode.WALKING;
 			mCurrentState = STATE.TRAVELING_ON_FOOT;
-			mOnFootTravelPath = ((WalkTransportOffer)selectedTransportOffer).getTransportPlan();
+			mOnFootTravelPath = ((WalkTransportOffer)selectedTransportOffer).getWalkPath();
 			mCurrentPathIndex = 0;
 			break;
 		case TAKE_BUS:
@@ -349,7 +346,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			// take the bus
 			mTransportModeUsed = TransportMode.TAKE_BUS;
 			mCurrentState = STATE.TRAVELING_TO_BUS_STOP;
-			handleBusTravelPlan(((BusTransportOffer)selectedTransportOffer).getTransportPlan());
+			handleBusTravelPlan(((BusTransportOffer)selectedTransportOffer).getBusTravelPlanMessage());
 			break;
 		case TAKE_TAXI:
 			logger.info("decideTransportMethod() I am taking the taxi to my destination");

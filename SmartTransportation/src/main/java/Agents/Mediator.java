@@ -27,7 +27,6 @@ import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 import conversations.userMediator.messages.messageData.TransportServiceOffer;
 import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
-import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
 
 import transportOffers.BusTransportOffer;
 import transportOffers.TaxiTransportOffer;
@@ -197,8 +196,7 @@ public class Mediator extends AbstractParticipant
 				NetworkAddress userAddress = confirmationRequest.getData().getUserAddress();
 				if(mUserTransportOffers.containsKey(userAddress))
 				{
-					TaxiTransportOffer taxiOffer = new TaxiTransportOffer(confirmationRequest, network,
-							userAddress);
+					TaxiTransportOffer taxiOffer = new TaxiTransportOffer(network, userAddress);
 					mUserTransportOffers.get(userAddress).add(taxiOffer);
 				}
 				else
@@ -215,7 +213,7 @@ public class Mediator extends AbstractParticipant
 					BusTransportOffer busOffer = new BusTransportOffer(busTravelPlanMessage);
 					mUserTransportOffers.get(userAddress).add(busOffer);
 				}
-				// no else, because bus requests don't need to be canceled
+				// TODO add the else case when the bus requests will need to be canceled yet
 			}
 			else
 			{
@@ -382,7 +380,7 @@ public class Mediator extends AbstractParticipant
 			List<TransportOffer> transportOffers = entry.getValue();
 			if(canSendOffers(transportOffers, userAddress))
 			{
-				logger.info("sendTransportOffers() Sending offers!");
+				logger.info("sendTransportOffers() Sending offers to: " + userAddress);
 				
 				addWalkingOffer(userAddress, transportOffers);
 				

@@ -19,7 +19,6 @@ import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.util.location.Location;
-import uk.ac.imperial.presage2.util.location.Move;
 import uk.ac.imperial.presage2.util.location.ParticipantLocationService;
 import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
@@ -37,8 +36,6 @@ import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
 import conversations.userBus.messages.UnBoardBusRequestMessage;
 import conversations.userBus.messages.messageData.BusStopArrivalNotification;
 import dataStores.AgentDataStore;
-import dataStores.AgentMoveData;
-import dataStores.MoveData;
 import dataStores.SimulationDataStore;
 
 public class Bus extends AbstractParticipant implements HasPerceptionRange
@@ -409,19 +406,6 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		{
 			logger.warn("Error while moving!", e);
 		}
-	}
-	
-	private boolean isBusStop(Location location)
-	{
-		List<Location> busStops = mBusRoute.getBusStopsLocations();
-		for (Location busStop : busStops) 
-		{
-			if(busStop.equals(location))
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 	
 	@Override

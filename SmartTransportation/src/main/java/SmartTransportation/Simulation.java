@@ -167,8 +167,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Inject
 	private CityMap mCityMap;
 	
-	private List<Location> mBusRoute1;
-	private List<Location> mBusRoute2;
+	private List<List<Location>> mBusRoutes;
 	
 	public Simulation(Set<AbstractModule> modules)
 	{
@@ -176,16 +175,20 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		mTaxies = new LinkedList<Taxi>();
 		
-		mBusRoute1 = new ArrayList<Location>();
+		mBusRoutes = new ArrayList<List<Location>>();
+		List<Location> mBusRoute1 = new ArrayList<Location>();
 		mBusRoute1.add(new Location(3, 5));
 		mBusRoute1.add(new Location(20, 5));
 		mBusRoute1.add(new Location(20, 16));
 		mBusRoute1.add(new Location(3, 16));		
-		mBusRoute2 = new ArrayList<Location>();
+		List<Location> mBusRoute2 = new ArrayList<Location>();
 		mBusRoute2.add(new Location(3, 16));		
 		mBusRoute2.add(new Location(20, 16));
 		mBusRoute2.add(new Location(20, 5));
 		mBusRoute2.add(new Location(3, 5));
+		
+		mBusRoutes.add(mBusRoute1);
+		mBusRoutes.add(mBusRoute2);
 	}
 	
 	@Inject
@@ -327,8 +330,13 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			String busStationName = "BusStation";
 			BusStation busStation = new BusStation(Random.randomUUID(), busStationName, 
 					mCityMap, getRandomLocation(), mMediatorNetworkAddress);
-			busStation.addBusRoute(mBusRoute1);
-			busStation.addBusRoute(mBusRoute2);			
+			
+			int busRoutesCount = Math.min(mBusRoutesCount, mBusRoutes.size());
+			for (int i = 0; i < busRoutesCount; ++i) 
+			{
+				busStation.addBusRoute(mBusRoutes.get(i));
+			}
+			
 			s.addParticipant(busStation);
 			addBuses(s, busStation.getNetworkAddress(), busStationName);
 		}
@@ -352,8 +360,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Override
 	public void incrementTime() 
 	{
-		logger.info("incrementTime() " + getSimluationPercentComplete());
-		
 		double progress = (double)(getCurrentSimulationTime().intValue() + 1)
 							/ getSimulationFinishTime().intValue();
 		mGUI.updateSimulationProgress(progress);
@@ -364,13 +370,13 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 //		session.fireAllRules();
 	}
 	
-	private void updateTaxiesInSession()
-	{
-		for(Taxi taxi: mTaxies)
-		{
-			session.update(session.getFactHandle(taxi), taxi);
-		}
-	}
+//	private void updateTaxiesInSession()
+//	{
+//		for(Taxi taxi: mTaxies)
+//		{
+//			session.update(session.getFactHandle(taxi), taxi);
+//		}
+//	}
 	
 	@Override
 	public void run() 

@@ -5,15 +5,20 @@ import SmartTransportation.Simulation.TransportMethodSpeed;
 import agents.User.TransportMode;
 import conversations.userBusStation.BusTravelPlanMessage;
 
-public class BusTransportOffer extends TransportOffer<BusTravelPlanMessage>
+public class BusTransportOffer extends TransportOffer
 {
-	public BusTransportOffer(BusTravelPlanMessage busOffer)
+	private BusTravelPlanMessage mBusTravelPlanMessage;
+	
+	public BusTransportOffer(BusTravelPlanMessage busMessage)
 	{
-		super(busOffer, TransportMode.TAKE_BUS);
+		super(TransportMode.TAKE_BUS);
 		
-		int travelToBusStopDistance = busOffer.getData().getPathToFirstBusStop().size();
-		int travelToDestinationDistance = busOffer.getData().getPathToDestination().size();
-		double busTravelDistance = (double)busOffer.getData().getBusTravelDistance();
+		assert(busMessage != null);
+		mBusTravelPlanMessage = busMessage;
+		
+		int travelToBusStopDistance = busMessage.getData().getPathToFirstBusStop().size();
+		int travelToDestinationDistance = busMessage.getData().getPathToDestination().size();
+		double busTravelDistance = (double)busMessage.getData().getBusTravelDistance();
 		// this is the worst case scenario - there is only one bus on the route,
 		// and it has just left the station
 		double onFootTravelTime = (double)(travelToBusStopDistance + travelToDestinationDistance) 
@@ -27,6 +32,11 @@ public class BusTransportOffer extends TransportOffer<BusTravelPlanMessage>
 		mTravelCost = busTravelDistance * TransportMethodCost.BUS_COST.getCost();
 	}
 
+	public BusTravelPlanMessage getBusTravelPlanMessage()
+	{
+		return mBusTravelPlanMessage;
+	}
+	
 	@Override
 	public void confirm() 
 	{

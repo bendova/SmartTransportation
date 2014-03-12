@@ -7,15 +7,24 @@ import SmartTransportation.Simulation.TransportMethodSpeed;
 import agents.User.TransportMode;
 import uk.ac.imperial.presage2.util.location.Location;
 
-public class WalkTransportOffer extends TransportOffer<List<Location>>
+public class WalkTransportOffer extends TransportOffer
 {
+	private List<Location> mWalkPath;
 	public WalkTransportOffer(List<Location> walkPath)
 	{
-		super(walkPath, TransportMode.WALKING);
+		super(TransportMode.WALKING);
+		
+		assert(walkPath != null);
+		mWalkPath = walkPath;
 		
 		double onFootTravelDistance = walkPath.size();
 		mTravelCost = onFootTravelDistance * TransportMethodCost.WALKING_COST.getCost();
 		mTravelTime = onFootTravelDistance * TransportMethodSpeed.WALKING_SPEED.getTimeTakenPerUnitDistance();
+	}
+	
+	public List<Location> getWalkPath()
+	{
+		return mWalkPath;
 	}
 	
 	@Override

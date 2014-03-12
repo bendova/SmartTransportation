@@ -7,15 +7,15 @@ import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
 
-public class TaxiTransportOffer extends TransportOffer<RequestTaxiConfirmationMessage>
+public class TaxiTransportOffer extends TransportOffer
 {
 	private NetworkAddress mTaxiStationAddress;
 	private NetworkAddress mRequestorAddress;
 	private NetworkAdaptor mNetworkAdaptor;
-	public TaxiTransportOffer(RequestTaxiConfirmationMessage taxiOffer, NetworkAdaptor networkAdaptor,
+	public TaxiTransportOffer(NetworkAdaptor networkAdaptor,
 			NetworkAddress requestorAddress)
 	{
-		super(taxiOffer, TransportMode.TAKE_TAXI);
+		super(TransportMode.TAKE_TAXI);
 		
 		assert(networkAdaptor != null);
 		assert(requestorAddress != null);

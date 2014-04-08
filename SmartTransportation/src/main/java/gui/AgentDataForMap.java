@@ -3,8 +3,6 @@ package gui;
 import java.util.ArrayList;
 import java.util.List;
 
-import dataStores.AgentMoveData;
-
 import SmartTransportation.Simulation.TransportMethodSpeed;
 
 import javafx.animation.Animation;

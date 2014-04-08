@@ -14,12 +14,9 @@ import java.util.*;
 
 import agents.User.TransportMode;
 
-import dataStores.AgentMoveData;
-import dataStores.MoveData;
 import dataStores.SimulationDataStore;
 import dataStores.AgentDataStore;
 import dataStores.UserDataStore;
-import dataStores.AgentMoveData.MoveDataType;
 
 import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TimeConstraint;
@@ -301,8 +298,8 @@ public class GUI extends Application implements SimulationGUI
 					building = RectangleBuilder.create().
 							translateX(coordX).translateY(coordY).
 							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
-//							fill(Color.GRAY).
-							fill(new Color(random.nextDouble(), random.nextDouble(), random.nextDouble(), 1)).
+							fill(Color.SILVER).
+//							fill(new Color(random.nextDouble(), random.nextDouble(), random.nextDouble(), 1)).
 							build();
 					map.getChildren().add(building);
 				}

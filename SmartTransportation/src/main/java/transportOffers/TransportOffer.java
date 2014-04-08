@@ -7,6 +7,7 @@ public abstract class TransportOffer
 	private TransportMode mTransportMode;
 	protected double mTravelCost = 0.0;
 	protected double mTravelTime = 0.0;
+	private double mTravelCostScaleFactor = 1.0;
 	public TransportOffer(TransportMode transportMode)
 	{
 		assert(transportMode != null);
@@ -30,8 +31,9 @@ public abstract class TransportOffer
 	{
 		return mTravelTime;
 	}
-	public void setCostScaleFactor(double scale)
+	public void scaleCost(double scale)
 	{
-		mTravelCost *= scale;
+		mTravelCost *= scale / mTravelCostScaleFactor;
+		mTravelCostScaleFactor = scale;
 	}
 }

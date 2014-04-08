@@ -69,7 +69,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	}
 	public enum TransportMethodSpeed
 	{
-		WALKING_SPEED	(4), 	// equivalent to 20 km/h
+		WALKING_SPEED	(2), 	// equivalent to 10 km/h
 		BUS_SPEED		(8),	// equivalent to 40 km/h
 		TAXI_SPEED		(10);	// equivalent to 50 km/h
 		

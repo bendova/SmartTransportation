@@ -21,6 +21,7 @@ public class AgentDataStore
 	{
 		assert(agentName != null);
 		assert(agentID != null);
+		assert(agentType != null);
 		assert(startLocation != null);
 		
 		mName = agentName;

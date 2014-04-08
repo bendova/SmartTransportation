@@ -3,28 +3,47 @@ package transportOffers;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import agents.User.TransportMode;
+import conversations.taxiStationMediator.TaxiAvailableMessage;
+import conversations.taxiStationMediator.messageData.ITaxiDescription;
+import conversations.taxiStationMediator.messageData.ITaxiServiceRequest;
+import conversations.taxiStationMediator.messageData.TaxiDescription;
+import conversations.taxiStationMediator.messageData.TaxiServiceRequest;
+import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
 
 public class TaxiTransportOffer extends TransportOffer
 {
-	private NetworkAddress mTaxiStationAddress;
-	private NetworkAddress mRequestorAddress;
+	private ITaxiDescription mTaxiDescription;
+	private ITransportServiceRequest mRequest;
 	private NetworkAdaptor mNetworkAdaptor;
-	public TaxiTransportOffer(NetworkAdaptor networkAdaptor,
-			NetworkAddress requestorAddress)
+	public TaxiTransportOffer(double travelCost, double travelTime, NetworkAdaptor networkAdaptor, 
+			ITaxiDescription taxiDescription, ITransportServiceRequest request)
 	{
 		super(TransportMode.TAKE_TAXI);
 		
+		assert(travelCost >= 0);
+		assert(travelTime >= 0);
 		assert(networkAdaptor != null);
-		assert(requestorAddress != null);
+		assert(taxiDescription != null);
+		assert(request != null);
 		
-		mTravelCost = taxiOffer.getData().getTravelCost();
-		mTravelTime = taxiOffer.getData().getTotalTravelTime();
-		mTaxiStationAddress = taxiOffer.getFrom();
-		mRequestorAddress = requestorAddress;
+		mTravelCost = travelCost;
+		mTravelTime = travelTime;
 		mNetworkAdaptor = networkAdaptor;
+		mTaxiDescription = taxiDescription;
+		mRequest = request;
+	}
+	
+	public void setTransportServiceRequest(ITransportServiceRequest request)
+	{
+		assert(request != null);
+		
+		if(request != null)
+		{
+			mRequest = request;
+		}
 	}
 
 	@Override
@@ -41,14 +60,20 @@ public class TaxiTransportOffer extends TransportOffer
 	
 	private void sendConfirmationMessage()
 	{
-		TaxiRequestConfirmationMessage confirmationMessage = new TaxiRequestConfirmationMessage("I confirm the request",
-				mRequestorAddress, mTaxiStationAddress);
+		ITaxiServiceRequest request = new TaxiServiceRequest(mRequest, mTaxiDescription);
+		TaxiRequestConfirmationMessage confirmationMessage = new TaxiRequestConfirmationMessage(request,
+				mRequest.getUserNetworkAddress(), mTaxiDescription.getTaxiStationAddress());
 		mNetworkAdaptor.sendMessage(confirmationMessage);
 	}
 	private void sendCancelMessage()
 	{
 		TaxiRequestCancelMessage cancelMessage = new TaxiRequestCancelMessage("I cancel this request", 
-				mRequestorAddress, mTaxiStationAddress);
+				mRequest.getUserNetworkAddress(), mTaxiDescription.getTaxiStationAddress());
 		mNetworkAdaptor.sendMessage(cancelMessage);
+	}
+	
+	public ITaxiDescription getTaxiDescription()
+	{
+		return mTaxiDescription;
 	}
 }

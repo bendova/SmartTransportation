@@ -150,7 +150,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mTransportPreference = transportPreference;
 		
 		// TODO pass this preference as a parameter
-		mTransportSortingPreference = TransportSortingPreference.PREFER_CHEAPEST;
+		mTransportSortingPreference = TransportSortingPreference.PREFER_FASTEST;
 		mTransportModeUsed = TransportMode.NONE;
 		mCityMap = cityMap;
 		mCurrentLocation = startLocation;

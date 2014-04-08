@@ -10,6 +10,10 @@ import map.CityMap;
 
 import conversations.protocols.taxistation.ProtocolWithTaxi;
 import conversations.taxiStationMediator.RegisterAsTaxiStationMessage;
+import conversations.taxiStationMediator.TaxiAvailableMessage;
+import conversations.taxiStationMediator.messageData.ITaxiDescription;
+import conversations.taxiStationMediator.messageData.ITaxiServiceRequest;
+import conversations.taxiStationMediator.messageData.TaxiDescription;
 import conversations.taxiStationTaxi.actions.OnOrderCompleteAction;
 import conversations.taxiStationTaxi.actions.OnRegisterAction;
 import conversations.taxiStationTaxi.actions.OnRejectOrderAction;
@@ -20,13 +24,9 @@ import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;
 import conversations.userMediator.messages.TransportServiceRequestMessage;
-import conversations.userMediator.messages.messageData.ITransportServiceRequest;
-import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiReplyMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
-import conversations.userTaxi.messages.messageData.ConfirmationRequest;
-import conversations.userTaxi.messages.messageData.IConfirmationRequest;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
 import conversations.userTaxi.messages.messageData.TaxiServiceReply;
@@ -44,8 +44,6 @@ public class TaxiStation extends AbstractParticipant
 {
 	private enum TaxiRequestState
 	{
-		PENDING_PROCESSING,
-		AWAITING_CONFIRMATION,
 		READY_FOR_SERVICE,
 		BEING_SERVICED,
 		COMPLETED,
@@ -57,37 +55,32 @@ public class TaxiStation extends AbstractParticipant
 		private static final int DEFAULT_TIME_OUT = 500;
 		
 		private TaxiRequestState mCurrentState;
-		private ITransportServiceRequest mRequestData;
+		private ITaxiServiceRequest mRequestData;
 		private NetworkAddress mFromUserAddress;
 		private NetworkAddress mServicedByTaxi;
 		
 		private int mCurrentTime;
 		private int mTimeoutTime;
 		
-		private boolean mWasConfirmed;
-		private boolean mIsAssigned;
-		
-		public TaxiRequest(TransportServiceRequestMessage requestMessage)
+		public TaxiRequest(TaxiRequestConfirmationMessage requestMessage)
 		{
 			this(requestMessage, 0, DEFAULT_TIME_OUT);
 		}
 		
-		public TaxiRequest(TransportServiceRequestMessage requestMessage, int currentTime, int timeOutTimeSteps)
+		public TaxiRequest(TaxiRequestConfirmationMessage requestMessage, int currentTime, int timeOutTimeSteps)
 		{
 			assert(requestMessage != null);
 			
 			mRequestData = requestMessage.getData();
+			mServicedByTaxi = mRequestData.getTaxiDescription().getTaxiAddress();
 			mFromUserAddress = mRequestData.getUserNetworkAddress();
-			mCurrentState = TaxiRequestState.PENDING_PROCESSING;
+			mCurrentState = TaxiRequestState.READY_FOR_SERVICE;
 			
 			mCurrentTime = currentTime;
 			mTimeoutTime = timeOutTimeSteps;
-			
-			mWasConfirmed = false;
-			mIsAssigned = false;
 		}
 		
-		public ITransportServiceRequest getRequestData()
+		public ITaxiServiceRequest getRequestData()
 		{
 			return mRequestData;
 		}
@@ -102,45 +95,9 @@ public class TaxiStation extends AbstractParticipant
 			return mCurrentState;
 		}
 		
-		public void setServicedBy(NetworkAddress taxiAddress)
-		{
-			assert(taxiAddress != null);
-			
-			mServicedByTaxi = taxiAddress;
-			mIsAssigned = true;
-		}
-		
-		public void clearServicedBy()
-		{
-			mServicedByTaxi = null;
-			mIsAssigned = false;
-		}
-		
 		public NetworkAddress getServicedBy()
 		{
 			return mServicedByTaxi;
-		}
-		
-		public void setAsPendingProcessing()
-		{
-			mCurrentState = TaxiRequestState.PENDING_PROCESSING;
-		}
-		
-		public void setAsAwaitingConfirmation()
-		{
-			assert(mCurrentState == TaxiRequestState.PENDING_PROCESSING);
-			
-			mCurrentState = TaxiRequestState.AWAITING_CONFIRMATION;
-		}
-		
-		public void setAsReadyForService()
-		{
-			assert(mWasConfirmed);
-			assert(mIsAssigned);
-			assert(mCurrentState != TaxiRequestState.CANCELED);
-			assert(mCurrentState != TaxiRequestState.COMPLETED);
-			
-			mCurrentState = TaxiRequestState.READY_FOR_SERVICE;
 		}
 		
 		public void setAsBeingServiced()
@@ -175,26 +132,6 @@ public class TaxiStation extends AbstractParticipant
 			mCurrentTime++;
 		}
 		
-		public boolean hasTimedOut()
-		{
-			return (mCurrentTime > mTimeoutTime);
-		}
-
-		public void setIsConfirmed()
-		{
-			mWasConfirmed = true;
-		}
-		
-		public boolean wasConfirmed()
-		{
-			return mWasConfirmed;
-		}
-		
-		public boolean isAssigned()
-		{
-			return mIsAssigned;
-		}
-		
 		@Override
 		public int compareTo(TaxiRequest o) 
 		{
@@ -211,7 +148,7 @@ public class TaxiStation extends AbstractParticipant
 	private NetworkAddress mMediatorAddress;
 	private Queue<TaxiRequest> mTaxiRequests;
 	private Map<NetworkAddress, UUID> mTaxiesMap;
-	private Set<NetworkAddress> mFreeTaxiesSet;
+	private Set<NetworkAddress> mAvailableTaxiesSet;
 	private ParticipantLocationService mLocationService;
 	private ProtocolWithTaxi withTaxi;
 	
@@ -223,7 +160,7 @@ public class TaxiStation extends AbstractParticipant
 		mMediatorAddress = mediatorNetworkAddress;
 		
 		mTaxiesMap = new HashMap<NetworkAddress, UUID>();
-		mFreeTaxiesSet = new HashSet<NetworkAddress>();
+		mAvailableTaxiesSet = new HashSet<NetworkAddress>();
 		mTaxiRequests = new ConcurrentLinkedQueue<TaxiRequest>();
 	}
 	
@@ -317,11 +254,7 @@ public class TaxiStation extends AbstractParticipant
 		
 		if(input != null)
 		{
-			if(input instanceof TransportServiceRequestMessage)
-			{
-				storeRequest((TransportServiceRequestMessage)input);
-			}
-			else if (input instanceof TaxiRequestConfirmationMessage)
+			if (input instanceof TaxiRequestConfirmationMessage)
 			{
 				processRequestConfirmation((TaxiRequestConfirmationMessage)input);
 			}
@@ -348,38 +281,13 @@ public class TaxiStation extends AbstractParticipant
 		}
 	}
 	
-	private void storeRequest(TransportServiceRequestMessage taxiRequestMessage)
-	{
-		logger.info("storeRequest()");
-		
-		mTaxiRequests.add(new TaxiRequest(taxiRequestMessage));
-	}
-	
 	private void processRequestConfirmation(TaxiRequestConfirmationMessage requestConfirmationMessage)
 	{
 		logger.info("processRequestConfirmation() requestConfirmationMessage " + requestConfirmationMessage);
 		
-		for(TaxiRequest taxiRequest : mTaxiRequests)
-		{
-			if(taxiRequest.getFrom().equals(requestConfirmationMessage.getFrom()))
-			{
-				if(taxiRequest.getCurrentState() == TaxiRequestState.CANCELED)
-				{
-					return;
-				}
-				
-				taxiRequest.setIsConfirmed();
-				if(taxiRequest.isAssigned())
-				{
-					taxiRequest.setAsReadyForService();
-				}
-				else 
-				{
-					taxiRequest.setAsPendingProcessing();
-				}
-				break;
-			}
-		}
+		TaxiRequest taxiRequest = new TaxiRequest(requestConfirmationMessage);
+		mTaxiRequests.add(taxiRequest);
+		mAvailableTaxiesSet.remove(taxiRequest.getServicedBy());
 	}
 	
 	private void processRequestCancel(TaxiRequestCancelMessage requestCancel)
@@ -395,11 +303,7 @@ public class TaxiStation extends AbstractParticipant
 					return;
 				}
 				
-				if(taxiRequest.isAssigned())
-				{
-					mFreeTaxiesSet.add(taxiRequest.getServicedBy());
-					taxiRequest.clearServicedBy();
-				}
+				setTaxiAsAvailable(taxiRequest.getServicedBy());
 				taxiRequest.setAsCanceled();
 				break;
 			}
@@ -415,7 +319,7 @@ public class TaxiStation extends AbstractParticipant
 		{
 			NetworkAddress taxiAddress = newTaxiData.getNetworkAddress();
 			mTaxiesMap.put(taxiAddress, newTaxiData.getID());
-			mFreeTaxiesSet.add(taxiAddress);
+			setTaxiAsAvailable(taxiAddress);
 		}
 	}
 	
@@ -426,13 +330,13 @@ public class TaxiStation extends AbstractParticipant
 		NetworkAddress reportingTaxiAddress = taxiOrderCompleteMessage.getFrom();
 		if(mTaxiesMap.containsKey(reportingTaxiAddress))
 		{
-			if(mFreeTaxiesSet.contains(reportingTaxiAddress))
+			if(mAvailableTaxiesSet.contains(reportingTaxiAddress))
 			{
 				logger.info("handleTaxiOrderComplete() Logic error!");
 			}
 			
-			assert(mFreeTaxiesSet.contains(reportingTaxiAddress) == false);
-			mFreeTaxiesSet.add(reportingTaxiAddress);
+			assert(mAvailableTaxiesSet.contains(reportingTaxiAddress) == false);
+			setTaxiAsAvailable(reportingTaxiAddress);
 			
 			for(TaxiRequest taxiRequest : mTaxiRequests)
 			{
@@ -441,11 +345,26 @@ public class TaxiStation extends AbstractParticipant
 				{
 					logger.info("handleTaxiOrderComplete() taxiRequest " + taxiRequest);
 					taxiRequest.setAsCompleted();
-					taxiRequest.clearServicedBy();
 					break;
 				}
 			}
 		}
+	}
+	
+	private void setTaxiAsAvailable(NetworkAddress taxiAddress)
+	{
+		mAvailableTaxiesSet.add(taxiAddress);
+		offerTaxiToMediator(taxiAddress);
+	}
+	
+	private void offerTaxiToMediator(NetworkAddress taxiAddress)
+	{
+		Location taxiLocation = mLocationService.getAgentLocation(taxiAddress.getId());
+		ITaxiDescription taxiDescription = new TaxiDescription(taxiAddress, taxiLocation, 
+				getNetworkAddress());
+		TaxiAvailableMessage msg = new TaxiAvailableMessage(taxiDescription, 
+				getNetworkAddress(), mMediatorAddress);
+		network.sendMessage(msg);
 	}
 	
 	private void handleTaxiStatusUpdate(TaxiStatusUpdateMessage msg)
@@ -459,37 +378,28 @@ public class TaxiStation extends AbstractParticipant
 			switch(msg.getData())
 			{
 			case AVAILABLE:
-				assert(mFreeTaxiesSet.contains(reportingTaxiAddress) == false) : 
+				assert(mAvailableTaxiesSet.contains(reportingTaxiAddress) == false) : 
 					"Taxi " + msg.getFrom() + " should not already be in our free taxies list!";
 				
 				logger.info("handleTaxiStatusUpdate() adding to mFreeTaxiesList " + msg.getFrom());
-				mFreeTaxiesSet.add(reportingTaxiAddress);
+				setTaxiAsAvailable(reportingTaxiAddress);
 				break;
 			case IN_REVISION:
 			case BROKEN:
-				if (mFreeTaxiesSet.contains(reportingTaxiAddress))
+				if (mAvailableTaxiesSet.contains(reportingTaxiAddress))
 				{
 					logger.info("handleTaxiStatusUpdate() removing from mFreeTaxiesList " + msg.getFrom());
 					
-					mFreeTaxiesSet.remove(reportingTaxiAddress);
+					mAvailableTaxiesSet.remove(reportingTaxiAddress);
+					// TODO notify mediator that this taxi is no longer available
 				}
 				else
 				{
 					logger.info("handleTaxiStatusUpdate() mTaxiesMap.get(reportingTaxiAddress) " + mTaxiesMap.get(reportingTaxiAddress));
-
-					for(TaxiRequest taxiRequest : mTaxiRequests)
-					{
-						NetworkAddress taxiAddress = taxiRequest.getServicedBy();
-						if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
-						{
-							taxiRequest.clearServicedBy();
-							taxiRequest.setAsPendingProcessing();
-							logger.info("handleTaxiStatusUpdate() clearing task of " + mTaxiesMap.get(taxiAddress));
-							break;
-						}
-					}
+					
+					// TODO haha - notify Mediator that the taxi has broken down,
+					// and have him deal with it
 				}
-				//sendRevisionCompleteMessageTo(reportingTaxiAddress);
 				break;
 			default:
 				assert(false);
@@ -509,8 +419,8 @@ public class TaxiStation extends AbstractParticipant
 				NetworkAddress taxiAddress = taxiRequest.getServicedBy();
 				if((taxiAddress != null) && (taxiAddress.equals(reportingTaxiAddress)))
 				{
-					taxiRequest.setAsPendingProcessing();
-					taxiRequest.clearServicedBy();
+					// FIXME taxiRequest.setAsPendingProcessing();
+					taxiRequest.setAsCanceled();
 					break;
 				}
 			}
@@ -532,33 +442,10 @@ public class TaxiStation extends AbstractParticipant
 	
 	private void processRequests()
 	{
-		List<TaxiRequest> pendingRequests = new LinkedList<TaxiRequest>();
 		for (TaxiRequest taxiRequest : mTaxiRequests) 
 		{
 			switch(taxiRequest.getCurrentState())
 			{
-				case PENDING_PROCESSING:
-					if((taxiRequest.hasTimedOut() == false) && 
-					   (taxiRequest.getRequestData().isValid()))
-					{
-						pendingRequests.add(taxiRequest);
-					}
-					else 
-					{
-						logger.info("processRequests() canceled request! ");
-						
-						taxiRequest.setAsCanceled();
-					}
-					break;
-				case AWAITING_CONFIRMATION:
-					if(taxiRequest.hasTimedOut() || 
-					  (taxiRequest.getRequestData().isValid() == false))
-					{
-						logger.info("processRequests() unconfirmed request! ");
-						
-						handleUnconfirmedRequest(taxiRequest);
-					}
-					break;
 				case READY_FOR_SERVICE:
 					logger.info("processRequests() confirmed request! ");
 					handleConfirmedRequest(taxiRequest);
@@ -573,82 +460,6 @@ public class TaxiStation extends AbstractParticipant
 					break;
 			}
 		}
-		if((pendingRequests.isEmpty() == false) && (mFreeTaxiesSet.isEmpty() == false))
-		{
-			Collections.sort(pendingRequests);
-			confirmAndAssignRequests(pendingRequests);
-		}
-	}
-	
-	private void confirmAndAssignRequests(List<TaxiRequest> pendingRequests)
-	{
-		logger.info("confirmRequests() pendingRequests.size() " + pendingRequests.size());
-		
-		Iterator<NetworkAddress> iterator = mFreeTaxiesSet.iterator();
-		while(iterator.hasNext())
-		{
-			if(pendingRequests.isEmpty())
-			{
-				break;
-			}
-			NetworkAddress taxiAddress = iterator.next();
-			
-			logger.info("confirmRequests() assigning to taxiAddress " + taxiAddress);
-			
-			UUID taxiID = mTaxiesMap.get(taxiAddress);
-			Location taxiLocation = mLocationService.getAgentLocation(taxiID);
-			
-			TaxiRequest assignedRequest = getRequestNearestTo(pendingRequests, taxiLocation);
-			pendingRequests.remove(assignedRequest);
-			
-			assignedRequest.setServicedBy(taxiAddress);
-		
-			if(assignedRequest.wasConfirmed())
-			{
-				assignedRequest.setAsReadyForService();
-			}
-			else
-			{
-				requestConfirmationFromUser(assignedRequest, taxiLocation);
-				assignedRequest.setAsAwaitingConfirmation();
-			}
-			iterator.remove();
-		}
-	}
-	
-	private TaxiRequest getRequestNearestTo(List<TaxiRequest> pendingRequests, Location taxiLocation)
-	{
-		logger.info("getRequestNearestTo() taxiLocation " + taxiLocation);
-		
-		TaxiRequest assignedRequest = null;
-		double minDistance = Integer.MAX_VALUE;
-		for(TaxiRequest taxiRequest: pendingRequests)
-		{
-			double distance = taxiRequest.getRequestData().getStartLocation().distanceTo(taxiLocation);
-			if(minDistance > distance)
-			{
-				assignedRequest = taxiRequest;
-				minDistance = distance;
-			}
-		}
-		
-		logger.info("getRequestNearestTo() request at " + assignedRequest.getRequestData().getStartLocation());
-		
-		return assignedRequest;
-	}
-	
-	private void handleUnconfirmedRequest(TaxiRequest taxiRequest)
-	{
-		logger.info("handleUnconfirmedRequest() taxiRequest " + taxiRequest);
-		
-		assert(mFreeTaxiesSet.contains(taxiRequest.getServicedBy()) == false);
-		
-		if(taxiRequest.getServicedBy() != null)
-		{
-			mFreeTaxiesSet.add(taxiRequest.getServicedBy());
-			taxiRequest.clearServicedBy();
-		}
-		taxiRequest.setAsCanceled();
 	}
 	
 	private void handleConfirmedRequest(TaxiRequest taxiRequest)
@@ -662,32 +473,6 @@ public class TaxiStation extends AbstractParticipant
 		sendOrderToTaxi(taxiAddress, taxiRequest.getRequestData(), taxiRequest.getFrom());
 		taxiRequest.setAsBeingServiced();
 	}
-		
-	private void requestConfirmationFromUser(TaxiRequest taxiRequest, Location taxiLocation)
-	{
-		logger.info("requestConfirmationFromUser() fromUser " + taxiRequest.getFrom());
-		
-		IConfirmationRequest confirmationRequest = createTaxiConfirmationRequest(taxiRequest.getRequestData(), 
-				taxiLocation);
-		
-		RequestTaxiConfirmationMessage message = new RequestTaxiConfirmationMessage(confirmationRequest,
-				network.getAddress(), mMediatorAddress);
-		network.sendMessage(message);
-	}
-	
-	private IConfirmationRequest createTaxiConfirmationRequest(ITransportServiceRequest taxiRequest, 
-			Location taxiLocation)
-	{
-		int travelToUserDistance = mCityMap.getPath(taxiLocation, taxiRequest.getStartLocation()).size();
-		int travelToDestinationDistance = mCityMap.getPath(taxiRequest.getStartLocation(), 
-				taxiRequest.getDestination()).size();
-		double totalTravelTime = (double)(travelToUserDistance + travelToDestinationDistance) 
-				* TransportMethodSpeed.TAXI_SPEED.getTimeTakenPerUnitDistance();
-		double travelCost = (double)travelToDestinationDistance 
-				* TransportMethodCost.TAXI_COST.getCost();
-		
-		return new ConfirmationRequest(taxiRequest.getUserNetworkAddress(), totalTravelTime, travelCost);
-	}
 	
 	private void sendReplyToUser(NetworkAddress toUser, UUID taxiID)
 	{
@@ -699,7 +484,7 @@ public class TaxiStation extends AbstractParticipant
 		network.sendMessage(taxiServiceReplyMessage);
 	}
 	
-	private void sendOrderToTaxi(NetworkAddress toTaxi, ITransportServiceRequest request, NetworkAddress userNetworkAddress)
+	private void sendOrderToTaxi(NetworkAddress toTaxi, ITaxiServiceRequest request, NetworkAddress userNetworkAddress)
 	{
 		logger.info("SendOrderToTaxi() toTaxi " + toTaxi);
 		

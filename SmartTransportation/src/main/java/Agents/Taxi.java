@@ -223,7 +223,6 @@ public class Taxi extends AbstractParticipant
 		TaxiData taxiData = new TaxiData(getID(), network.getAddress());
 		RegisterAsTaxiMessage registerMessage = new 
 				RegisterAsTaxiMessage(taxiData, network.getAddress(), mTaxiStationAddress);
-		//network.sendMessage(registerMessage);
 		mWithTaxiStation.registerAsTaxi(registerMessage);
 	}
 	
@@ -234,28 +233,14 @@ public class Taxi extends AbstractParticipant
 		{
 			if(input instanceof TaxiOrderMessage)
 			{
-				/*
-				if(mCurrentStatus != Status.AVAILABLE)
-				{
-					logger.info("processInput() mCurrentStatus " + mCurrentStatus);
-					sendRejectOrderMessage((TaxiOrderMessage)input);
-				}
-				else
-				{				
-					processOrderMessage((TaxiOrderMessage)input);
-				}
-				*/
 				mWithTaxiStation.handleOrderMessage((TaxiOrderMessage)input);
 			}
 			else if (input instanceof TakeMeToDestinationMessage)
 			{
-				//processOrderMessage((TakeMeToDestinationMessage)input);
-				
 				mWithUser.handleTakeMeToDestination((TakeMeToDestinationMessage)input);
 			}
 			else if (input instanceof RevisionCompleteMessage)
 			{
-				//handleRevisionComplete((RevisionCompleteMessage)input);
 				mWithTaxiStation.handleRevisionCompleteMessage((RevisionCompleteMessage)input);
 			}
 		}

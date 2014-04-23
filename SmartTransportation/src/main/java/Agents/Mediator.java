@@ -1,6 +1,5 @@
 package agents;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,7 +9,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import map.CityMap;
@@ -18,6 +16,8 @@ import map.CityMap;
 import SmartTransportation.Simulation.TransportMethodCost;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 import agents.User.TransportPreference;
+import agents.helpers.ITransportServiceRecord;
+import agents.helpers.TransportServiceRecord;
 
 import conversations.busStationMediator.RegisterAsBusServiceMessage;
 import conversations.taxiStationMediator.RegisterAsTaxiStationMessage;
@@ -25,11 +25,8 @@ import conversations.taxiStationMediator.TaxiAvailableMessage;
 import conversations.taxiStationMediator.messageData.ITaxiDescription;
 import conversations.userBusStation.BusTravelPlanMessage;
 import conversations.userMediator.messages.ConfirmTransportOfferMessage;
-import conversations.userMediator.messages.TransportServiceOfferMessage;
 import conversations.userMediator.messages.TransportServiceRequestMessage;
-import conversations.userMediator.messages.messageData.ITransportServiceOffer;
 import conversations.userMediator.messages.messageData.ITransportServiceRequest;
-import conversations.userMediator.messages.messageData.TransportServiceOffer;
 
 import transportOffers.BusTransportOffer;
 import transportOffers.TaxiTransportOffer;
@@ -53,17 +50,13 @@ public class Mediator extends AbstractParticipant
 	private ParticipantLocationService mLocationService;
 	private Location mLocation = new Location(0, 0, 0);
 	private CityMap mCityMap;
-	private NetworkAddress mAddress;
+	private NetworkAddress mNetworkAddress;
 	
 	private boolean mIsWalkingEnabled = true;
 	private boolean mAreBusesEnabled = true;
 	private boolean mAreTaxiesEnabled = true;
 	
-	private Map<NetworkAddress, ITransportServiceRequest> mUserTransportRequests;
-	private Map<NetworkAddress, List<TransportOffer>> mUserTransportOffers;
-	private Map<NetworkAddress, List<TransportOffer>> mOffersPendingDelivery;	
-	private Map<NetworkAddress, List<TransportOffer>> mOffersPendingConfirmation;
-	
+	private Map<NetworkAddress, ITransportServiceRecord> mTransportServiceRecords;
 	private List<ITaxiDescription> mAvailableTaxies;
 	
 	private Comparator<TransportOffer> mSortOnTimeComparator;
@@ -111,10 +104,8 @@ public class Mediator extends AbstractParticipant
 		mTaxiStations = new HashSet<NetworkAddress>();
 		mBusServices = new HashSet<NetworkAddress>();
 		mPendingServiceRequests = new ConcurrentLinkedQueue<TransportServiceRequestMessage>();
-		mUserTransportRequests = new ConcurrentHashMap<NetworkAddress, ITransportServiceRequest>();
-		mUserTransportOffers = new ConcurrentHashMap<NetworkAddress, List<TransportOffer>>();
-		mOffersPendingConfirmation = new HashMap<NetworkAddress, List<TransportOffer>>();
-		mOffersPendingDelivery = new HashMap<NetworkAddress, List<TransportOffer>>();
+		
+		mTransportServiceRecords = new HashMap<NetworkAddress, ITransportServiceRecord>();
 		mAvailableTaxies = new ArrayList<ITaxiDescription>();
 		
 		initTranportMethodComparators();
@@ -134,11 +125,11 @@ public class Mediator extends AbstractParticipant
 	
 	public NetworkAddress getNetworkAddress() 
 	{
-		if(mAddress == null)
+		if(mNetworkAddress == null)
 		{
-			mAddress = network.getAddress();
+			mNetworkAddress = network.getAddress();
 		}
-		return mAddress;
+		return mNetworkAddress;
 	}
 	
 	@Override
@@ -215,36 +206,35 @@ public class Mediator extends AbstractParticipant
 				processInput(input);
 			}
 		}
-		if(mUserTransportRequests.isEmpty() == false)
+		if(mTransportServiceRecords.isEmpty() == false)
 		{
-			processTransportRequests();
+			processTransportServiceRecords();
 		}
 	}
 	
 	private void handleTaxiAvailable(TaxiAvailableMessage message)
 	{
-		if(mUserTransportRequests.isEmpty())
+		if(mTransportServiceRecords.isEmpty())
 		{
 			mAvailableTaxies.add(message.getData());
 		}
 		else
 		{
 			ITaxiDescription taxi = message.getData();
-			NetworkAddress userAddress = getUserNearestTo(mUserTransportRequests.keySet(), 
+			NetworkAddress userAddress = getUserNearestTo(mTransportServiceRecords.keySet(), 
 					taxi.getTaxiLocation());
-			mUserTransportOffers.get(userAddress).add(getTaxiTransportOffer(userAddress, taxi));
+			mTransportServiceRecords.get(userAddress).addTransportOffer(getTaxiTransportOffer(userAddress, taxi));
 		}
 	}
 	
 	private void handleBusPlan(BusTravelPlanMessage message)
 	{
 		NetworkAddress userAddress = message.getData().getUserAddress();
-		if(mUserTransportOffers.containsKey(userAddress))
+		if(mTransportServiceRecords.containsKey(userAddress))
 		{
 			BusTransportOffer busOffer = new BusTransportOffer(message);
-			mUserTransportOffers.get(userAddress).add(busOffer);
+			mTransportServiceRecords.get(userAddress).addTransportOffer(busOffer);
 		}
-		// TODO add the else case when the bus requests will need to be canceled
 	}
 	
 	@Override
@@ -278,8 +268,10 @@ public class Mediator extends AbstractParticipant
 		logger.info("handleConfirmedTransportOffer() confirmedOffer " + confirmedOffer);
 		
 		NetworkAddress userAddress = confirmedOfferMessage.getFrom();
-		List<TransportOffer> transportOffers = mOffersPendingConfirmation.remove(userAddress);
-		transportOffers.remove(confirmedOffer);
+		
+		ITransportServiceRecord transportServiceRecord = mTransportServiceRecords.remove(userAddress);
+		List<TransportOffer> transportOffers = transportServiceRecord.getTransportOffers();
+		transportServiceRecord.removeTransportOffer(confirmedOffer);
 		for (Iterator<TransportOffer> iterator = transportOffers.iterator(); iterator.hasNext();) 
 		{
 			TransportOffer transportOffer = iterator.next();
@@ -299,14 +291,16 @@ public class Mediator extends AbstractParticipant
 		logger.info("processRequest() TransportServiceRequestMessage " + serviceRequestMessage);
 		
 		NetworkAddress userAddress = serviceRequestMessage.getFrom();
-		mUserTransportRequests.put(userAddress, serviceRequestMessage.getData());
-		mUserTransportOffers.put(userAddress, new ArrayList<TransportOffer>());
+		ITransportServiceRequest serviceRequest = serviceRequestMessage.getData();
+		ITransportServiceRecord serviceRecord = new TransportServiceRecord(userAddress, 
+				serviceRequest, mNetworkAddress, network, getComparatorFor(serviceRequest));
+		mTransportServiceRecords.put(userAddress, serviceRecord);
 		
 		mPendingServiceRequests.add(serviceRequestMessage);
 		if(mAvailableTaxies.isEmpty() == false)
 		{
 			ITaxiDescription taxi = getTaxiNearestTo(serviceRequestMessage.getData().getStartLocation());
-			mUserTransportOffers.get(userAddress).add(getTaxiTransportOffer(userAddress, taxi));
+			serviceRecord.addTransportOffer(getTaxiTransportOffer(userAddress, taxi));
 		}
 		if(mBusServices.isEmpty() == false)
 		{
@@ -315,6 +309,10 @@ public class Mediator extends AbstractParticipant
 				forwardRequest(serviceRequestMessage, toBusStation);
 			}
 		}
+		if(mIsWalkingEnabled)
+		{
+			serviceRecord.addTransportOffer(getWalkingTransportOffer(serviceRequest));
+		}
 	}
 	
 	private TaxiTransportOffer getTaxiTransportOffer(NetworkAddress userAddress, 
@@ -322,7 +320,7 @@ public class Mediator extends AbstractParticipant
 	{
 		Location taxiLocation = taxiDescription.getTaxiLocation();
 		
-		ITransportServiceRequest request = mUserTransportRequests.get(userAddress);
+		ITransportServiceRequest request = mTransportServiceRecords.get(userAddress).getTransportServiceRequest();
 		int travelToUserDistance = mCityMap.getPath(taxiLocation, request.getStartLocation()).size();
 		int travelToDestinationDistance = mCityMap.getPath(request.getStartLocation(), 
 				request.getDestination()).size();
@@ -369,130 +367,35 @@ public class Mediator extends AbstractParticipant
 		logger.info("forwardRequest() requestMessage " + requestMessage);
 		
 		TransportServiceRequestMessage forwardMessage = new TransportServiceRequestMessage
-				(requestMessage.getData(), mAddress, toTransportStation);
+				(requestMessage.getData(), mNetworkAddress, toTransportStation);
 		network.sendMessage(forwardMessage);
 	}
 	
-	private void processTransportRequests()
+	private void processTransportServiceRecords()
 	{
-		if(mIsWalkingEnabled)
+		if(mTransportServiceRecords.isEmpty() == false)
 		{
-			addWalkingOffers();
-		}
-		if(mUserTransportOffers.isEmpty() == false)
-		{
-			Iterator<Map.Entry<NetworkAddress, List<TransportOffer>>> iterator = mUserTransportOffers.
+			Iterator<Map.Entry<NetworkAddress, ITransportServiceRecord>> iterator = mTransportServiceRecords.
 					entrySet().iterator();
 			while(iterator.hasNext())
 			{
-				Map.Entry<NetworkAddress, List<TransportOffer>> entry = iterator.next();
-				List<TransportOffer> transportOffers = entry.getValue();
+				Map.Entry<NetworkAddress, ITransportServiceRecord> entry = iterator.next();
+				List<TransportOffer> transportOffers = entry.getValue().getTransportOffers();
 				if(transportOffers.isEmpty() == false)
 				{
+					entry.getValue().sortTransportOffers();
 					NetworkAddress userAddress = entry.getKey();
-					sortTransportOffers(userAddress, transportOffers);
 					reassignSurplusOffers(userAddress, transportOffers);
-					
-					mOffersPendingDelivery.put(userAddress, transportOffers);
 				}
 			}
-			
-			if(mOffersPendingDelivery.isEmpty() == false)
-			{
-				sendOffers();
-			}
+			sendOffers();
 		}
-	}
-	
-	private void addWalkingOffers()
-	{
-		Iterator<Map.Entry<NetworkAddress, ITransportServiceRequest>> iterator = mUserTransportRequests.
-				entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			Map.Entry<NetworkAddress, ITransportServiceRequest> entry = iterator.next();
-			NetworkAddress userAddress = entry.getKey();
-			ITransportServiceRequest request = entry.getValue();
-			List<TransportOffer> transportOffers = mUserTransportOffers.get(userAddress);
-			
-			if(canAddWalkOffer(transportOffers, request))
-			{
-				transportOffers.add(getWalkingTransportOffer(request));
-			}
-		}	
-	}
-	
-	private boolean canAddWalkOffer(List<TransportOffer> transportOffers, ITransportServiceRequest request)
-	{
-		boolean canAdd = false;
-		if(mAreBusesEnabled || mAreTaxiesEnabled)
-		{
-			if(transportOffers.size() > 0)
-			{
-				canAdd = true;
-			}
-			else
-			{
-				int triggerTime = request.getTargetTravelTime();
-				if(request.getRequestAge() > triggerTime)
-				{
-					canAdd = true;
-				}
-			}
-		}
-		else
-		{
-			canAdd = true;
-		}
-		return canAdd;
 	}
 	
 	private WalkTransportOffer getWalkingTransportOffer(ITransportServiceRequest request)
 	{
 		List<Location> walkPath = mCityMap.getPath(request.getStartLocation(), request.getDestination());
 		return new WalkTransportOffer(walkPath);
-	}
-	
-	private void sortTransportOffers(NetworkAddress userAddress, List<TransportOffer> transportOffers)
-	{
-		ITransportServiceRequest request = mUserTransportRequests.get(userAddress);
-		applyTransportPreference(request.getTransportPreference(), transportOffers);
-		
-		if(transportOffers.size() > 1)
-		{
-			Collections.sort(transportOffers, getComparatorFor(request));
-		}
-	}
-	
-	private void applyTransportPreference(TransportPreference pref, List<TransportOffer> transportOffers)
-	{
-		for (Iterator<TransportOffer> iterator = transportOffers.iterator(); iterator.hasNext();) 
-		{
-			applyTransportPreference(pref, iterator.next());
-		}
-	}
-	
-	private void applyTransportPreference(TransportPreference pref, TransportOffer transportOffer)
-	{
-		double taxiCostScaling = pref.getTaxiCostScaling();
-		double busCostScaling = pref.getBusCostScaling();
-		double walkingCostScaling = pref.getWalkingCostScaling();
-		
-		switch (transportOffer.getTransportMode()) 
-		{
-		case TAKE_TAXI:
-			transportOffer.scaleCost(taxiCostScaling);
-			break;
-		case TAKE_BUS:
-			transportOffer.scaleCost(busCostScaling);
-			break;
-		case WALKING:
-			transportOffer.scaleCost(walkingCostScaling);
-			break;
-		default:
-			assert(false) : "Transport mode not handled: " + transportOffer.getTransportMode();
-			break;
-		}
 	}
 	
 	private Comparator<TransportOffer> getComparatorFor(ITransportServiceRequest request)
@@ -511,7 +414,7 @@ public class Mediator extends AbstractParticipant
 	
 	private void reassignSurplusOffers(NetworkAddress userAddress, List<TransportOffer> offers)
 	{
-		if(mUserTransportRequests.size() < 2)
+		if(mTransportServiceRecords.size() < 2)
 		{
 			return;
 		}
@@ -544,27 +447,28 @@ public class Mediator extends AbstractParticipant
 		int maxCostGain = 0;
 		NetworkAddress selectedUser = null;
 		
-		Iterator<Map.Entry<NetworkAddress, List<TransportOffer>>> iterator = mUserTransportOffers.
+		Iterator<Map.Entry<NetworkAddress, ITransportServiceRecord>> iterator = mTransportServiceRecords.
 				entrySet().iterator();
 		while(iterator.hasNext())
 		{
-			Map.Entry<NetworkAddress, List<TransportOffer>> entry = iterator.next();
+			Map.Entry<NetworkAddress, ITransportServiceRecord> entry = iterator.next();
 			NetworkAddress user = entry.getKey(); 
 			if(user.equals(sharingUser) == false)
 			{
-				ITransportServiceRequest request = mUserTransportRequests.get(user);
+				ITransportServiceRecord serviceRecord = mTransportServiceRecords.get(user);
+				ITransportServiceRequest request = serviceRecord.getTransportServiceRequest();
 				TransportPreference pref = request.getTransportPreference();
-				applyTransportPreference(pref, offerToShare);
+				serviceRecord.applyTransportPreference(pref, offerToShare);
 				
 				int costGain;
-				List<TransportOffer> currentOffers = entry.getValue();
+				List<TransportOffer> currentOffers = entry.getValue().getTransportOffers();
 				if(currentOffers.isEmpty())
 				{
 					costGain = (int)offerToShare.getCost();
 				}
 				else
 				{
-					TransportOffer currentTopOffer = entry.getValue().get(0);
+					TransportOffer currentTopOffer = currentOffers.get(0);
 					Comparator<TransportOffer> comparator = getComparatorFor(request);
 					costGain = comparator.compare(currentTopOffer, offerToShare);
 				}
@@ -577,20 +481,22 @@ public class Mediator extends AbstractParticipant
 			}
 		}
 		
+		ITransportServiceRecord serviceRecordOfSharingUser = mTransportServiceRecords.get(sharingUser);
 		if(selectedUser != null)
 		{
-			mUserTransportOffers.get(sharingUser).remove(offerToShare);
+			serviceRecordOfSharingUser.removeTransportOffer(offerToShare);
 			
-			offerToShare.setTransportServiceRequest(mUserTransportRequests.get(selectedUser));
-			mUserTransportOffers.get(selectedUser).add(0, offerToShare);
+			ITransportServiceRecord serviceRecordOfSelectedUser = mTransportServiceRecords.get(selectedUser);
+			offerToShare.setTransportServiceRequest(serviceRecordOfSelectedUser.getTransportServiceRequest());
+			serviceRecordOfSelectedUser.addTransportOffer(offerToShare);
 			
 			return true;
 		}
 		else
 		{
-			ITransportServiceRequest request = mUserTransportRequests.get(sharingUser);
+			ITransportServiceRequest request = serviceRecordOfSharingUser.getTransportServiceRequest();
 			TransportPreference pref = request.getTransportPreference();
-			applyTransportPreference(pref, offerToShare);
+			serviceRecordOfSharingUser.applyTransportPreference(pref, offerToShare);
 			
 			return false;
 		}
@@ -600,31 +506,12 @@ public class Mediator extends AbstractParticipant
 	{
 		logger.info("sendOffers()");
 		
-		Iterator<Map.Entry<NetworkAddress, List<TransportOffer>>> iterator = mOffersPendingDelivery.
+		Iterator<Map.Entry<NetworkAddress, ITransportServiceRecord>> iterator = mTransportServiceRecords.
 				entrySet().iterator();
 		while(iterator.hasNext())
 		{
-			Map.Entry<NetworkAddress, List<TransportOffer>> entry = iterator.next();
-			List<TransportOffer> transportOffers = entry.getValue();
-			NetworkAddress userAddress = entry.getKey();
-			
-			sendOffersToUser(userAddress, transportOffers);
-			
-			mUserTransportOffers.remove(userAddress);
-			mUserTransportRequests.remove(userAddress);
-			mOffersPendingConfirmation.put(userAddress, transportOffers);
-			iterator.remove();
+			iterator.next().getValue().sendTransportOffers();
 		}
-	}
-	
-	private void sendOffersToUser(NetworkAddress userAddress, List<TransportOffer> transportOffers)
-	{
-		logger.info("sendOffersToUser() userAddress " + userAddress);
-		
-		ITransportServiceOffer offer = new TransportServiceOffer(transportOffers);
-		TransportServiceOfferMessage msg = new TransportServiceOfferMessage(offer, mAddress, 
-				userAddress);
-		network.sendMessage(msg);
 	}
 	
 	private NetworkAddress getUserNearestTo(Set<NetworkAddress> userAddresses, Location location)
@@ -633,7 +520,8 @@ public class Mediator extends AbstractParticipant
 		double minDistance = Integer.MAX_VALUE;
 		for(NetworkAddress userAddress: userAddresses)
 		{
-			double distance = mUserTransportRequests.get(userAddress).getStartLocation().distanceTo(location);
+			double distance = mTransportServiceRecords.get(userAddress).
+					getTransportServiceRequest().getStartLocation().distanceTo(location);
 			if(minDistance > distance)
 			{
 				nearestUser = userAddress;

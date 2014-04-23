@@ -186,7 +186,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		return mTravelTimeTarget;
 	}
 	
-	public int getTravelTime()
+	public double getTravelTime()
 	{
 		return mTravelTime;
 	}
@@ -317,44 +317,9 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 	}
 	
-	@Override
-	public void execute()
-	{
-		if(mCurrentState == State.LOOKING_FOR_TRANSPORT)
-		{
-			// pull in Messages from the network
-			enqueueInput(this.network.getMessages());
-			
-			while (inputQueue.size() > 0) 
-			{
-				Input input = inputQueue.poll();
-				if(input instanceof TransportServiceOfferMessage)
-				{
-					mReceivedTransportOffers.addAll(((TransportServiceOfferMessage)input).getData().getTransportOffers());
-					logTransportOffers(mReceivedTransportOffers);
-				}
-				else
-				{
-					processInput(input);
-				}
-			}
-		}
-		else
-		{
-			super.execute();
-		}
-	}
-	
 	public List<TransportOffer> getReceivedTransportOffers()
 	{
 		return mReceivedTransportOffers;
-	}
-	
-	private void decideTransportMethod(List<TransportOffer> transportOffers)
-	{
-		logTransportOffers(transportOffers);
-		
-		selectTransportOffer(transportOffers.get(0));
 	}
 	
 	public void selectTransportOffer(TransportOffer selectedTransportOffer)
@@ -400,7 +365,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	{
 		if(mReceivedTransportOffers.isEmpty() == false)
 		{
-			mReceivedTransportOffers.clear();
+			mReceivedTransportOffers = new ArrayList<TransportOffer>();
 		}
 	}
 	
@@ -428,7 +393,15 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	@Override
 	protected void processInput(Input input) 
 	{
-		if(input != null)
+		if(mCurrentState == State.LOOKING_FOR_TRANSPORT)
+		{
+			if(input instanceof TransportServiceOfferMessage)
+			{
+				mReceivedTransportOffers = ((TransportServiceOfferMessage)input).getData().getTransportOffers();
+				logTransportOffers(mReceivedTransportOffers);
+			}
+		}
+		else 
 		{
 			switch(mTransportModeUsed)
 			{

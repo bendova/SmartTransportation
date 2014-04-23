@@ -29,7 +29,7 @@ rule "Accept the top transport offer if we are aproaching the deadline"
 		user: User(getCurrentState() == User.State.LOOKING_FOR_TRANSPORT,
 			(getReceivedTransportOffers().isEmpty() == false),
 			topOffer: getReceivedTransportOffers().get(0),
-			(topOffer.getTravelTime() > getTravelTimeTarget() / 2))
+			(getTravelTime() > getTravelTimeTarget() / 2))
 	then
 		user.selectTransportOffer(topOffer);
 end

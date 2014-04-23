@@ -1,15 +1,14 @@
-package gui.pieChartWindow;
+package gui.charts.transportMethodsUsed;
 
-import gui.Window;
+import gui.charts.Chart;
 
 import java.util.Map;
 
-public class PieChartWindow extends Window
+public class TransportMethodsUsedWindow extends Chart
 {
-	private final String LAYOUTS_PATH = "../../layouts/";
-	private final String PIE_CHART = LAYOUTS_PATH + "PieChart.fxml";
+	private final static String PIE_CHART = Chart.LAYOUTS_PATH + "PieChart.fxml";
 	
-	private PieChartController mPieChartController;
+	private TransportMethodsUsedController mPieChartController;
 	private Map<String, Double> mPieData;
 	
 	public void show()
@@ -17,7 +16,7 @@ public class PieChartWindow extends Window
 		super.show();
 		if(mStage.isShowing() == false)
 		{
-			mPieChartController = (PieChartController)loadScene(PIE_CHART);
+			mPieChartController = (TransportMethodsUsedController)loadScene(PIE_CHART);
 			if(mPieData != null)
 			{
 				mPieChartController.setPieChartData(mPieData);

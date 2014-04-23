@@ -1,4 +1,4 @@
-package gui;
+package gui.agents;
 
 import java.util.ArrayList;
 import java.util.List;

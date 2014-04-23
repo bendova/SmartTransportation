@@ -1,10 +1,10 @@
-package gui;
+package gui.screens;
 
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.control.ProgressIndicator;
 
-public class ProgressDialogController extends Parent
+public class LoadingScreen extends Parent
 {
 	@FXML
 	private ProgressIndicator progressIndicator;
@@ -12,7 +12,7 @@ public class ProgressDialogController extends Parent
     @FXML
     private void initialize() 
     {
-    	System.out.println("ProgressDialogController::initialize()");
+    	System.out.println("LoadingScreen::initialize()");
     }
     
     public void updateProgress(double progress)

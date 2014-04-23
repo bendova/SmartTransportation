@@ -9,7 +9,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
 
-<Pane fx:id="container" prefHeight="34.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.TimeLineController">
+<Pane fx:id="container" prefHeight="34.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.timeline.TimeLineController">
   <children>
     <Rectangle fx:id="background" arcHeight="5.0" arcWidth="5.0" fill="#bfbfbf" height="36.0" layoutX="0.0" layoutY="0.0" stroke="BLACK" strokeType="INSIDE" width="600.0">
       <effect>

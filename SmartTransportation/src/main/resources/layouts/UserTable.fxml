@@ -6,4 +6,4 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<StackPane id="StackPane" fx:id="container" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.tableWindow.UserTableController" />
+<StackPane id="StackPane" fx:id="container" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.charts.userDataTable.UserTableController" />

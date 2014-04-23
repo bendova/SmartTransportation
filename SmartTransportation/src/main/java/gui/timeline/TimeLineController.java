@@ -1,4 +1,4 @@
-package gui;
+package gui.timeline;
 
 import java.net.URL;
 import java.util.ResourceBundle;

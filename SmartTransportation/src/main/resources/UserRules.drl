@@ -1,0 +1,36 @@
+//created on: 14.04.2014
+package user
+
+import agents.User;
+import java.util.List;
+import transportOffers.TransportOffer;
+
+global org.apache.log4j.Logger gLogger;
+
+rule "Initially, send a transport request to the Mediator"
+	when 
+		user: User(getCurrentState() == User.State.INITIAL)
+	then
+		user.sendRequestMessageToMediator();
+end
+
+rule "Accept the top transport offer if it meets the time constraint"
+	when
+		user: User(getCurrentState() == User.State.LOOKING_FOR_TRANSPORT,
+			(getReceivedTransportOffers().isEmpty() == false),
+			topOffer: getReceivedTransportOffers().get(0),
+			(topOffer.getTravelTime() < getTravelTimeTarget()))
+	then
+		user.selectTransportOffer(topOffer);
+end
+
+rule "Accept the top transport offer if we are aproaching the deadline"
+	when
+		user: User(getCurrentState() == User.State.LOOKING_FOR_TRANSPORT,
+			(getReceivedTransportOffers().isEmpty() == false),
+			topOffer: getReceivedTransportOffers().get(0),
+			(topOffer.getTravelTime() > getTravelTimeTarget() / 2))
+	then
+		user.selectTransportOffer(topOffer);
+end
+

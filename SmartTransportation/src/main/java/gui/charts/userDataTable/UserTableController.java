@@ -1,4 +1,4 @@
-package gui.tableWindow;
+package gui.charts.userDataTable;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -29,26 +29,32 @@ public class UserTableController extends Parent implements Initializable
 	public void setData(ObservableList<UserTableData> userTableDataList)
 	{
 		TableColumn<UserTableData, String> nameColumn = new TableColumn<UserTableData, String>();
+		nameColumn.setMinWidth(100);
 		nameColumn.setText("Name");
 		nameColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, String>("name"));
 		
 		TableColumn<UserTableData, Boolean> hasReachedDestinationColumn = new TableColumn<UserTableData, Boolean>();
+		hasReachedDestinationColumn.setMinWidth(200);
 		hasReachedDestinationColumn.setText("Has reached destination");
 		hasReachedDestinationColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, Boolean>("hasReachedDestination"));
 		
 		TableColumn<UserTableData, Double> travelTimeColumn = new TableColumn<UserTableData, Double>();
+		travelTimeColumn.setMinWidth(100);
 		travelTimeColumn.setText("Travel time");
 		travelTimeColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, Double>("travelTime"));
 		
 		TableColumn<UserTableData, Double> travelTimeTargetColumn = new TableColumn<UserTableData, Double>();
+		travelTimeTargetColumn.setMinWidth(140);
 		travelTimeTargetColumn.setText("Travel time target");
 		travelTimeTargetColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, Double>("travelTimeTarget"));
 		
 		TableColumn<UserTableData, String> transportPreferenceColumn = new TableColumn<UserTableData, String>();
+		transportPreferenceColumn.setMinWidth(200);
 		transportPreferenceColumn.setText("Transport preference");
 		transportPreferenceColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, String>("transportPreference"));
 		
 		TableColumn<UserTableData, String> transportModeUsedColumn = new TableColumn<UserTableData, String>();
+		transportModeUsedColumn.setMinWidth(200);
 		transportModeUsedColumn.setText("Transport mode used");
 		transportModeUsedColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, String>("transportModeUsed"));
 		

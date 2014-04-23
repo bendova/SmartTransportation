@@ -1,10 +1,10 @@
 package gui;
 
-import gui.configurationDialog.SimulationConfiguration;
+import gui.screens.configurationScreen.SimulationConfiguration;
 
 import dataStores.SimulationDataStore;
 
-public interface SimulationGUI 
+public interface ISmartTransportionGUI 
 {
 	void setAreaSize(int width, int height);
 	void setSimulationData(SimulationDataStore agentData);

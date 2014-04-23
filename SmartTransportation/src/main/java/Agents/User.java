@@ -37,8 +37,9 @@ import util.movement.TransportMove;
 
 public class User extends AbstractParticipant implements HasPerceptionRange
 {
-	private enum STATE
+	public enum State
 	{
+		INITIAL,
 		LOOKING_FOR_TRANSPORT,
 		WAITING_FOR_TAXI,
 		TRAVELING_BY_TAXI,
@@ -105,7 +106,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 	}
 	
-	private STATE mCurrentState;
+	private State mCurrentState;
 	private TransportPreference mTransportPreference;
 	private TransportSortingPreference mTransportSortingPreference;
 	private TransportMode mTransportModeUsed;
@@ -131,6 +132,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private CityMap mCityMap;
 	private SimulationDataStore mSimulationDataStore;
 	
+	private List<TransportOffer> mReceivedTransportOffers;
+	
 	public User(UUID id, String name, CityMap cityMap, Location startLocation, Location targetLocation, 
 			int travelTimeTarget, NetworkAddress mediatorNetworkAddress, TransportPreference transportPreference) 
 	{
@@ -146,7 +149,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		logger.info("User() id " + id);
 		logger.info("User() transportPreference " + transportPreference);
 		
-		mCurrentState = STATE.LOOKING_FOR_TRANSPORT;
+		mCurrentState = State.INITIAL;
 		mTransportPreference = transportPreference;
 		
 		// TODO pass this preference as a parameter
@@ -161,6 +164,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		mTravelTime = 0;
 		mTimeTakenPerUnitDistance = TransportMethodSpeed.WALKING_SPEED.getTimeTakenPerUnitDistance();
+		
+		mReceivedTransportOffers = new ArrayList<TransportOffer>();
 	}
 	
 	public void setDataStore(SimulationDataStore dataStore) 
@@ -176,6 +181,21 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		return shareState;
 	}
 	
+	public double getTravelTimeTarget()
+	{
+		return mTravelTimeTarget;
+	}
+	
+	public int getTravelTime()
+	{
+		return mTravelTime;
+	}
+	
+	public State getCurrentState()
+	{
+		return mCurrentState;
+	}
+	
 	@Override
 	public void initialise()
 	{
@@ -185,7 +205,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		initializeLocationService();
 		initialiseProtocol();
-		sendRequestMessageToMediator();
 	}
 	
 	private void initializeLocationService()
@@ -223,7 +242,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mWithTaxi.init(requestDestinationAction, destinationReachedAction);
 	}
 	
-	private void sendRequestMessageToMediator()
+	public void sendRequestMessageToMediator()
 	{
 		logger.info("sendRequestMessageToMediator()");
 		
@@ -235,6 +254,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		TransportServiceRequestMessage myMessage = new TransportServiceRequestMessage
 				(mCurrentServiceRequest, network.getAddress(), mMediatorAddress);
 		network.sendMessage(myMessage);
+		
+		mCurrentState = State.LOOKING_FOR_TRANSPORT;		
 	}
 	
 	@Override
@@ -244,7 +265,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mCurrentServiceRequest.incrementTime();
 		updateLocation();
 		
-		if(mCurrentState != STATE.REACHED_DESTINATION)
+		if(mCurrentState != State.REACHED_DESTINATION)
 		{
 			++mTravelTime;
 		}
@@ -259,7 +280,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			}
 			else
 			{
-				mCurrentState = STATE.IN_BUS_STOP;
+				mCurrentState = State.IN_BUS_STOP;
 			}
 			break;
 			
@@ -299,7 +320,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	@Override
 	public void execute()
 	{
-		if(mCurrentState == STATE.LOOKING_FOR_TRANSPORT)
+		if(mCurrentState == State.LOOKING_FOR_TRANSPORT)
 		{
 			// pull in Messages from the network
 			enqueueInput(this.network.getMessages());
@@ -309,7 +330,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 				Input input = inputQueue.poll();
 				if(input instanceof TransportServiceOfferMessage)
 				{
-					decideTransportMethod(((TransportServiceOfferMessage)input).getData().getTransportOffers());
+					mReceivedTransportOffers.addAll(((TransportServiceOfferMessage)input).getData().getTransportOffers());
+					logTransportOffers(mReceivedTransportOffers);
 				}
 				else
 				{
@@ -323,44 +345,63 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 	}
 	
+	public List<TransportOffer> getReceivedTransportOffers()
+	{
+		return mReceivedTransportOffers;
+	}
+	
 	private void decideTransportMethod(List<TransportOffer> transportOffers)
 	{
-		logger.info("decideTransportMethod() I need to get there in: " + mTravelTimeTarget + " time units.");
 		logTransportOffers(transportOffers);
 		
-		TransportOffer selectedTransportOffer = transportOffers.get(0);
+		selectTransportOffer(transportOffers.get(0));
+	}
+	
+	public void selectTransportOffer(TransportOffer selectedTransportOffer)
+	{
+		logger.info("selectTransportOffer() I am choosing this offer: " + selectedTransportOffer);
+		
 		switch (selectedTransportOffer.getTransportMode()) 
 		{
 		case WALKING:
-			logger.info("decideTransportMethod() I am walking to my destination.");
+			logger.info("selectTransportOffer() I am walking to my destination.");
 			
 			// walk there
 			mTransportModeUsed = TransportMode.WALKING;
-			mCurrentState = STATE.TRAVELING_ON_FOOT;
+			mCurrentState = State.TRAVELING_ON_FOOT;
 			mOnFootTravelPath = ((WalkTransportOffer)selectedTransportOffer).getWalkPath();
 			mCurrentPathIndex = 0;
 			break;
 		case TAKE_BUS:
-			logger.info("decideTransportMethod() I am taking the bus to my destination.");
+			logger.info("selectTransportOffer() I am taking the bus to my destination.");
 			
 			// take the bus
 			mTransportModeUsed = TransportMode.TAKE_BUS;
-			mCurrentState = STATE.TRAVELING_TO_BUS_STOP;
+			mCurrentState = State.TRAVELING_TO_BUS_STOP;
 			handleBusTravelPlan(((BusTransportOffer)selectedTransportOffer).getBusTravelPlanMessage());
 			break;
 		case TAKE_TAXI:
-			logger.info("decideTransportMethod() I am taking the taxi to my destination");
+			logger.info("selectTransportOffer() I am taking the taxi to my destination");
 			
 			// take the taxi
 			mTransportModeUsed = TransportMode.TAKE_TAXI;
-			mCurrentState = STATE.WAITING_FOR_TAXI;
+			mCurrentState = State.WAITING_FOR_TAXI;
 			break;
 		default:
-			assert(false) : "decideTransportMethod(): Unhandled transport offer: " + selectedTransportOffer.getTransportMode();
+			assert(false) : "selectTransportOffer(): Unhandled transport offer: " + selectedTransportOffer.getTransportMode();
 			break;
 		}
 		
 		sendConfirmationMessage(selectedTransportOffer);
+		clearReceivedTransportOffers();
+	}
+	
+	private void clearReceivedTransportOffers()
+	{
+		if(mReceivedTransportOffers.isEmpty() == false)
+		{
+			mReceivedTransportOffers.clear();
+		}
 	}
 	
 	private void sendConfirmationMessage(TransportOffer selectedTransportOffer)
@@ -372,12 +413,14 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	
 	private void logTransportOffers(List<TransportOffer> transportOffers)
 	{
+		logger.info("logTransportOffers() I need to get there in: " + mTravelTimeTarget + " time units.");
+		
 		for (int i = 0; i < transportOffers.size(); ++i) 
 		{
 			TransportOffer offer = transportOffers.get(i);
-			logger.info("decideTransportMethod() " + offer.getTransportMode() + 
+			logger.info("logTransportOffers() " + offer.getTransportMode() + 
 					" costs: " + offer.getCost() + " currency units");
-			logger.info("decideTransportMethod() " + offer.getTransportMode() + 
+			logger.info("logTransportOffers() " + offer.getTransportMode() + 
 					" takes: " + offer.getTravelTime() + " time units");
 		}
 	}
@@ -449,14 +492,14 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 						requestDestinationMessage.getFrom());
 		mWithTaxi.sendTakeMeToDestination(destinationMessage);
 		
-		mCurrentState = STATE.TRAVELING_BY_TAXI;
+		mCurrentState = State.TRAVELING_BY_TAXI;
 	}
 	
 	private void onDestinationReached()
 	{	
 		logger.info("onDestinationReached()");
 
-		mCurrentState = STATE.REACHED_DESTINATION;
+		mCurrentState = State.REACHED_DESTINATION;
 	}
 	
 	private void handleBusTravelPlan(BusTravelPlanMessage msg)
@@ -483,7 +526,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 				{
 					logger.info("handleBusArrival() The bus has arrived " + notification.getFrom());
 					
-					mCurrentState = STATE.WAITING_BUS_BOARD_CONFIRMATION;
+					mCurrentState = State.WAITING_BUS_BOARD_CONFIRMATION;
 					
 					// send a request to board the bus
 					BoardBusRequest request = new BoardBusRequest(authkey);
@@ -500,7 +543,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 					{
 						logger.info("handleBusArrival() I've reached my bus stop " + targetBusStop);
 						
-						mCurrentState = STATE.WAITING_BUS_UNBOARD_CONFIRMATION;
+						mCurrentState = State.WAITING_BUS_UNBOARD_CONFIRMATION;
 						// send a request to unboard the bus
 						String request = "This is my stop!";
 						UnBoardBusRequestMessage msg = new UnBoardBusRequestMessage(request, 
@@ -517,27 +560,27 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	{
 		logger.info("handleBusBoardSuccesful() I've boarded the bus " + msg.getFrom());
 		
-		assert (mCurrentState == STATE.WAITING_BUS_BOARD_CONFIRMATION);
+		assert (mCurrentState == State.WAITING_BUS_BOARD_CONFIRMATION);
 		
-		mCurrentState = STATE.TRAVELING_BY_BUS;
+		mCurrentState = State.TRAVELING_BY_BUS;
 	}
 	
 	private void handleBusBoardFailure(BusIsFullMessage msg)
 	{
 		logger.info("handleBusBoardFailure() This bus is full " + msg.getFrom());
 		
-		assert (mCurrentState == STATE.WAITING_BUS_BOARD_CONFIRMATION);
+		assert (mCurrentState == State.WAITING_BUS_BOARD_CONFIRMATION);
 		
-		mCurrentState = STATE.IN_BUS_STOP;
+		mCurrentState = State.IN_BUS_STOP;
 	}
 	
 	private void handleBusUnBoarded(BusUnBoardingSuccessful msg)
 	{
 		logger.info("handleBusUnBoarded() I've got of the bus " + msg.getFrom());
 		
-		assert (mCurrentState == STATE.WAITING_BUS_UNBOARD_CONFIRMATION);
+		assert (mCurrentState == State.WAITING_BUS_UNBOARD_CONFIRMATION);
 		
-		mCurrentState = STATE.TRAVELING_ON_FOOT;
+		mCurrentState = State.TRAVELING_ON_FOOT;
 		mCurrentPathIndex = 0;
 		mOnFootTravelPath = mBusTravelPlan.getPathToDestination();
 	}
@@ -561,7 +604,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	{
 		UUID userID = getID();
 		UserDataStore userDataStore = new UserDataStore(getName(), userID, mStartLocation);
-		if(mCurrentState != STATE.REACHED_DESTINATION)
+		if(mCurrentState != State.REACHED_DESTINATION)
 		{
 			logger.info("I didn't reach my destination!");
 			

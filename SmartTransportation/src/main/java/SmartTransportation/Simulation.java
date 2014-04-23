@@ -1,8 +1,8 @@
 package SmartTransportation;
 
 import gui.GUIModule;
-import gui.SimulationGUI;
-import gui.configurationDialog.SimulationConfiguration;
+import gui.ISmartTransportionGUI;
+import gui.screens.configurationScreen.SimulationConfiguration;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -153,15 +153,16 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	public static final int DISTANCE_BETWEEN_REVISIONS = 100;
 	
-	private StatefulKnowledgeSession session;
+	private StatefulKnowledgeSession mSession;
 	
 	private NetworkAddress mMediatorNetworkAddress;
 	
 	private int mNextUserIndex = 0;
 	private List<Taxi> mTaxies;
+	private List<User> mUsers;
 	private TransportMethodSpeed mMaxSpeed;
 	
-	private SimulationGUI mGUI;
+	private ISmartTransportionGUI mGUI;
 	private SimulationDataStore mSimulationDataStore;
 	
 	@Inject
@@ -174,6 +175,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		super(modules);
 		
 		mTaxies = new LinkedList<Taxi>();
+		mUsers = new LinkedList<User>();
 		
 		mBusRoutes = new ArrayList<List<Location>>();
 		List<Location> mBusRoute1 = new ArrayList<Location>();
@@ -193,11 +195,11 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	@Inject
 	public void setSession(StatefulKnowledgeSession session) {
-		this.session = session;
+		this.mSession = session;
 	}
 	
 	@Inject
-	public void setGUI(SimulationGUI gui)
+	public void setGUI(ISmartTransportionGUI gui)
 	{
 		mGUI = gui;
 	}
@@ -218,7 +220,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 					.addParticipantEnvironmentService(ParticipantLocationService.class));
 		modules.add(NetworkModule.fullyConnectedNetworkModule());
 		modules.add(new GUIModule());
-		modules.add(new RuleModule().addClasspathDrlFile("MainRules.drl"));
+		modules.add(new RuleModule().addClasspathDrlFile("UserRules.drl"));
 		
 		return modules;
 	}
@@ -234,8 +236,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		addBusStation(s);
 		s.addTimeDriven(this);
 		
-		session.setGlobal("logger", logger);
-		session.setGlobal("DISTANCE_BETWEEN_REVISIONS", DISTANCE_BETWEEN_REVISIONS);
+		mSession.setGlobal("gLogger", logger);
+//		mSession.setGlobal("DISTANCE_BETWEEN_REVISIONS", DISTANCE_BETWEEN_REVISIONS);
 	}
 	
 	private void initParameters()
@@ -282,7 +284,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 					getTransportPreference());
 			newUser.setDataStore(mSimulationDataStore);
 			s.addParticipant(newUser);
-			session.insert(newUser);
+			mUsers.add(newUser);
+			mSession.insert(newUser);
 		}
 	}
 	
@@ -315,7 +318,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 						getRandomLocation(), taxiStationNetworkAddress);
 				newTaxi.setDataStore(mSimulationDataStore);
 				s.addParticipant(newTaxi);
-				session.insert(newTaxi);
+				mSession.insert(newTaxi);
 				mTaxies.add(newTaxi);
 			}
 		}
@@ -365,18 +368,18 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		mGUI.updateSimulationProgress(progress);
 		
 		TransportMoveHandler.incrementTime();
-//		spawnUsersRandom(mScenario);
-//		updateTaxiesInSession();
-//		session.fireAllRules();
+		
+		updateUsersInSession();
+		mSession.fireAllRules();
 	}
 	
-//	private void updateTaxiesInSession()
-//	{
-//		for(Taxi taxi: mTaxies)
-//		{
-//			session.update(session.getFactHandle(taxi), taxi);
-//		}
-//	}
+	private void updateUsersInSession()
+	{
+		for(User user: mUsers)
+		{
+			mSession.update(mSession.getFactHandle(user), user);
+		}
+	}
 	
 	@Override
 	public void run() 

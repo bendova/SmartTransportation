@@ -1,4 +1,4 @@
-package gui.XYChartWindow;
+package gui.charts.transportResults;
 
 import java.net.URL;
 import java.util.Iterator;
@@ -15,7 +15,7 @@ import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.layout.StackPane;
 
-public class XYChartController extends Parent implements Initializable
+public class TransportResultsController extends Parent implements Initializable
 {
 	@FXML
 	private StackPane container;
@@ -42,14 +42,15 @@ public class XYChartController extends Parent implements Initializable
 		while(iterator.hasNext())
 		{
 			Map.Entry<Number, Number> entry = iterator.next();
-			Number key = entry.getKey();
-			if(key.intValue() <= 0)
+			Number deltaTravelTime = entry.getKey();
+			Number usersCount = entry.getValue();
+			if(deltaTravelTime.intValue() <= 0)
 			{
-				negativeSeriesData.add(new XYChart.Data<Number, Number>(key, entry.getValue()));
+				negativeSeriesData.add(new XYChart.Data<Number, Number>(deltaTravelTime, usersCount));
 			}
 			else
 			{
-				pozitiveSeriesData.add(new XYChart.Data<Number, Number>(key, entry.getValue()));
+				pozitiveSeriesData.add(new XYChart.Data<Number, Number>(deltaTravelTime, usersCount));
 			}
 		}
 		

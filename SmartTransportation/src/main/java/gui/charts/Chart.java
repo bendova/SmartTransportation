@@ -1,4 +1,4 @@
-package gui;
+package gui.charts;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,8 +10,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-public class Window 
+public class Chart 
 {
+	protected final static String LAYOUTS_PATH = "../../../layouts/";
 	protected Stage mStage;
 
 	public void show()
@@ -63,7 +64,17 @@ public class Window
 			loader.setBuilderFactory(new JavaFXBuilderFactory());
 			loader.setLocation(getClass().getResource(scenePath));
 			InputStream inputStream = getClass().getResourceAsStream(scenePath);
-			rootGroup = (Parent)loader.load(inputStream);
+			
+			assert(inputStream != null);
+			
+			if(inputStream != null)
+			{
+				rootGroup = (Parent)loader.load(inputStream);
+			}
+			else 
+			{
+				return null;
+			}
 		} 
 		catch (IOException e) 
 		{

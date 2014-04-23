@@ -1,6 +1,6 @@
 package dataStores;
 
-import gui.configurationDialog.SimulationConfiguration;
+import gui.screens.configurationScreen.SimulationConfiguration;
 
 import java.util.HashMap;
 import java.util.List;

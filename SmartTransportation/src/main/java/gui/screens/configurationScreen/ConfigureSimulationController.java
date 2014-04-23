@@ -1,4 +1,4 @@
-package gui.configurationDialog;
+package gui.screens.configurationScreen;
 
 import java.net.URL;
 import java.util.List;

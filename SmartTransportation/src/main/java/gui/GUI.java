@@ -1,12 +1,17 @@
 package gui;
 
-import gui.XYChartWindow.XYChartWindow;
+import gui.agents.AgentDataForMap;
 import gui.agents.AgentNodeController;
-import gui.configurationDialog.ConfigureSimulationController;
-import gui.configurationDialog.SimulationConfiguration;
-import gui.pieChartWindow.PieChartWindow;
-import gui.tableWindow.UserTableData;
-import gui.tableWindow.UserTableWindow;
+import gui.charts.ChartsMenuController;
+import gui.charts.Chart;
+import gui.charts.transportMethodsUsed.TransportMethodsUsedWindow;
+import gui.charts.transportResults.TransportResultsWindow;
+import gui.charts.userDataTable.UserTableData;
+import gui.charts.userDataTable.UserTableWindow;
+import gui.screens.LoadingScreen;
+import gui.screens.configurationScreen.ConfigureSimulationController;
+import gui.screens.configurationScreen.SimulationConfiguration;
+import gui.timeline.TimeLineController;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +50,7 @@ import javafx.scene.shape.RectangleBuilder;
 import javafx.stage.Stage;
 import javafx.util.*;
 
-public class GUI extends Application implements SimulationGUI
+public class GUI extends Application implements ISmartTransportionGUI
 {
 	private final String LAYOUTS_PATH = "../layouts/";
 	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
@@ -72,16 +77,12 @@ public class GUI extends Application implements SimulationGUI
 	private ToggleButton mPlayPauseToggle;
 	private Slider mTimeLineSlider;
 	
-	// charts
-	private PieChartWindow mTransportModesUseChart;
-	private XYChartWindow mTravelTimesChart;
-	
-	private UserTableWindow mUserTableWindow;
-	
-	private List<Window> mWindowsList;
+	private TransportMethodsUsedWindow mTransportModesUseChart;
+	private TransportResultsWindow mTransportResultsChart;
+	private UserTableWindow mUserDataTableChart;
 	
 	private Timer mTimeLineTimer;
-	private ProgressDialogController mProgressDialogController;
+	private LoadingScreen mProgressDialogController;
 	
 	private int mAgentsAnimatingCount = 0;
 	private SimulationConfiguration mSimulationConfiguration;
@@ -234,7 +235,7 @@ public class GUI extends Application implements SimulationGUI
 	
 	private void openProgressDialog(Stage parent)
 	{
-		mProgressDialogController = (ProgressDialogController)loadScene(LOADING_DIALOG_LAYOUT);
+		mProgressDialogController = (LoadingScreen)loadScene(LOADING_DIALOG_LAYOUT);
 		mStage.setTitle("Simulating...");
 	}
 	
@@ -344,30 +345,36 @@ public class GUI extends Application implements SimulationGUI
 	
 	private Pane loadChartsMenu()
 	{
+		System.out.println("GUI::loadChartsMenu()");
+		
 		ChartsMenuController chartsMenuController = (ChartsMenuController)
 				(loadNode(CHARTS_MENU_LAYOUT)).getController();
-		chartsMenuController.showTransportMethodsUsed.setOnAction(new EventHandler<ActionEvent>() 
+				
+		chartsMenuController.setOnShowTransportMethodUsed(new Callback<Void, Void>() 
 		{
 			@Override
-			public void handle(ActionEvent event) 
+			public Void call(Void param) 
 			{
 				toggleWindow(mTransportModesUseChart);
+				return null;
 			}
 		});
-		chartsMenuController.showUserTransportResults.setOnAction(new EventHandler<ActionEvent>() 
+		chartsMenuController.setOnShowUserTransportResults(new Callback<Void, Void>() 
 		{
 			@Override
-			public void handle(ActionEvent event) 
+			public Void call(Void param) 
 			{
-				toggleWindow(mTravelTimesChart);
+				toggleWindow(mTransportResultsChart);
+				return null;
 			}
 		});
-		chartsMenuController.showUserDataTable.setOnAction(new EventHandler<ActionEvent>() 
+		chartsMenuController.setOnShowUserDataTable(new Callback<Void, Void>() 
 		{
 			@Override
-			public void handle(ActionEvent event) 
+			public Void call(Void param) 
 			{
-				toggleWindow(mUserTableWindow);
+				toggleWindow(mUserDataTableChart);
+				return null;
 			}
 		});
 		Pane container = chartsMenuController.container;
@@ -668,16 +675,11 @@ public class GUI extends Application implements SimulationGUI
 		initTransportModesUseChart();
 		initTravelTimesChart();
 		initUserDataTable();
-		
-		mWindowsList = new ArrayList<Window>();
-		mWindowsList.add(mTransportModesUseChart);
-		mWindowsList.add(mTravelTimesChart);
-		mWindowsList.add(mUserTableWindow);
 	}
 	
 	private void initTransportModesUseChart()
 	{
-		mTransportModesUseChart = new PieChartWindow();
+		mTransportModesUseChart = new TransportMethodsUsedWindow();
 		
 		TransportMode[] transportModes = TransportMode.values();
 		int[] transportModeUse = new int[transportModes.length];
@@ -698,7 +700,7 @@ public class GUI extends Application implements SimulationGUI
 	
 	private void initTravelTimesChart()
 	{
-		mTravelTimesChart = new XYChartWindow();
+		mTransportResultsChart = new TransportResultsWindow();
 		TreeMap<Number, Number> chartData = new TreeMap<Number, Number>();
 		
 		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
@@ -718,7 +720,7 @@ public class GUI extends Application implements SimulationGUI
 			}
 		}
 		
-		mTravelTimesChart.setData(chartData);
+		mTransportResultsChart.setData(chartData);
 	}
 	
 	private void initUserDataTable()
@@ -737,8 +739,8 @@ public class GUI extends Application implements SimulationGUI
 					data.getTransportMethodUsed()));
 		}
 		
-		mUserTableWindow = new UserTableWindow();
-		mUserTableWindow.setData(userTableDataList);
+		mUserDataTableChart = new UserTableWindow();
+		mUserDataTableChart.setData(userTableDataList);
 	}
 	
 	private void initMapData()
@@ -759,8 +761,11 @@ public class GUI extends Application implements SimulationGUI
 		}
 	}
 
-	private void toggleWindow(Window window)
+	private void toggleWindow(Chart window)
 	{
+		System.out.println("GUI::toggleWindow() window " + window);
+		System.out.println("GUI::toggleWindow() window.isIconified() " + window.isIconified());
+		
 		if(window.isIconified())
 		{
 			window.maximize();

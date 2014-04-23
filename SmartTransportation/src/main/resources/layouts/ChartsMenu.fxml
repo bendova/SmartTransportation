@@ -7,7 +7,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<Pane fx:id="container" maxHeight="-1.0" maxWidth="-1.0" prefHeight="119.0" prefWidth="170.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.ChartsMenuController">
+<Pane fx:id="container" maxHeight="-1.0" maxWidth="-1.0" prefHeight="119.0" prefWidth="170.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.charts.ChartsMenuController">
   <children>
     <ToolBar layoutX="0.0" layoutY="0.0" minWidth="155.0" orientation="VERTICAL" prefHeight="119.0" prefWidth="170.0">
       <items>

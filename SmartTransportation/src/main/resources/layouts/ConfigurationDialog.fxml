@@ -11,7 +11,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<StackPane prefHeight="660.0" prefWidth="660.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.configurationDialog.ConfigureSimulationController">
+<StackPane prefHeight="660.0" prefWidth="660.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.screens.configurationScreen.ConfigureSimulationController">
   <children>
     <Group id="Group">
       <children>
@@ -54,7 +54,7 @@
                     <Label font="$x1" prefWidth="146.0" text="Simulation Parameters" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.halignment="LEFT" GridPane.rowIndex="0" GridPane.valignment="CENTER" />
                     <Label text="Time steps count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                     <Label text="Area size:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                    <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="300" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="200" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <TextField fx:id="areaSizeTF" prefWidth="200.0" text="22" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   </children>
                   <columnConstraints>
@@ -106,7 +106,7 @@
                 <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
                   <children>
                     <Label text="Users count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <TextField fx:id="usersCountTF" prefHeight="32.0" prefWidth="126.0" text="5" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField fx:id="usersCountTF" prefHeight="32.0" prefWidth="126.0" text="1" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <Label font="$x1" text="User Parameters" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <Label text="Transport preference allocation:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                     <ChoiceBox id="preferenceCheckBox" fx:id="transportPreferenceChoiceBox" prefWidth="134.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
@@ -164,7 +164,7 @@
                     <Label text="Taxi Stations count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                     <Label text="Taxies count:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                     <TextField fx:id="taxiStationsCountTF" prefWidth="200.0" text="1" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                    <TextField fx:id="taxiesCountTF" prefWidth="200.0" text="5" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                    <TextField fx:id="taxiesCountTF" prefWidth="200.0" text="1" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   </children>
                   <columnConstraints>
                     <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />

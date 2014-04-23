@@ -1,12 +1,11 @@
-package gui.tableWindow;
+package gui.charts.userDataTable;
 
-import gui.Window;
+import gui.charts.Chart;
 import javafx.collections.ObservableList;
 
-public class UserTableWindow extends Window
+public class UserTableWindow extends Chart
 {
-	private final String LAYOUTS_PATH = "../../layouts/";
-	private final String USER_TABLE = LAYOUTS_PATH + "UserTable.fxml";
+	private final static String USER_TABLE = Chart.LAYOUTS_PATH + "UserTable.fxml";
 	
 	private UserTableController mUserTableController;
 	private ObservableList<UserTableData> mTableData;

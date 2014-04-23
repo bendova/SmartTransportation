@@ -3,9 +3,6 @@ package agents;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import SmartTransportation.Simulation.TransportMethodCost;
-import SmartTransportation.Simulation.TransportMethodSpeed;
-
 import map.CityMap;
 
 import conversations.protocols.taxistation.ProtocolWithTaxi;
@@ -23,7 +20,6 @@ import conversations.taxiStationTaxi.messages.RejectOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderCompleteMessage;
 import conversations.taxiStationTaxi.messages.TaxiOrderMessage;
 import conversations.taxiStationTaxi.messages.TaxiStatusUpdateMessage;
-import conversations.userMediator.messages.TransportServiceRequestMessage;
 import conversations.userTaxi.messages.TaxiReplyMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
@@ -52,22 +48,14 @@ public class TaxiStation extends AbstractParticipant
 	
 	private class TaxiRequest implements TimeDriven, Comparable<TaxiRequest>
 	{
-		private static final int DEFAULT_TIME_OUT = 500;
-		
 		private TaxiRequestState mCurrentState;
 		private ITaxiServiceRequest mRequestData;
 		private NetworkAddress mFromUserAddress;
 		private NetworkAddress mServicedByTaxi;
 		
 		private int mCurrentTime;
-		private int mTimeoutTime;
 		
 		public TaxiRequest(TaxiRequestConfirmationMessage requestMessage)
-		{
-			this(requestMessage, 0, DEFAULT_TIME_OUT);
-		}
-		
-		public TaxiRequest(TaxiRequestConfirmationMessage requestMessage, int currentTime, int timeOutTimeSteps)
 		{
 			assert(requestMessage != null);
 			
@@ -76,8 +64,7 @@ public class TaxiStation extends AbstractParticipant
 			mFromUserAddress = mRequestData.getUserNetworkAddress();
 			mCurrentState = TaxiRequestState.READY_FOR_SERVICE;
 			
-			mCurrentTime = currentTime;
-			mTimeoutTime = timeOutTimeSteps;
+			mCurrentTime = 0;
 		}
 		
 		public ITaxiServiceRequest getRequestData()

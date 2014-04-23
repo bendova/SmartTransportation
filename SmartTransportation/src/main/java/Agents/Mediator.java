@@ -13,9 +13,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.eclipse.jdt.internal.compiler.env.IGenericField;
-import org.mvel2.ast.Proto.ReceiverType;
-
 import map.CityMap;
 
 import SmartTransportation.Simulation.TransportMethodCost;
@@ -207,7 +204,7 @@ public class Mediator extends AbstractParticipant
 			Input input = inputQueue.poll();
 			if(input instanceof TaxiAvailableMessage)
 			{
-				handleTaxiAvaible((TaxiAvailableMessage)input);
+				handleTaxiAvailable((TaxiAvailableMessage)input);
 			}
 			else if(input instanceof BusTravelPlanMessage)
 			{
@@ -224,7 +221,7 @@ public class Mediator extends AbstractParticipant
 		}
 	}
 	
-	private void handleTaxiAvaible(TaxiAvailableMessage message)
+	private void handleTaxiAvailable(TaxiAvailableMessage message)
 	{
 		if(mUserTransportRequests.isEmpty())
 		{
@@ -253,24 +250,21 @@ public class Mediator extends AbstractParticipant
 	@Override
 	protected void processInput(Input input) 
 	{
-		if(input != null)
+		if(input instanceof TransportServiceRequestMessage)
 		{
-			if(input instanceof TransportServiceRequestMessage)
-			{
-				processRequest((TransportServiceRequestMessage)input);
-			}
-			else if (input instanceof RegisterAsTaxiStationMessage)
-			{
-				processRequest((RegisterAsTaxiStationMessage)input);
-			}
-			else if (input instanceof RegisterAsBusServiceMessage)
-			{
-				processRequest((RegisterAsBusServiceMessage)input);
-			}
-			else if (input instanceof ConfirmTransportOfferMessage)
-			{
-				handleConfirmedTransportOffer((ConfirmTransportOfferMessage)input);
-			}
+			handleTransportRequest((TransportServiceRequestMessage)input);
+		}
+		else if (input instanceof RegisterAsTaxiStationMessage)
+		{
+			registerTaxiStation((RegisterAsTaxiStationMessage)input);
+		}
+		else if (input instanceof RegisterAsBusServiceMessage)
+		{
+			registerBusService((RegisterAsBusServiceMessage)input);
+		}
+		else if (input instanceof ConfirmTransportOfferMessage)
+		{
+			handleConfirmedTransportOffer((ConfirmTransportOfferMessage)input);
 		}
 	}
 	
@@ -300,7 +294,7 @@ public class Mediator extends AbstractParticipant
 		}
 	}
 	
-	private void processRequest(TransportServiceRequestMessage serviceRequestMessage)
+	private void handleTransportRequest(TransportServiceRequestMessage serviceRequestMessage)
 	{
 		logger.info("processRequest() TransportServiceRequestMessage " + serviceRequestMessage);
 		
@@ -341,14 +335,14 @@ public class Mediator extends AbstractParticipant
 				taxiDescription, request);
 	}
 	
-	private void processRequest(RegisterAsTaxiStationMessage registerMessage)
+	private void registerTaxiStation(RegisterAsTaxiStationMessage registerMessage)
 	{
 		logger.info("processRequest() RegisterAsTaxiStationMessage " + registerMessage);
 		
 		mTaxiStations.add(registerMessage.getFrom());
 	}
 	
-	private void processRequest(RegisterAsBusServiceMessage registerMessage)
+	private void registerBusService(RegisterAsBusServiceMessage registerMessage)
 	{
 		logger.info("processRequest() RegisterAsBusServiceMessage " + registerMessage);
 		

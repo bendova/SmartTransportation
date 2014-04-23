@@ -1,4 +1,4 @@
-package gui.tableWindow;
+package gui.charts.userDataTable;
 
 import java.util.UUID;
 

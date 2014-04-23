@@ -1,4 +1,4 @@
-package gui.pieChartWindow;
+package gui.charts.transportMethodsUsed;
 
 import java.net.URL;
 import java.util.Iterator;
@@ -12,7 +12,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.chart.PieChart;
 
-public class PieChartController extends Parent implements Initializable
+public class TransportMethodsUsedController extends Parent implements Initializable
 {
 	@FXML
 	private PieChart pieChart;

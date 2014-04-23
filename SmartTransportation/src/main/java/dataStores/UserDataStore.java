@@ -1,6 +1,6 @@
 package dataStores;
 
-import gui.AgentDataForMap.AgentType;
+import gui.agents.AgentDataForMap.AgentType;
 
 import java.util.UUID;
 

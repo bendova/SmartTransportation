@@ -1,4 +1,4 @@
-package gui.configurationDialog;
+package gui.screens.configurationScreen;
 
 public class SimulationConfiguration 
 {

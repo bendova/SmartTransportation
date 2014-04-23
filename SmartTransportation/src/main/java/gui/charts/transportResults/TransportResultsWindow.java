@@ -1,14 +1,14 @@
-package gui.XYChartWindow;
+package gui.charts.transportResults;
 
-import gui.Window;
+import gui.charts.Chart;
+
 import java.util.TreeMap;
 
-public class XYChartWindow extends Window
+public class TransportResultsWindow extends Chart
 {
-	private final String LAYOUTS_PATH = "../../layouts/";
-	private final String AREA_CHART = LAYOUTS_PATH + "Chart.fxml";
+	private final static String AREA_CHART = Chart.LAYOUTS_PATH + "Chart.fxml";
 	
-	private XYChartController mAreaChartController;
+	private TransportResultsController mAreaChartController;
 	private TreeMap<Number, Number> mChartData;
 
 	public void show()
@@ -16,7 +16,7 @@ public class XYChartWindow extends Window
 		super.show();
 		if(mStage.isShowing() == false)
 		{
-			mAreaChartController = (XYChartController)loadScene(AREA_CHART);
+			mAreaChartController = (TransportResultsController)loadScene(AREA_CHART);
 			if(mChartData != null)
 			{
 				mAreaChartController.setAreaChartData(mChartData);

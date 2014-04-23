@@ -1,6 +1,6 @@
 package agents;
 
-import gui.AgentDataForMap.AgentType;
+import gui.agents.AgentDataForMap.AgentType;
 
 import java.util.ArrayList;
 import java.util.HashMap;

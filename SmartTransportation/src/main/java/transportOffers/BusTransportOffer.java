@@ -3,6 +3,7 @@ package transportOffers;
 import SmartTransportation.Simulation.TransportMethodCost;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 import agents.User.TransportMode;
+import agents.User.TransportPreference;
 import conversations.userBusStation.BusTravelPlanMessage;
 
 public class BusTransportOffer extends TransportOffer
@@ -47,5 +48,11 @@ public class BusTransportOffer extends TransportOffer
 	public void cancel() 
 	{
 		// do nothing, for now
+	}
+
+	@Override
+	public void applyTransportPreference(TransportPreference preference) 
+	{
+		scaleCost(preference.getBusCostScaling());
 	}
 }

@@ -94,44 +94,16 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	{
 		if(mHasBeenUpdated)
 		{
-			applyTransportPreference(mTransportServiceRequest.getTransportPreference(), mTransportOffers);
+			TransportPreference preference = mTransportServiceRequest.getTransportPreference();
+			for (Iterator<TransportOffer> iterator = mTransportOffers.iterator(); iterator.hasNext();) 
+			{
+				iterator.next().applyTransportPreference(preference);
+			}
 			
 			if(mTransportOffers.size() > 1)
 			{
 				Collections.sort(mTransportOffers, mTransportOffersComparator);
 			}
-		}
-	}
-	
-	private void applyTransportPreference(TransportPreference pref, List<TransportOffer> transportOffers)
-	{
-		for (Iterator<TransportOffer> iterator = transportOffers.iterator(); iterator.hasNext();) 
-		{
-			applyTransportPreference(pref, iterator.next());
-		}
-	}
-	
-	@Override
-	public void applyTransportPreference(TransportPreference pref, TransportOffer transportOffer)
-	{
-		double taxiCostScaling = pref.getTaxiCostScaling();
-		double busCostScaling = pref.getBusCostScaling();
-		double walkingCostScaling = pref.getWalkingCostScaling();
-		
-		switch (transportOffer.getTransportMode()) 
-		{
-		case TAKE_TAXI:
-			transportOffer.scaleCost(taxiCostScaling);
-			break;
-		case TAKE_BUS:
-			transportOffer.scaleCost(busCostScaling);
-			break;
-		case WALKING:
-			transportOffer.scaleCost(walkingCostScaling);
-			break;
-		default:
-			assert(false) : "Transport mode not handled: " + transportOffer.getTransportMode();
-			break;
 		}
 	}
 }

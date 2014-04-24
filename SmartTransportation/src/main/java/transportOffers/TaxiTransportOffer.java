@@ -3,6 +3,7 @@ package transportOffers;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import agents.User.TransportMode;
+import agents.User.TransportPreference;
 import conversations.taxiStationMediator.TaxiAvailableMessage;
 import conversations.taxiStationMediator.messageData.ITaxiDescription;
 import conversations.taxiStationMediator.messageData.ITaxiServiceRequest;
@@ -75,5 +76,11 @@ public class TaxiTransportOffer extends TransportOffer
 	public ITaxiDescription getTaxiDescription()
 	{
 		return mTaxiDescription;
+	}
+
+	@Override
+	public void applyTransportPreference(TransportPreference preference) 
+	{
+		scaleCost(preference.getTaxiCostScaling());		
 	}
 }

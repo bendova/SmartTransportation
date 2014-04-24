@@ -14,7 +14,6 @@ public interface ITransportServiceRecord
 	List<TransportOffer> getTransportOffers();
 	void addTransportOffer(TransportOffer offer);
 	void removeTransportOffer(TransportOffer offer);
-	void applyTransportPreference(TransportPreference pref, TransportOffer transportOffer);
 	void sendTransportOffers();
 	void sortTransportOffers();
 }

@@ -458,7 +458,7 @@ public class Mediator extends AbstractParticipant
 				ITransportServiceRecord serviceRecord = mTransportServiceRecords.get(user);
 				ITransportServiceRequest request = serviceRecord.getTransportServiceRequest();
 				TransportPreference pref = request.getTransportPreference();
-				serviceRecord.applyTransportPreference(pref, offerToShare);
+				offerToShare.applyTransportPreference(pref);
 				
 				int costGain;
 				List<TransportOffer> currentOffers = entry.getValue().getTransportOffers();
@@ -496,7 +496,7 @@ public class Mediator extends AbstractParticipant
 		{
 			ITransportServiceRequest request = serviceRecordOfSharingUser.getTransportServiceRequest();
 			TransportPreference pref = request.getTransportPreference();
-			serviceRecordOfSharingUser.applyTransportPreference(pref, offerToShare);
+			offerToShare.applyTransportPreference(pref);
 			
 			return false;
 		}

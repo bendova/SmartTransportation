@@ -1,6 +1,7 @@
 package transportOffers;
 
 import agents.User.TransportMode;
+import agents.User.TransportPreference;
 
 public abstract class TransportOffer
 {
@@ -17,6 +18,7 @@ public abstract class TransportOffer
 	
 	public abstract void confirm();
 	public abstract void cancel();
+	public abstract void applyTransportPreference(TransportPreference preference);
 	
 	public TransportMode getTransportMode()
 	{
@@ -31,7 +33,7 @@ public abstract class TransportOffer
 	{
 		return mTravelTime;
 	}
-	public void scaleCost(double scale)
+	protected void scaleCost(double scale)
 	{
 		mTravelCost *= scale / mTravelCostScaleFactor;
 		mTravelCostScaleFactor = scale;

@@ -5,6 +5,7 @@ import java.util.List;
 import SmartTransportation.Simulation.TransportMethodCost;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 import agents.User.TransportMode;
+import agents.User.TransportPreference;
 import uk.ac.imperial.presage2.util.location.Location;
 
 public class WalkTransportOffer extends TransportOffer
@@ -37,5 +38,11 @@ public class WalkTransportOffer extends TransportOffer
 	public void cancel() 
 	{
 		// do nothing, for now
+	}
+
+	@Override
+	public void applyTransportPreference(TransportPreference preference) 
+	{
+		scaleCost(preference.getWalkingCostScaling());
 	}
 }

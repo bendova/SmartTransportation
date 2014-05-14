@@ -1,5 +1,7 @@
 package gui.agents;
 
+import gui.GUI;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,10 +22,9 @@ public class AgentDataForMap
 		BUS
 	}
 	
-	private final String LAYOUTS_PATH = "../layouts/";
-	private final String TAXI_SHAPE_LAYOUT = LAYOUTS_PATH + "TaxiShape.fxml";
-	private final String USER_SHAPE_LAYOUT = LAYOUTS_PATH + "UserShape.fxml";
-	private final String BUS_SHAPE_LAYOUT = LAYOUTS_PATH + "BusShape.fxml";
+	private final String TAXI_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "TaxiShape.fxml";
+	private final String USER_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "UserShape.fxml";
+	private final String BUS_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "BusShape.fxml";
 	
 	private String mName;
 	private List<Movement> mMovements;

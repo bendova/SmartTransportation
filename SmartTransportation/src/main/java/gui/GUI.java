@@ -52,7 +52,7 @@ import javafx.util.*;
 
 public class GUI extends Application implements ISmartTransportionGUI
 {
-	private final String LAYOUTS_PATH = "../layouts/";
+	public static final String LAYOUTS_PATH = "/layouts/";
 	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
 	private final String LOADING_DIALOG_LAYOUT 		 	= LAYOUTS_PATH + "LoadingDialog.fxml";
 	private final String MENU_BAR_LAYOUT 				= LAYOUTS_PATH + "MenuBar.fxml";
@@ -200,7 +200,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mTimeStepsCount = config.getTimeStepsCount();
 		
 		Simulation.setMapConfiguration(mMapLayout);
-		String className = "SmartTransportation.Simulation";
+		String className = Simulation.class.getName();
 		String finishTime = "finishTime=" + mTimeStepsCount;
 		String areaSize = "areaSize=" + config.getAreaSize();
 		final String[] args = {className, finishTime, areaSize};
@@ -285,7 +285,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private Group loadMap()
 	{
-		Random random = new Random();
 		Group map = new Group();
 		Rectangle building;
 		int coordX = 0;
@@ -300,7 +299,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 							translateX(coordX).translateY(coordY).
 							width(mPixelsPerAreaPoint).height(mPixelsPerAreaPoint).
 							fill(Color.SILVER).
-//							fill(new Color(random.nextDouble(), random.nextDouble(), random.nextDouble(), 1)).
 							build();
 					map.getChildren().add(building);
 				}
@@ -542,7 +540,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 			public void handle(ActionEvent event) 
 			{
 				System.out.println("Animation completed for " + agentName);
-				mAgentsAnimatingCount--;
+				--mAgentsAnimatingCount;
 				
 				if(mAgentsAnimatingCount == 0)
 				{
@@ -553,7 +551,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 				}
 			}
 		});
-		mAgentsAnimatingCount++;
+		++mAgentsAnimatingCount;
 	}
 	
 	private void togglePlay()

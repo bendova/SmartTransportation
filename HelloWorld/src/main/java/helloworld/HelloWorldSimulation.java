@@ -3,6 +3,8 @@ package helloworld;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.drools.runtime.StatefulKnowledgeSession;
+
 import uk.ac.imperial.presage2.core.network.NetworkConstraint;
 import uk.ac.imperial.presage2.core.participant.Participant;
 import uk.ac.imperial.presage2.core.plugin.PluginModule;
@@ -10,6 +12,7 @@ import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
 import uk.ac.imperial.presage2.core.simulator.Parameter;
 import uk.ac.imperial.presage2.core.simulator.Scenario;
 import uk.ac.imperial.presage2.core.util.random.Random;
+import uk.ac.imperial.presage2.rules.RuleModule;
 import uk.ac.imperial.presage2.util.environment.AbstractEnvironmentModule;
 import uk.ac.imperial.presage2.util.location.Location;
 import uk.ac.imperial.presage2.util.location.LocationService;
@@ -22,6 +25,7 @@ import uk.ac.imperial.presage2.util.network.NetworkModule;
 import uk.ac.imperial.presage2.util.network.NetworkRangeConstraint;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 
 public class HelloWorldSimulation extends InjectedSimulation {
 
@@ -58,7 +62,8 @@ public class HelloWorldSimulation extends InjectedSimulation {
 		constraints.add(NetworkRangeConstraint.class);
 		modules.add(NetworkModule.constrainedNetworkModule(constraints)
 				.withNodeDiscovery());
-
+		modules.add(new RuleModule());
+		
 		modules.add(new PluginModule().addPlugin(LocationStoragePlugin.class));
 
 		return modules;
@@ -74,5 +79,10 @@ public class HelloWorldSimulation extends InjectedSimulation {
 			s.addParticipant(p);
 		}
 	}
-
+	
+	@Inject
+	public void setSession(StatefulKnowledgeSession session) 
+	{
+		StatefulKnowledgeSession mSession = session;
+	}
 }

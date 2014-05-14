@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
-import org.drools.lang.dsl.DSLMapParser.value_chunk_return;
 
 import com.google.inject.Inject;
 

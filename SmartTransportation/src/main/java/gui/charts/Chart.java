@@ -12,7 +12,6 @@ import javafx.stage.Stage;
 
 public class Chart 
 {
-	protected final static String LAYOUTS_PATH = "../../../layouts/";
 	protected Stage mStage;
 
 	public void show()

@@ -1,12 +1,13 @@
 package gui.charts.transportMethodsUsed;
 
+import gui.GUI;
 import gui.charts.Chart;
 
 import java.util.Map;
 
 public class TransportMethodsUsedWindow extends Chart
 {
-	private final static String PIE_CHART = Chart.LAYOUTS_PATH + "PieChart.fxml";
+	private final static String PIE_CHART = GUI.LAYOUTS_PATH + "PieChart.fxml";
 	
 	private TransportMethodsUsedController mPieChartController;
 	private Map<String, Double> mPieData;

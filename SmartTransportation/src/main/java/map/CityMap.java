@@ -197,7 +197,7 @@ public class CityMap extends Area
 		@Override
 		protected void configure() 
 		{
-//			bind(HasArea.class).to(CityMap.class);
+			//bind(HasArea.class).to(CityMap.class);
 		}
 		
 		@Provides

@@ -44,12 +44,23 @@ public class TransportServiceRecord implements ITransportServiceRecord
 		mTransportOffers = new ArrayList<TransportOffer>();
 		mHasBeenUpdated = false;
 	}
+	
 	@Override
 	public List<TransportOffer> getTransportOffers() 
 	{
 		return Collections.unmodifiableList(mTransportOffers);
 	}
 
+	@Override
+	public void addTransportOffer(TransportOffer offer) 
+	{
+		assert(offer != null);
+		assert(mTransportOffers.contains(offer) == false);
+		
+		mTransportOffers.add(offer);
+		mHasBeenUpdated = true;
+	}
+	
 	@Override
 	public void removeTransportOffer(TransportOffer offer) 
 	{
@@ -65,7 +76,7 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	{
 		if(mHasBeenUpdated && (mTransportOffers.isEmpty() == false))
 		{
-			ITransportServiceOffer offer = new TransportServiceOffer(Collections.unmodifiableList(mTransportOffers));
+			ITransportServiceOffer offer = new TransportServiceOffer(new ArrayList<TransportOffer>(mTransportOffers));
 			TransportServiceOfferMessage msg = new TransportServiceOfferMessage(offer, mMediatorAddress, 
 					mUserAddress);
 			mNetworkAdaptor.sendMessage(msg);
@@ -78,17 +89,7 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	{
 		return mTransportServiceRequest;
 	}
-	
-	@Override
-	public void addTransportOffer(TransportOffer offer) 
-	{
-		assert(offer != null);
-		assert(mTransportOffers.contains(offer) == false);
 		
-		mTransportOffers.add(offer);
-		mHasBeenUpdated = true;
-	}
-	
 	@Override
 	public void sortTransportOffers()
 	{

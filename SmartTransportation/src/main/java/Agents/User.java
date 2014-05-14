@@ -264,7 +264,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		super.incrementTime();
 		mCurrentServiceRequest.incrementTime();
 		updateLocation();
-		
+
 		if(mCurrentState != State.REACHED_DESTINATION)
 		{
 			++mTravelTime;
@@ -358,7 +358,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 		
 		sendConfirmationMessage(selectedTransportOffer);
-		clearReceivedTransportOffers();
+//		clearReceivedTransportOffers();
 	}
 	
 	private void clearReceivedTransportOffers()
@@ -379,6 +379,16 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private void logTransportOffers(List<TransportOffer> transportOffers)
 	{
 		logger.info("logTransportOffers() I need to get there in: " + mTravelTimeTarget + " time units.");
+		
+		int timeLeft = mTravelTimeTarget - mTravelTime;
+		if(timeLeft > 0)
+		{
+			logger.info("logTransportOffers() I have left: " + timeLeft + " time units.");
+		}
+		else
+		{
+			logger.info("logTransportOffers() I am late by: " + (-timeLeft) + " time units.");
+		}
 		
 		for (int i = 0; i < transportOffers.size(); ++i) 
 		{

@@ -151,6 +151,9 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private static int[][] mMapConfiguration;
 	
+	public static final String RULES_PATH = "/rules/";
+	public static final String USER_RULES_PATH = RULES_PATH + "UserRules.drl";
+	
 	public static final int DISTANCE_BETWEEN_REVISIONS = 100;
 	
 	private StatefulKnowledgeSession mSession;
@@ -165,7 +168,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	private ISmartTransportionGUI mGUI;
 	private SimulationDataStore mSimulationDataStore;
 	
-	@Inject
 	private CityMap mCityMap;
 	
 	private List<List<Location>> mBusRoutes;
@@ -194,7 +196,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	}
 	
 	@Inject
-	public void setSession(StatefulKnowledgeSession session) {
+	public void setSession(StatefulKnowledgeSession session) 
+	{
 		this.mSession = session;
 	}
 	
@@ -202,6 +205,12 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	public void setGUI(ISmartTransportionGUI gui)
 	{
 		mGUI = gui;
+	}
+	
+	@Inject
+	public void setCityMap(CityMap cityMap)
+	{
+		mCityMap = cityMap;
 	}
 	
 	public static void setMapConfiguration(int[][] mapConfig)
@@ -220,7 +229,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 					.addParticipantEnvironmentService(ParticipantLocationService.class));
 		modules.add(NetworkModule.fullyConnectedNetworkModule());
 		modules.add(new GUIModule());
-		modules.add(new RuleModule().addClasspathDrlFile("UserRules.drl"));
+		modules.add(new RuleModule().addClasspathDrlFile(USER_RULES_PATH));
 		
 		return modules;
 	}

@@ -13,4 +13,6 @@ public interface IBusTravelPlan
 	public int getBusTravelDistance();
 	public List<Location> getPathToDestination();
 	public UUID getBusRouteID();
+	public Location getFirstBusStopLocation();
+	public Location getDestinationBusStopLocation();
 }

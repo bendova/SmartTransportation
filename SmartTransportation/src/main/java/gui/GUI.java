@@ -95,7 +95,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private AnimationState mAnimationState = AnimationState.PAUSED;
 	
 	private static GUI mInstance;
-	private int mMapLayout[][] = {
+	private static int mMapLayout[][] = {
 			{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1}, 
 			{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1}, 
 			{1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1},
@@ -125,14 +125,14 @@ public class GUI extends Application implements ISmartTransportionGUI
 		return mInstance;
 	}
 	
-	public int[][] getMapConfiguration()
-	{
-		return mMapLayout;
-	}
-	
 	public SimulationConfiguration getSimulationConfiguration()
 	{
 		return mSimulationConfiguration;
+	}
+	
+	public static int[][] getMapConfiguration()
+	{
+		return mMapLayout;
 	}
 	
 	public static void main(String[] args)
@@ -198,12 +198,12 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mTimeStepDuration = new Duration(config.getTimeStepDuration());
 		mPixelsPerAreaPoint = config.getPixelsPerAreaPoint();
 		mTimeStepsCount = config.getTimeStepsCount();
+		setAreaSize(config.getAreaSize(), config.getAreaSize());
 		
 		Simulation.setMapConfiguration(mMapLayout);
 		String className = Simulation.class.getName();
 		String finishTime = "finishTime=" + mTimeStepsCount;
-		String areaSize = "areaSize=" + config.getAreaSize();
-		final String[] args = {className, finishTime, areaSize};
+		final String[] args = {className, finishTime};
 		try 
 		{
 			openProgressDialog(mStage);

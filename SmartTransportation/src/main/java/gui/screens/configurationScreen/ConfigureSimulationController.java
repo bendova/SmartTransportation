@@ -136,10 +136,21 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		int transportAllocationIndex = transportPreferenceChoiceBox.getSelectionModel().getSelectedIndex();
 		int timeConstraintIndex = timeContraintChoiceBox.getSelectionModel().getSelectedIndex();
 		
-		SimulationConfiguration config = new SimulationConfiguration(timeStepDuration, 
-				timeStepsCount, areaSize, pixelsPerPoint, usersCount, areTaxiesEnabled, taxiesCount, 
-				taxiStationsCount, areBusesEnabled, busesCount, busRoutesCount, isWalkingEnabled, 
-				transportAllocationIndex, timeConstraintIndex);
+		SimulationConfiguration config = new SimulationConfiguration()
+						.setTimeStepDuration(timeStepDuration)
+						.setTimeStepsCount(timeStepsCount)
+						.setAreaSize(areaSize)
+						.setPixelsPerAreaPoint(pixelsPerPoint)
+						.setUsersCount(usersCount)
+						.setAreTaxiesEnabled(areTaxiesEnabled)
+						.setTaxiesCount(taxiesCount)
+						.setTaxiStationsCount(taxiStationsCount)
+						.setAreBusesEnabled(areBusesEnabled)
+						.setBusesCount(busesCount)
+						.setBusRoutesCount(busRoutesCount)
+						.setIsWalkingEnabled(isWalkingEnabled)
+						.setTransportAllocationMethodIndex(transportAllocationIndex)
+						.setTimeContraintTypeIndex(timeConstraintIndex);
 		return config;
 	}
 	

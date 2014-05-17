@@ -1,0 +1,7 @@
+//created on: 14.05.2014
+package test
+
+global org.apache.log4j.Logger gLogger;
+
+
+

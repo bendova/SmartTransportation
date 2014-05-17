@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import agents.User.TransportPreference;
 
 import conversations.userMediator.messages.TransportServiceOfferMessage;
@@ -13,6 +15,7 @@ import conversations.userMediator.messages.messageData.ITransportServiceOffer;
 import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 import conversations.userMediator.messages.messageData.TransportServiceOffer;
 
+import transportOffers.ITransportOffer;
 import transportOffers.TransportOffer;
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -22,24 +25,28 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	private NetworkAddress mUserAddress;
 	private NetworkAddress mMediatorAddress;
 	private NetworkAdaptor mNetworkAdaptor;
+	private Logger mLogger;
 	private ITransportServiceRequest mTransportServiceRequest;
 	private List<TransportOffer> mTransportOffers;
 	private Comparator<TransportOffer> mTransportOffersComparator;
 	private boolean mHasBeenUpdated;
 	
 	public TransportServiceRecord(NetworkAddress userAddress, ITransportServiceRequest transportServiceRequest,
-			NetworkAddress mediatorAddress, NetworkAdaptor adaptor, Comparator<TransportOffer> comparator)
+			NetworkAddress mediatorAddress, NetworkAdaptor adaptor, Logger logger, 
+			Comparator<TransportOffer> comparator)
 	{
 		assert(userAddress != null);
 		assert(transportServiceRequest != null);
 		assert(mediatorAddress != null);
 		assert(adaptor != null);
+		assert(logger != null);
 		assert(comparator != null);
 		
 		mUserAddress = userAddress;
 		mTransportServiceRequest = transportServiceRequest;
 		mMediatorAddress = mediatorAddress;
 		mNetworkAdaptor = adaptor;
+		mLogger = logger;
 		mTransportOffersComparator = comparator;
 		mTransportOffers = new ArrayList<TransportOffer>();
 		mHasBeenUpdated = false;
@@ -57,6 +64,9 @@ public class TransportServiceRecord implements ITransportServiceRecord
 		assert(offer != null);
 		assert(mTransportOffers.contains(offer) == false);
 		
+		mLogger.info("addTransportOffer() offer " + offer);
+		mLogger.info("addTransportOffer() mUserAddress " + mUserAddress);
+		
 		mTransportOffers.add(offer);
 		mHasBeenUpdated = true;
 	}
@@ -67,6 +77,9 @@ public class TransportServiceRecord implements ITransportServiceRecord
 		assert(offer != null);
 		assert(mTransportOffers.contains(offer) == true);
 		
+		mLogger.info("removeTransportOffer() offer " + offer);
+		mLogger.info("removeTransportOffer() mUserAddress " + mUserAddress);
+		
 		mTransportOffers.remove(offer);
 		mHasBeenUpdated = true;
 	}
@@ -76,7 +89,9 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	{
 		if(mHasBeenUpdated && (mTransportOffers.isEmpty() == false))
 		{
-			ITransportServiceOffer offer = new TransportServiceOffer(new ArrayList<TransportOffer>(mTransportOffers));
+			mLogger.info("sendTransportOffers() mUserAddress " + mUserAddress);
+			
+			ITransportServiceOffer offer = new TransportServiceOffer(new ArrayList<ITransportOffer>(mTransportOffers));
 			TransportServiceOfferMessage msg = new TransportServiceOfferMessage(offer, mMediatorAddress, 
 					mUserAddress);
 			mNetworkAdaptor.sendMessage(msg);

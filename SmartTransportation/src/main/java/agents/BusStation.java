@@ -163,7 +163,9 @@ public class BusStation extends AbstractParticipant
 		}
 		
 		List<Location> selectedStartTravelPath = null;
+		Location selectionStartBusStop = null; 
 		List<Location> selectedDestinationTravelPath = null;
+		Location selectionDestinationBusStop = null; 
 		UUID selectedBusRouteID = null;
 		int minBusTravelDistance = Integer.MAX_VALUE;
 		
@@ -196,7 +198,9 @@ public class BusStation extends AbstractParticipant
 			if(busTravelDistance < minBusTravelDistance)
 			{
 				selectedStartTravelPath = startTravelPath;
+				selectionStartBusStop = start;
 				selectedDestinationTravelPath = destinationTravelPath;
+				selectionDestinationBusStop = destination;
 				selectedBusRouteID = busRouteID;
 				minBusTravelDistance = busTravelDistance;
 			}
@@ -207,7 +211,8 @@ public class BusStation extends AbstractParticipant
 			logger.info("replyToRequest() Replying to " + msg.getFrom() + " with the bus route " + selectedBusRouteID);
 			
 			// reply to the user with the travel paths
-			BusTravelPlan travelPlan = new BusTravelPlan(selectedStartTravelPath, selectedDestinationTravelPath, 
+			BusTravelPlan travelPlan = new BusTravelPlan(selectedStartTravelPath, selectionStartBusStop,
+					selectedDestinationTravelPath, selectionDestinationBusStop,
 					minBusTravelDistance, selectedBusRouteID, msg.getData().getUserNetworkAddress());
 			BusTravelPlanMessage travelPlanMsg = new BusTravelPlanMessage(travelPlan, 
 					network.getAddress(), mMediatorAddress);

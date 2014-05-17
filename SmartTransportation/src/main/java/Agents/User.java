@@ -22,6 +22,7 @@ import conversations.userTaxi.messages.*;
 import dataStores.SimulationDataStore;
 import dataStores.UserDataStore;
 import transportOffers.BusTransportOffer;
+import transportOffers.ITransportOffer;
 import transportOffers.TransportOffer;
 import transportOffers.WalkTransportOffer;
 import uk.ac.imperial.presage2.core.messaging.Input;
@@ -132,7 +133,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private CityMap mCityMap;
 	private SimulationDataStore mSimulationDataStore;
 	
-	private List<TransportOffer> mReceivedTransportOffers;
+	private List<ITransportOffer> mReceivedTransportOffers;
 	
 	public User(UUID id, String name, CityMap cityMap, Location startLocation, Location targetLocation, 
 			int travelTimeTarget, NetworkAddress mediatorNetworkAddress, TransportPreference transportPreference) 
@@ -165,7 +166,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mTravelTime = 0;
 		mTimeTakenPerUnitDistance = TransportMethodSpeed.WALKING_SPEED.getTimeTakenPerUnitDistance();
 		
-		mReceivedTransportOffers = new ArrayList<TransportOffer>();
+		mReceivedTransportOffers = new ArrayList<ITransportOffer>();
 	}
 	
 	public void setDataStore(SimulationDataStore dataStore) 
@@ -317,14 +318,16 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 	}
 	
-	public List<TransportOffer> getReceivedTransportOffers()
+	public List<ITransportOffer> getReceivedTransportOffers()
 	{
 		return mReceivedTransportOffers;
 	}
 	
-	public void selectTransportOffer(TransportOffer selectedTransportOffer)
+	public void selectTransportOffer(ITransportOffer selectedTransportOffer)
 	{
 		logger.info("selectTransportOffer() I am choosing this offer: " + selectedTransportOffer);
+		
+		assert(mCurrentState == State.LOOKING_FOR_TRANSPORT);
 		
 		switch (selectedTransportOffer.getTransportMode()) 
 		{
@@ -358,25 +361,17 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 		
 		sendConfirmationMessage(selectedTransportOffer);
-//		clearReceivedTransportOffers();
+		mReceivedTransportOffers = new ArrayList<ITransportOffer>();
 	}
 	
-	private void clearReceivedTransportOffers()
-	{
-		if(mReceivedTransportOffers.isEmpty() == false)
-		{
-			mReceivedTransportOffers = new ArrayList<TransportOffer>();
-		}
-	}
-	
-	private void sendConfirmationMessage(TransportOffer selectedTransportOffer)
+	private void sendConfirmationMessage(ITransportOffer selectedTransportOffer)
 	{
 		ConfirmTransportOfferMessage msg = new ConfirmTransportOfferMessage(selectedTransportOffer, 
 				network.getAddress(), mMediatorAddress);
 		network.sendMessage(msg);
 	}
 	
-	private void logTransportOffers(List<TransportOffer> transportOffers)
+	private void logTransportOffers(List<ITransportOffer> transportOffers)
 	{
 		logger.info("logTransportOffers() I need to get there in: " + mTravelTimeTarget + " time units.");
 		
@@ -392,7 +387,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		for (int i = 0; i < transportOffers.size(); ++i) 
 		{
-			TransportOffer offer = transportOffers.get(i);
+			ITransportOffer offer = transportOffers.get(i);
 			logger.info("logTransportOffers() " + offer.getTransportMode() + 
 					" costs: " + offer.getCost() + " currency units");
 			logger.info("logTransportOffers() " + offer.getTransportMode() + 
@@ -494,8 +489,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToFirstBusStop() " + mBusTravelPlan.getPathToFirstBusStop());
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToDestination() " + mBusTravelPlan.getPathToDestination());
-		
-		moveTo(mBusTravelPlan.getPathToFirstBusStop().get(mCurrentPathIndex++));
 	}
 	
 	private void handleArrivalAtBusStop(NotificationOfArrivalAtBusStop notification)
@@ -520,7 +513,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 				break;
 				case TRAVELING_BY_BUS:
 				{
-					Location targetBusStop = mBusTravelPlan.getPathToDestination().get(0);
+					Location targetBusStop = mBusTravelPlan.getDestinationBusStopLocation();
 					Location currentBusStop = notification.getData().getBusStopLocation();
 					if(currentBusStop.equals(targetBusStop))
 					{

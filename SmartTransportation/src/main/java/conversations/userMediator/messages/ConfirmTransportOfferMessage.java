@@ -1,14 +1,14 @@
 package conversations.userMediator.messages;
 
-import transportOffers.TransportOffer;
+import transportOffers.ITransportOffer;
 import uk.ac.imperial.presage2.core.messaging.Performative;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.network.UnicastMessage;
 import util.TimeStamp;
 
-public class ConfirmTransportOfferMessage extends UnicastMessage<TransportOffer>
+public class ConfirmTransportOfferMessage extends UnicastMessage<ITransportOffer>
 {
-	public ConfirmTransportOfferMessage(TransportOffer offer, NetworkAddress from, NetworkAddress to)
+	public ConfirmTransportOfferMessage(ITransportOffer offer, NetworkAddress from, NetworkAddress to)
 	{
 		super(Performative.REQUEST, from, to, new TimeStamp());
 		

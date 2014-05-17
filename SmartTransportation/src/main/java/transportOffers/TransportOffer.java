@@ -3,7 +3,7 @@ package transportOffers;
 import agents.User.TransportMode;
 import agents.User.TransportPreference;
 
-public abstract class TransportOffer
+public abstract class TransportOffer implements ITransportOffer
 {
 	private TransportMode mTransportMode;
 	protected double mTravelCost = 0.0;

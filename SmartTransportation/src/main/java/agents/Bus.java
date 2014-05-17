@@ -60,8 +60,8 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private List<Location> mPathToTravel;
 	private int mCurrentPathIndex;
 	private IBusRoute mBusRoute;
-	
-	private final static int MAX_PASSANGERS_COUNT = 5;
+
+	private final static int MAX_PASSANGERS_COUNT = 3;
 	
 	// mapping of the passengers'
 	// network addresses(so we can talk to them) to their
@@ -189,7 +189,6 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mNextBusStop = mBusStops.get(mNextBusIndex);
 		mPathToTravel = mCityMap.getPath(mCurrentLocation, mNextBusStop);
 		mCurrentPathIndex = 0;
-		moveTo(mPathToTravel.get(mCurrentPathIndex++));
 	}
 	
 	private void processMessage(BoardBusRequestMessage boardRequestMessage)
@@ -261,11 +260,8 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mCurrentPathIndex = 0;
 		mPathToTravel = mBusRoute.getPathsBetweenBusStops().get(mNextBusStop);
 		
-		if(mNextBusIndex < mBusStops.size())
-		{
-			++mNextBusIndex;
-		}
-		else 
+		++mNextBusIndex;
+		if(mNextBusIndex == mBusStops.size())
 		{
 			mNextBusIndex = 0;
 		}

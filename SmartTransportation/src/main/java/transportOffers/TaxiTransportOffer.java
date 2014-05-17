@@ -1,5 +1,7 @@
 package transportOffers;
 
+import org.apache.log4j.Logger;
+
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import agents.User.TransportMode;
@@ -19,7 +21,10 @@ public class TaxiTransportOffer extends TransportOffer
 	private ITaxiDescription mTaxiDescription;
 	private ITransportServiceRequest mRequest;
 	private NetworkAdaptor mNetworkAdaptor;
-	public TaxiTransportOffer(double travelCost, double travelTime, NetworkAdaptor networkAdaptor, 
+	private Logger mLogger;	
+	
+	public TaxiTransportOffer(double travelCost, double travelTime, 
+			NetworkAdaptor networkAdaptor, Logger logger, 
 			ITaxiDescription taxiDescription, ITransportServiceRequest request)
 	{
 		super(TransportMode.TAKE_TAXI);
@@ -27,12 +32,14 @@ public class TaxiTransportOffer extends TransportOffer
 		assert(travelCost >= 0);
 		assert(travelTime >= 0);
 		assert(networkAdaptor != null);
+		assert(logger != null);
 		assert(taxiDescription != null);
 		assert(request != null);
 		
 		mTravelCost = travelCost;
 		mTravelTime = travelTime;
 		mNetworkAdaptor = networkAdaptor;
+		mLogger = logger;
 		mTaxiDescription = taxiDescription;
 		mRequest = request;
 	}
@@ -61,6 +68,8 @@ public class TaxiTransportOffer extends TransportOffer
 	
 	private void sendConfirmationMessage()
 	{
+		mLogger.info("sendConfirmationMessage() fromUser " + mRequest.getUserNetworkAddress());
+		
 		ITaxiServiceRequest request = new TaxiServiceRequest(mRequest, mTaxiDescription);
 		TaxiRequestConfirmationMessage confirmationMessage = new TaxiRequestConfirmationMessage(request,
 				mRequest.getUserNetworkAddress(), mTaxiDescription.getTaxiStationAddress());
@@ -68,6 +77,8 @@ public class TaxiTransportOffer extends TransportOffer
 	}
 	private void sendCancelMessage()
 	{
+		mLogger.info("sendCancelMessage() toUser " + mRequest.getUserNetworkAddress());
+		
 		TaxiRequestCancelMessage cancelMessage = new TaxiRequestCancelMessage("I cancel this request", 
 				mRequest.getUserNetworkAddress(), mTaxiDescription.getTaxiStationAddress());
 		mNetworkAdaptor.sendMessage(cancelMessage);

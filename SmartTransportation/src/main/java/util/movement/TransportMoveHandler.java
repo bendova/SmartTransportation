@@ -5,17 +5,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
 import com.google.inject.Inject;
 
-import dataStores.AgentDataStore;
-
 import uk.ac.imperial.presage2.core.Action;
-import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.environment.ActionHandler;
 import uk.ac.imperial.presage2.core.environment.ActionHandlingException;
 import uk.ac.imperial.presage2.core.environment.EnvironmentServiceProvider;
@@ -23,10 +20,7 @@ import uk.ac.imperial.presage2.core.environment.EnvironmentSharedStateAccess;
 import uk.ac.imperial.presage2.core.environment.ServiceDependencies;
 import uk.ac.imperial.presage2.core.environment.UnavailableServiceException;
 import uk.ac.imperial.presage2.core.messaging.Input;
-import uk.ac.imperial.presage2.core.participant.Participant;
 import uk.ac.imperial.presage2.util.location.CannotSeeAgent;
-import uk.ac.imperial.presage2.util.location.Cell;
-import uk.ac.imperial.presage2.util.location.CellMove;
 import uk.ac.imperial.presage2.util.location.Location;
 import uk.ac.imperial.presage2.util.location.LocationService;
 import uk.ac.imperial.presage2.util.location.Move;
@@ -59,8 +53,8 @@ public class TransportMoveHandler implements ActionHandler
 		mServiceProvider = serviceProvider;
 		mSharedState = sharedState;
 		mLocationService = serviceProvider.getEnvironmentService(LocationService.class);
-		mAgentMovements = new HashMap<UUID, List<Movement>>();
-		mMovingAgents = new HashMap<UUID, List<Movement>>();
+		mAgentMovements = new ConcurrentHashMap<UUID, List<Movement>>();
+		mMovingAgents = new ConcurrentHashMap<UUID, List<Movement>>();
 		mSimulationTime = 0;
 	}
 	
@@ -159,7 +153,7 @@ public class TransportMoveHandler implements ActionHandler
 		{
 			int moveStartTime = mSimulationTime;
 			List<Movement> pendingMovements = mMovingAgents.get(agentID);
-			if(mMovingAgents.get(agentID) == null)
+			if(pendingMovements == null)
 			{
 				pendingMovements = new ArrayList<Movement>();
 				mMovingAgents.put(agentID, pendingMovements);
@@ -185,18 +179,25 @@ public class TransportMoveHandler implements ActionHandler
 			{
 				Map.Entry<UUID, List<Movement>> entry = iterator.next();
 				List<Movement> pendingMovements = entry.getValue();
-				Movement movement = pendingMovements.get(0);
-				int timeElapsed = movement.getStartTime() + movement.getTimeTakenPerUnitDistance();
-				if(timeElapsed <= mSimulationTime)
+				if(pendingMovements.isEmpty() == false)
 				{
-					changeAgentLocation(entry.getKey(), movement.getLocation(), 
-							movement.getTimeTakenPerUnitDistance());
-					
-					pendingMovements.remove(0);
-					if(pendingMovements.isEmpty())
+					Movement movement = pendingMovements.get(0);
+					int timeElapsed = movement.getStartTime() + movement.getTimeTakenPerUnitDistance();
+					if(timeElapsed <= mSimulationTime)
 					{
-						iterator.remove();
+						changeAgentLocation(entry.getKey(), movement.getLocation(), 
+								movement.getTimeTakenPerUnitDistance());
+						
+						pendingMovements.remove(0);
+						if(pendingMovements.isEmpty())
+						{
+							iterator.remove();
+						}
 					}
+				}
+				else 
+				{
+					iterator.remove();
 				}
 			}
 		}

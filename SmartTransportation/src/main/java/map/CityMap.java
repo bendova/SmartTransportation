@@ -18,9 +18,9 @@ import uk.ac.imperial.presage2.util.location.area.HasArea;
 public class CityMap extends Area
 {
 	private int[][] mMapConfiguration;
-	public CityMap(int x, int y, int[][] mapConfig) 
+	public CityMap(int[][] mapConfig) 
 	{
-		super(x, y, 1);
+		super(mapConfig.length, mapConfig[0].length, 1);
 		
 		mMapConfiguration = mapConfig;
 	}
@@ -176,22 +176,18 @@ public class CityMap extends Area
 	
 	public static class Bind extends AbstractModule 
 	{
-		private int mWidth;
-		private int mHeight;
 		private int[][] mMapConfiguration;
 		private CityMap mCityMap;
 		
-		public Bind(int width, int height, int[][] mapConfiguration) 
+		public Bind(int[][] mapConfiguration) 
 		{
 			super();
-			mWidth = width;
-			mHeight = height;
 			mMapConfiguration = mapConfiguration;
 		}
 		
-		public static Bind cityMap2D(final int width, final int height, final int[][] mapConfig) 
+		public static Bind cityMap2D(final int[][] mapConfig) 
 		{
-			return new Bind(width, height, mapConfig);
+			return new Bind(mapConfig);
 		}
 		
 		@Override
@@ -216,7 +212,7 @@ public class CityMap extends Area
 		{
 			if(mCityMap == null)
 			{
-				mCityMap = new CityMap(mWidth, mHeight, mMapConfiguration);
+				mCityMap = new CityMap(mMapConfiguration);
 			}
 			return mCityMap;
 		}

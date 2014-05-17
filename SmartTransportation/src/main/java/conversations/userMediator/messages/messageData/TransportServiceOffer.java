@@ -2,12 +2,13 @@ package conversations.userMediator.messages.messageData;
 
 import java.util.List;
 
+import transportOffers.ITransportOffer;
 import transportOffers.TransportOffer;
 
 public class TransportServiceOffer implements ITransportServiceOffer
 {
-	private List<TransportOffer> mTransportOffers;
-	public TransportServiceOffer(List<TransportOffer> transportOffers)
+	private List<ITransportOffer> mTransportOffers;
+	public TransportServiceOffer(List<ITransportOffer> transportOffers)
 	{
 		assert(transportOffers != null);
 		assert(transportOffers.size() > 0);
@@ -16,7 +17,7 @@ public class TransportServiceOffer implements ITransportServiceOffer
 	}
 	
 	@Override
-	public List<TransportOffer> getTransportOffers() 
+	public List<ITransportOffer> getTransportOffers() 
 	{
 		return mTransportOffers;
 	}

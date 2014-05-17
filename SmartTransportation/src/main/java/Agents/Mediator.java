@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import map.CityMap;
@@ -105,7 +106,7 @@ public class Mediator extends AbstractParticipant
 		mBusServices = new HashSet<NetworkAddress>();
 		mPendingServiceRequests = new ConcurrentLinkedQueue<TransportServiceRequestMessage>();
 		
-		mTransportServiceRecords = new HashMap<NetworkAddress, ITransportServiceRecord>();
+		mTransportServiceRecords = new ConcurrentHashMap<NetworkAddress, ITransportServiceRecord>();
 		mAvailableTaxies = new ArrayList<ITaxiDescription>();
 		
 		initTranportMethodComparators();
@@ -261,15 +262,17 @@ public class Mediator extends AbstractParticipant
 	private void handleConfirmedTransportOffer(ConfirmTransportOfferMessage confirmedOfferMessage)
 	{
 		logger.info("handleConfirmedTransportOffer() from " + confirmedOfferMessage.getFrom());
+		logger.info("handleConfirmedTransportOffer() confirmedOffer " + confirmedOfferMessage.getData());
 		
-		TransportOffer confirmedOffer = confirmedOfferMessage.getData();
+		TransportOffer confirmedOffer = (TransportOffer)confirmedOfferMessage.getData();
 		confirmedOffer.confirm();
-		
-		logger.info("handleConfirmedTransportOffer() confirmedOffer " + confirmedOffer);
 		
 		NetworkAddress userAddress = confirmedOfferMessage.getFrom();
 		
 		ITransportServiceRecord transportServiceRecord = mTransportServiceRecords.remove(userAddress);
+		
+		assert(transportServiceRecord != null);
+		
 		List<TransportOffer> transportOffers = transportServiceRecord.getTransportOffers();
 		transportServiceRecord.removeTransportOffer(confirmedOffer);
 		for (Iterator<TransportOffer> iterator = transportOffers.iterator(); iterator.hasNext();) 
@@ -288,30 +291,53 @@ public class Mediator extends AbstractParticipant
 	
 	private void handleTransportRequest(TransportServiceRequestMessage serviceRequestMessage)
 	{
-		logger.info("processRequest() TransportServiceRequestMessage " + serviceRequestMessage);
+		logger.info("handleTransportRequest() serviceRequestMessage " + serviceRequestMessage);
 		
-		NetworkAddress userAddress = serviceRequestMessage.getFrom();
 		ITransportServiceRequest serviceRequest = serviceRequestMessage.getData();
-		ITransportServiceRecord serviceRecord = new TransportServiceRecord(userAddress, 
-				serviceRequest, mNetworkAddress, network, getComparatorFor(serviceRequest));
-		mTransportServiceRecords.put(userAddress, serviceRecord);
+		ITransportServiceRecord serviceRecord = createTransportServiceRecordFor(serviceRequest);
+		
+		addTaxiOffer(serviceRequest, serviceRecord);
+		addWalkingOffer(serviceRequest, serviceRecord);
+		forwardRequestMessageToBusStations(serviceRequestMessage);
 		
 		mPendingServiceRequests.add(serviceRequestMessage);
+	}
+	
+	private ITransportServiceRecord createTransportServiceRecordFor(ITransportServiceRequest serviceRequest)
+	{
+		NetworkAddress userAddress = serviceRequest.getUserNetworkAddress();
+		ITransportServiceRecord serviceRecord = new TransportServiceRecord(userAddress, 
+				serviceRequest, mNetworkAddress, network, logger, getComparatorFor(serviceRequest));
+		mTransportServiceRecords.put(userAddress, serviceRecord);
+		return serviceRecord;
+	}
+	
+	private void addTaxiOffer(ITransportServiceRequest serviceRequest, ITransportServiceRecord serviceRecord)
+	{
 		if(mAvailableTaxies.isEmpty() == false)
 		{
-			ITaxiDescription taxi = getTaxiNearestTo(serviceRequestMessage.getData().getStartLocation());
-			serviceRecord.addTransportOffer(getTaxiTransportOffer(userAddress, taxi));
+			ITaxiDescription taxi = getTaxiNearestTo(serviceRequest.getStartLocation());
+			serviceRecord.addTransportOffer(
+					getTaxiTransportOffer(serviceRequest.getUserNetworkAddress(), taxi));
 		}
+	}
+	
+	private void addWalkingOffer(ITransportServiceRequest serviceRequest, ITransportServiceRecord serviceRecord)
+	{
+		if(mIsWalkingEnabled)
+		{
+			serviceRecord.addTransportOffer(getWalkingTransportOffer(serviceRequest));
+		}
+	}
+	
+	private void forwardRequestMessageToBusStations(TransportServiceRequestMessage serviceRequestMessage)
+	{
 		if(mBusServices.isEmpty() == false)
 		{
 			for (NetworkAddress toBusStation : mBusServices) 
 			{
 				forwardRequest(serviceRequestMessage, toBusStation);
 			}
-		}
-		if(mIsWalkingEnabled)
-		{
-			serviceRecord.addTransportOffer(getWalkingTransportOffer(serviceRequest));
 		}
 	}
 	
@@ -329,7 +355,7 @@ public class Mediator extends AbstractParticipant
 		double travelCost = (double)travelToDestinationDistance 
 				* TransportMethodCost.TAXI_COST.getCost();
 		
-		return new TaxiTransportOffer(travelCost, totalTravelTime, network, 
+		return new TaxiTransportOffer(travelCost, totalTravelTime, network, logger,
 				taxiDescription, request);
 	}
 	

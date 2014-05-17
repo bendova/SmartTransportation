@@ -34,7 +34,6 @@ import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.participant.Participant;
 import uk.ac.imperial.presage2.core.simulator.InjectedSimulation;
-import uk.ac.imperial.presage2.core.simulator.Parameter;
 import uk.ac.imperial.presage2.core.simulator.Scenario;
 import uk.ac.imperial.presage2.rules.RuleModule;
 import uk.ac.imperial.presage2.util.environment.AbstractEnvironmentModule;
@@ -48,9 +47,6 @@ import util.movement.TransportMoveHandler;
 
 public class Simulation extends InjectedSimulation implements TimeDriven
 {
-	@Parameter(name="areaSize")
-	public int areaSize;
-	
 	public enum TransportMethodCost
 	{
 		WALKING_COST	(1),
@@ -138,6 +134,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		}
 	}
 	
+	private static int mAreaSize;
 	private int mUsersCount;
 	private boolean mIsWalkingEnabled;
 	private boolean mAreTaxiesEnabled;
@@ -213,9 +210,30 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		mCityMap = cityMap;
 	}
 	
+	@Inject
+	public void setSimulationConfiguration(SimulationConfiguration config)
+	{
+		mUsersCount 		= config.getUsersCount();
+		mIsWalkingEnabled 	= config.isWalkingEnabled();
+		mAreTaxiesEnabled 	= config.areTaxiesEnabled();
+		mTaxiStationsCount 	= config.getTaxiStationsCount();
+		mTaxiesCount 		= config.getTaxiesCount();
+		mAreBusesEnabled 	= config.areBusesEnabled();
+		mBusesCount 		= config.getBusesCount();
+		mBusRoutesCount 	= config.getBusRoutesCount();
+		mTransportPrefAllocation 	= TransportPreferenceAllocation.values()[config.getTransportAllocationIndex()];
+		mTravelTimeConstraintScale 		= TimeConstraint.values()[config.getTimeConstraintIndex()];
+		
+		mMaxSpeed = getMaximumSpeed();
+		
+		mSimulationDataStore = new SimulationDataStore();
+		mSimulationDataStore.setSimulationConfiguration(config);
+	}
+	
 	public static void setMapConfiguration(int[][] mapConfig)
 	{
 		mMapConfiguration = mapConfig;
+		mAreaSize = mMapConfiguration.length;
 	}
 	
 	@Override
@@ -223,7 +241,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		Set<AbstractModule> modules = new HashSet<AbstractModule>();
 		
-		modules.add(CityMap.Bind.cityMap2D(areaSize, areaSize, mMapConfiguration));
+		modules.add(CityMap.Bind.cityMap2D(mMapConfiguration));
 		modules.add(new AbstractEnvironmentModule()
 					.addActionHandler(TransportMoveHandler.class)
 					.addParticipantEnvironmentService(ParticipantLocationService.class));
@@ -251,22 +269,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private void initParameters()
 	{
-		SimulationConfiguration config = mGUI.getSimulationConfiguration();
-		mUsersCount 		= config.getUsersCount();
-		mIsWalkingEnabled 	= config.isWalkingEnabled();
-		mAreTaxiesEnabled 	= config.areTaxiesEnabled();
-		mTaxiStationsCount 	= config.getTaxiStationsCount();
-		mTaxiesCount 		= config.getTaxiesCount();
-		mAreBusesEnabled 	= config.areBusesEnabled();
-		mBusesCount 		= config.getBusesCount();
-		mBusRoutesCount 	= config.getBusRoutesCount();
-		mTransportPrefAllocation 	= TransportPreferenceAllocation.values()[config.getTransportAllocationIndex()];
-		mTravelTimeConstraintScale 		= TimeConstraint.values()[config.getTimeConstraintIndex()];
 		
-		mMaxSpeed = getMaximumSpeed();
-		
-		mSimulationDataStore = new SimulationDataStore();
-		mSimulationDataStore.setSimulationConfiguration(config);
 	}
 	
 	private void addMediator(Scenario s)
@@ -373,9 +376,8 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	public void incrementTime() 
 	{
 		double progress = (double)(getCurrentSimulationTime().intValue() + 1)
-							/ getSimulationFinishTime().intValue();
+								/ getSimulationFinishTime().intValue();
 		mGUI.updateSimulationProgress(progress);
-		
 		TransportMoveHandler.incrementTime();
 		
 		updateUsersInSession();
@@ -401,10 +403,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		System.out.println("onSimulationComplete()");
 		
-		assert (mGUI != null) : "mGUI is null!";
-		
 		addAgentsMovements();
-		mGUI.setAreaSize(areaSize, areaSize);
 		mGUI.setSimulationData(mSimulationDataStore);
 	}
 	
@@ -431,12 +430,12 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	
 	private Location getRandomLocation()
 	{
-		int initialX = Random.randomInt(areaSize);
-		int initialY = Random.randomInt(areaSize);
+		int initialX = Random.randomInt(mAreaSize);
+		int initialY = Random.randomInt(mAreaSize);
 		while(mCityMap.isValidLocation(initialX, initialY) == false)
 		{
-			initialX = Random.randomInt(areaSize);
-			initialY = Random.randomInt(areaSize);
+			initialX = Random.randomInt(mAreaSize);
+			initialY = Random.randomInt(mAreaSize);
 		}
 		
 		return new Location(initialX, initialY);

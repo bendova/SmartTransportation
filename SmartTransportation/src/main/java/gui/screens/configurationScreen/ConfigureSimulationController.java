@@ -20,6 +20,8 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 {
 	@FXML
 	private Button startButton;
+	@FXML
+	private CheckBox saveConfigurationCheckBox;
 	
 	// GUI parameters
 	@FXML
@@ -108,6 +110,31 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		}
 	}
 	
+	public void setConfiguration(SimulationConfiguration config)
+	{
+		timeStepDurationTF.setText(Integer.toString(config.getTimeStepDuration()));
+		pixelsPerAreaPointTF.setText(Integer.toString(config.getPixelsPerAreaPoint()));
+		
+		timeStepsCountTF.setText(Integer.toString(config.getTimeStepsCount()));
+		areaSizeTF.setText(Integer.toString(config.getAreaSize()));
+		
+		usersCountTF.setText(Integer.toString(config.getUsersCount()));
+		walkingCheckBox.setSelected(config.isWalkingEnabled());
+		
+		taxiesCheckBox.setSelected(config.areTaxiesEnabled());
+		taxiesCountTF.setText(Integer.toString(config.getTaxiesCount()));
+		taxiStationsCountTF.setText(Integer.toString(config.getTaxiStationsCount()));
+		
+		busesCheckBox.setSelected(config.areBusesEnabled());
+		busesCountTF.setText(Integer.toString(config.getBusesCount()));
+		busRoutesCountTF.setText(Integer.toString(config.getBusRoutesCount()));
+		
+		transportPreferenceChoiceBox.getSelectionModel().select(config.getTransportAllocationIndex());
+		timeContraintChoiceBox.getSelectionModel().select(config.getTimeConstraintIndex());
+		
+		saveConfigurationCheckBox.setSelected(config.getSaveConfiguration());
+	}
+	
 	private SimulationConfiguration getConfiguration()
 	{
 		int timeStepDuration = getValue(timeStepDurationTF.getText());
@@ -136,6 +163,8 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		int transportAllocationIndex = transportPreferenceChoiceBox.getSelectionModel().getSelectedIndex();
 		int timeConstraintIndex = timeContraintChoiceBox.getSelectionModel().getSelectedIndex();
 		
+		boolean saveConfiguration = saveConfigurationCheckBox.isSelected();
+		
 		SimulationConfiguration config = new SimulationConfiguration()
 						.setTimeStepDuration(timeStepDuration)
 						.setTimeStepsCount(timeStepsCount)
@@ -150,7 +179,8 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 						.setBusRoutesCount(busRoutesCount)
 						.setIsWalkingEnabled(isWalkingEnabled)
 						.setTransportAllocationMethodIndex(transportAllocationIndex)
-						.setTimeContraintTypeIndex(timeConstraintIndex);
+						.setTimeContraintTypeIndex(timeConstraintIndex)
+						.setSaveConfiguration(saveConfiguration);
 		return config;
 	}
 	

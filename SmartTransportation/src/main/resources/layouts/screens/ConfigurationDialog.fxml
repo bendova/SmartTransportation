@@ -184,6 +184,7 @@
                 <Separator orientation="VERTICAL" prefHeight="200.0" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.rowSpan="5" GridPane.valignment="CENTER" />
                 <Separator orientation="VERTICAL" prefHeight="200.0" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.rowSpan="5" GridPane.valignment="CENTER" />
                 <Button fx:id="startButton" mnemonicParsing="false" onAction="#onStart" prefWidth="134.0" text="Start" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.valignment="CENTER" />
+                <CheckBox fx:id="saveConfigurationCheckBox" alignment="CENTER_RIGHT" mnemonicParsing="false" prefWidth="300.0" selected="true" text="Save configuration" GridPane.columnIndex="3" GridPane.rowIndex="8" />
               </children>
               <columnConstraints>
                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="10.0" minWidth="10.0" prefWidth="100.0" />
@@ -200,6 +201,7 @@
                 <RowConstraints maxHeight="107.0" minHeight="10.0" prefHeight="102.0" vgrow="SOMETIMES" />
                 <RowConstraints maxHeight="10.0" minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" />
                 <RowConstraints maxHeight="106.0" minHeight="10.0" prefHeight="101.0" vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="10.0" minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" />
                 <RowConstraints maxHeight="10.0" minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" />
               </rowConstraints>
             </GridPane>

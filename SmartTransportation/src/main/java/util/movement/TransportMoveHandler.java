@@ -198,10 +198,6 @@ public class TransportMoveHandler implements ActionHandler
 						}
 					}
 				}
-				else 
-				{
-					iterator.remove();
-				}
 			}
 		}
 	}

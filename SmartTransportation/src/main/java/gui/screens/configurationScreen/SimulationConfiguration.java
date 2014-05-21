@@ -1,11 +1,13 @@
 package gui.screens.configurationScreen;
 
-public class SimulationConfiguration 
+import java.io.Serializable;
+
+public class SimulationConfiguration implements Serializable
 {
-	private int mTimeStepDuration 	= 10;
+	private int mTimeStepDuration 	= 50;
 	private int mTimeStepsCount 	= 100;
-	private int mAreaSize 			= 10;
-	private int mPixelsPerAreaPoint = 10;
+	private int mAreaSize 			= 22;
+	private int mPixelsPerAreaPoint = 30;
 	private int mUsersCount 		= 0;
 	private int mTaxiStationsCount 	= 0;
 	private int mTaxiesCount 		= 0;
@@ -16,6 +18,7 @@ public class SimulationConfiguration
 	private boolean mIsWalkingEnabled = false;
 	private boolean mAreTaxiesEnabled = false;
 	private boolean mAreBusesEnabled = false;
+	private boolean mSaveConfiguration = false;
 	
 	public SimulationConfiguration setTimeStepDuration(int duration)
 	{
@@ -123,6 +126,12 @@ public class SimulationConfiguration
 		return this;
 	}
 	
+	public SimulationConfiguration setSaveConfiguration(boolean save)
+	{
+		mSaveConfiguration = save;
+		return this;
+	}
+	
 	public int getTimeStepDuration()
 	{
 		return mTimeStepDuration;
@@ -191,5 +200,10 @@ public class SimulationConfiguration
 	public int getTimeConstraintIndex()
 	{
 		return mTimeConstraintIndex;
+	}
+	
+	public boolean getSaveConfiguration()
+	{
+		return mSaveConfiguration;
 	}
 }

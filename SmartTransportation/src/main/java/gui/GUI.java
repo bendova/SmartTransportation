@@ -14,8 +14,16 @@ import gui.screens.configurationScreen.ConfigureSimulationController;
 import gui.screens.configurationScreen.SimulationConfiguration;
 import gui.timeline.TimeLineController;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.*;
 
 import agents.User.TransportMode;
@@ -63,6 +71,8 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private static final String MENU_BAR_LAYOUT 	= COMPONENTS_PATH + "MenuBar.fxml";
 	private static final String CHARTS_MENU_LAYOUT 	= COMPONENTS_PATH + "ChartsMenu.fxml";
 	private static final String LABELS_PANE_LAYOUT 	= COMPONENTS_PATH + "LabelsPane.fxml";
+	
+	private static final String SAVE_FILE_PATH = "/save/SavedSimulationConfig.sav";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
@@ -170,11 +180,13 @@ public class GUI extends Application implements ISmartTransportionGUI
 	{
 		ConfigureSimulationController controller = 
 				(ConfigureSimulationController)loadScene(CONFIGURATION_DIALOG_LAYOUT);
+		controller.setConfiguration(loadSavedConfiguration());
 		controller.setOnStartCallback( new Callback<SimulationConfiguration, Void>() 
 		{
 			@Override
 			public Void call(SimulationConfiguration param) 
 			{
+				saveConfiguration(param);
 				startSimulation(param);
 				return null;
 			}
@@ -197,6 +209,50 @@ public class GUI extends Application implements ISmartTransportionGUI
 		controller.setsTimeConstraints(constraintNames);
 		
 		mStage.setTitle("Configure Simulation");
+	}
+	
+	private SimulationConfiguration loadSavedConfiguration()
+	{
+		SimulationConfiguration configuration;
+		try 
+		{
+			File file = new File(GUI.class.getResource(SAVE_FILE_PATH).toURI());
+			
+			FileInputStream fileInputStream = new FileInputStream(file);
+			ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+			
+			configuration = (SimulationConfiguration)objectInputStream.readObject();
+			objectInputStream.close();
+		}
+		catch (Exception e) 
+		{
+			configuration = new SimulationConfiguration();
+		}
+		return configuration;
+	}
+	
+	private void saveConfiguration(SimulationConfiguration config)
+	{
+		if(config.getSaveConfiguration())
+		{
+			try 
+			{
+				File file = new File(GUI.class.getResource(SAVE_FILE_PATH).toURI());
+				
+				FileOutputStream fileOutputStream = new FileOutputStream(file);
+				ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+				objectOutputStream.writeObject(config);
+				objectOutputStream.close();
+			}
+			catch (IOException e) 
+			{
+				e.printStackTrace();
+			}
+			catch (URISyntaxException e) 
+			{
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	private void startSimulation(SimulationConfiguration config)

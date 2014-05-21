@@ -21,7 +21,10 @@ rule "Accept the top transport offer if it meets the time constraint"
 			topOffer: getReceivedTransportOffers().get(0),
 			(topOffer.getTravelTime() < getTravelTimeTarget()))
 	then
-		user.selectTransportOffer(topOffer);
+		modify(user) 
+		{ 
+			selectTransportOffer(topOffer); 
+		}
 end
 
 rule "Accept the top transport offer if we are aproaching the deadline"
@@ -31,6 +34,9 @@ rule "Accept the top transport offer if we are aproaching the deadline"
 			topOffer: getReceivedTransportOffers().get(0),
 			(getTravelTime() > getTravelTimeTarget() / 2))
 	then
-		user.selectTransportOffer(topOffer);
+		modify(user) 
+		{ 
+			selectTransportOffer(topOffer); 
+		}
 end
 

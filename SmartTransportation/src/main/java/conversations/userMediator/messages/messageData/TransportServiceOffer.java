@@ -3,7 +3,6 @@ package conversations.userMediator.messages.messageData;
 import java.util.List;
 
 import transportOffers.ITransportOffer;
-import transportOffers.TransportOffer;
 
 public class TransportServiceOffer implements ITransportServiceOffer
 {

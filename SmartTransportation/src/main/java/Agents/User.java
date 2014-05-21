@@ -23,7 +23,6 @@ import dataStores.SimulationDataStore;
 import dataStores.UserDataStore;
 import transportOffers.BusTransportOffer;
 import transportOffers.ITransportOffer;
-import transportOffers.TransportOffer;
 import transportOffers.WalkTransportOffer;
 import uk.ac.imperial.presage2.core.messaging.Input;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
@@ -122,7 +121,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private TransportServiceRequest mCurrentServiceRequest;
 	
 	private IBusTravelPlan mBusTravelPlan;
-	private int mCurrentPathIndex;
 	
 	// the path that we are currently following on foot
 	private List<Location> mOnFootTravelPath;
@@ -338,7 +336,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			mTransportModeUsed = TransportMode.WALKING;
 			mCurrentState = State.TRAVELING_ON_FOOT;
 			mOnFootTravelPath = ((WalkTransportOffer)selectedTransportOffer).getWalkPath();
-			mCurrentPathIndex = 0;
 			break;
 		case TAKE_BUS:
 			logger.info("selectTransportOffer() I am taking the bus to my destination.");
@@ -361,6 +358,11 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 		
 		sendConfirmationMessage(selectedTransportOffer);
+		clearTransportOffers();
+	}
+	
+	private void clearTransportOffers()
+	{
 		mReceivedTransportOffers = new ArrayList<ITransportOffer>();
 	}
 	
@@ -485,7 +487,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		logger.info("handleBusTravelPlan() mCurrentState " + mCurrentState);
 		
 		mBusTravelPlan = msg.getData();
-		mCurrentPathIndex = 0;
 		
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToFirstBusStop() " + mBusTravelPlan.getPathToFirstBusStop());
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToDestination() " + mBusTravelPlan.getPathToDestination());
@@ -557,7 +558,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		assert (mCurrentState == State.WAITING_BUS_UNBOARD_CONFIRMATION);
 		
 		mCurrentState = State.TRAVELING_ON_FOOT;
-		mCurrentPathIndex = 0;
 		mOnFootTravelPath = mBusTravelPlan.getPathToDestination();
 	}
 	

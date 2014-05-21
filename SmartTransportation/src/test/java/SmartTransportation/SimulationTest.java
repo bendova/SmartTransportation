@@ -75,19 +75,11 @@ public class SimulationTest
 	}
 	
 	@Test
-	public void withUsersSharingTaxies()
-	{
-		setSimulationWithUsersAndTaxies();
-		addUserRules();
-		startSimulation(400);
-	}
-	
-	@Test
 	public void withUsersAndBuses()
 	{
 		setSimulationWithUsersAndBuses();
 		addUserRules();
-		startSimulation(400);
+		startSimulation(1200);
 	}
 	
 	@Test

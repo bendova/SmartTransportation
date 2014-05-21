@@ -27,60 +27,63 @@ public class CityMap extends Area
 	
 	public List<Location> getPath(Location start, Location destination)
 	{
-		Set<Location> evaluatedLocations = new HashSet<Location>();
-		Map<Location, Location> traveledPaths = new HashMap<Location, Location>();
-		Set<Location> locationsToEvaluate = new HashSet<Location>();
-		locationsToEvaluate.add(start);
-		
-		Map<Location, Integer> globalCostMap = new HashMap<Location, Integer>();
-		globalCostMap.put(start, 0);
-		Map<Location, Integer> estimatedCostMap = new HashMap<Location, Integer>();
-		estimatedCostMap.put(start, Integer.valueOf((int)start.distanceTo(destination)));
-		
-		while(locationsToEvaluate.isEmpty() == false)
+		if(start.equals(destination) == false)
 		{
-			Location currentLocation = null;
-			int minCost = Integer.MAX_VALUE;
-			for (Iterator<Location> iterator = locationsToEvaluate.iterator(); iterator.hasNext();)
-			{
-				Location location = iterator.next();
-				if(estimatedCostMap.get(location) < minCost)
-				{
-					minCost = estimatedCostMap.get(location);
-					currentLocation = location;
-				}
-			}
+			Set<Location> evaluatedLocations = new HashSet<Location>();
+			Map<Location, Location> traveledPaths = new HashMap<Location, Location>();
+			Set<Location> locationsToEvaluate = new HashSet<Location>();
+			locationsToEvaluate.add(start);
 			
-			if(currentLocation.equals(destination))
-			{
-				List<Location> pathList = reconstructPath(traveledPaths, destination);
-				pathList.remove(0);
-				return pathList;
-			}
+			Map<Location, Integer> globalCostMap = new HashMap<Location, Integer>();
+			globalCostMap.put(start, 0);
+			Map<Location, Integer> estimatedCostMap = new HashMap<Location, Integer>();
+			estimatedCostMap.put(start, Integer.valueOf((int)start.distanceTo(destination)));
 			
-			locationsToEvaluate.remove(currentLocation);
-			evaluatedLocations.add(currentLocation);
-			// evaluate the neighbors
-			for (Iterator<Location> iterator2 = getNeighboringLocations(currentLocation).iterator(); 
-					iterator2.hasNext();) 
+			while(locationsToEvaluate.isEmpty() == false)
 			{
-				Location neighbor = iterator2.next();
-				int cost = globalCostMap.get(currentLocation) + (int)currentLocation.distanceTo(neighbor);
-				int estimatedTotalCost = cost + (int)neighbor.distanceTo(destination);
-				
-				if(evaluatedLocations.contains(neighbor) && (estimatedTotalCost >= estimatedCostMap.get(neighbor)))
+				Location currentLocation = null;
+				int minCost = Integer.MAX_VALUE;
+				for (Iterator<Location> iterator = locationsToEvaluate.iterator(); iterator.hasNext();)
 				{
-					continue;
-				}
-				
-				if((locationsToEvaluate.contains(neighbor) == false) || (estimatedTotalCost < estimatedCostMap.get(neighbor)))
-				{
-					traveledPaths.put(neighbor, currentLocation);
-					globalCostMap.put(neighbor, cost);
-					estimatedCostMap.put(neighbor, estimatedTotalCost);
-					if(locationsToEvaluate.contains(neighbor) == false)
+					Location location = iterator.next();
+					if(estimatedCostMap.get(location) < minCost)
 					{
-						locationsToEvaluate.add(neighbor);
+						minCost = estimatedCostMap.get(location);
+						currentLocation = location;
+					}
+				}
+				
+				if(currentLocation.equals(destination))
+				{
+					List<Location> pathList = reconstructPath(traveledPaths, destination);
+					pathList.remove(0);
+					return pathList;
+				}
+				
+				locationsToEvaluate.remove(currentLocation);
+				evaluatedLocations.add(currentLocation);
+				// evaluate the neighbors
+				for (Iterator<Location> iterator2 = getNeighboringLocations(currentLocation).iterator(); 
+						iterator2.hasNext();) 
+				{
+					Location neighbor = iterator2.next();
+					int cost = globalCostMap.get(currentLocation) + (int)currentLocation.distanceTo(neighbor);
+					int estimatedTotalCost = cost + (int)neighbor.distanceTo(destination);
+					
+					if(evaluatedLocations.contains(neighbor) && (estimatedTotalCost >= estimatedCostMap.get(neighbor)))
+					{
+						continue;
+					}
+					
+					if((locationsToEvaluate.contains(neighbor) == false) || (estimatedTotalCost < estimatedCostMap.get(neighbor)))
+					{
+						traveledPaths.put(neighbor, currentLocation);
+						globalCostMap.put(neighbor, cost);
+						estimatedCostMap.put(neighbor, estimatedTotalCost);
+						if(locationsToEvaluate.contains(neighbor) == false)
+						{
+							locationsToEvaluate.add(neighbor);
+						}
 					}
 				}
 			}

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.math.geometry.Vector3D;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Inject;
@@ -110,7 +111,9 @@ public class TransportMoveHandler implements ActionHandler
 		}
 		
 		Location currentLocation = getCurrentLocation(agentID);
-		moveAgent(agentID, currentLocation, move.getTargetLocation(),
+		Location targetLocation = move.getTargetLocation();
+				
+		moveAgent(agentID, currentLocation, targetLocation,
 				move.getTimePerUnitDistance());
 	}
 	
@@ -135,8 +138,8 @@ public class TransportMoveHandler implements ActionHandler
 			try 
 			{
 				Move currentMove = new Move(targetLocation);
-				targetLocation = new Location(currentLocation.
-						add(mArea.getValidMove(currentLocation, currentMove)));
+				targetLocation = new Location(currentLocation.add(
+						mArea.getValidMove(currentLocation, currentMove)));
 			} 
 			catch (EdgeException e) 
 			{
@@ -206,6 +209,8 @@ public class TransportMoveHandler implements ActionHandler
 	private static void changeAgentLocation(UUID agentID, Location targetLocation,
 			int timeTakenPerUnitDistance)
 	{
+		assert(mLocationService.getAgentLocation(agentID).distanceTo(targetLocation) == 1);
+		
 		mLocationService.setAgentLocation(agentID, targetLocation);
 		addMovementForAgent(agentID, targetLocation, timeTakenPerUnitDistance);
 	}

@@ -10,8 +10,6 @@ public class AgentNodeController
 	private Node container;
     @FXML
     private Label title;
-    @FXML
-    private Node shape;
     
     @FXML
     void initialize() 

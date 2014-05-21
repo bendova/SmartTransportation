@@ -53,7 +53,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private Location mStartLocation;
 	private Location mCurrentLocation;
 	private Location mNextBusStop;
-	private int mNextBusIndex;
+	private int mNextBusStopIndex;
 	private NetworkAddress mBusStationAddress;
 	private ParticipantLocationService mLocationService;
 	private List<Location> mBusStops;
@@ -61,7 +61,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private int mCurrentPathIndex;
 	private IBusRoute mBusRoute;
 
-	private final static int MAX_PASSANGERS_COUNT = 3;
+	private final static int MAX_PASSANGERS_COUNT = 10;
 	
 	// mapping of the passengers'
 	// network addresses(so we can talk to them) to their
@@ -185,10 +185,26 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	{
 		mCurrentState = State.TRAVELING_TO_FIRST_BUS_STOP;
 		
-		mNextBusIndex = 0;
-		mNextBusStop = mBusStops.get(mNextBusIndex);
+		mNextBusStopIndex = getIndexOfNearestBusStop();
+		mNextBusStop = mBusStops.get(mNextBusStopIndex);
 		mPathToTravel = mCityMap.getPath(mCurrentLocation, mNextBusStop);
 		mCurrentPathIndex = 0;
+	}
+	
+	private int getIndexOfNearestBusStop()
+	{
+		double minDistance = Double.MAX_VALUE;
+		int busStopIndex = 0;
+		for(int i = 0; i < mBusStops.size(); ++i)
+		{
+			double distance = mBusStops.get(i).distanceTo(mCurrentLocation);
+			if(distance < minDistance)
+			{
+				busStopIndex = i;
+				minDistance = distance;
+			}
+		}
+		return busStopIndex;
 	}
 	
 	private void processMessage(BoardBusRequestMessage boardRequestMessage)
@@ -260,12 +276,12 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		mCurrentPathIndex = 0;
 		mPathToTravel = mBusRoute.getPathsBetweenBusStops().get(mNextBusStop);
 		
-		++mNextBusIndex;
-		if(mNextBusIndex == mBusStops.size())
+		++mNextBusStopIndex;
+		if(mNextBusStopIndex == mBusStops.size())
 		{
-			mNextBusIndex = 0;
+			mNextBusStopIndex = 0;
 		}
-		mNextBusStop = mBusStops.get(mNextBusIndex);
+		mNextBusStop = mBusStops.get(mNextBusStopIndex);
 	}
 	
 	private void followRoute()

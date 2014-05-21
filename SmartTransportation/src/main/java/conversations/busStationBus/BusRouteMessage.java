@@ -1,7 +1,5 @@
 package conversations.busStationBus;
 
-import java.util.List;
-
 import conversations.busStationBus.messageData.IBusRoute;
 
 import uk.ac.imperial.presage2.core.messaging.Performative;

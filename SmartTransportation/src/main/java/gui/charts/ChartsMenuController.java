@@ -15,13 +15,13 @@ import javafx.util.Callback;
 public class ChartsMenuController extends Parent implements Initializable
 {
 	@FXML
-	public Pane container;
+	private Pane container;
 	@FXML
-	public Button showTransportMethodsUsed; 
+	private Button showTransportMethodsUsed; 
 	@FXML
-	public Button showUserTransportResults; 
+	private Button showUserTransportResults; 
 	@FXML
-	public Button showUserDataTable; 
+	private Button showUserDataTable; 
 	
 	private Callback<Void, Void> mOnShowTransportMethodUsed;
 	private Callback<Void, Void> mOnShowUserTransportResults;
@@ -84,5 +84,10 @@ public class ChartsMenuController extends Parent implements Initializable
 		assert(callback != null);
 		
 		mOnShowUserDataTable = callback;
+	}
+	
+	public Pane getContainer()
+	{
+		return container;
 	}
 }

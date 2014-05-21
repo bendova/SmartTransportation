@@ -19,7 +19,7 @@
           <children>
             <ImageView fitHeight="100.0" fitWidth="232.72727272727272" pickOnBounds="true" preserveRatio="true">
               <image>
-                <Image url="@../images/smartTransportation.jpg" />
+                <Image url="@../../images/smartTransportation.jpg" />
               </image>
               <VBox.margin>
                 <Insets />
@@ -35,7 +35,7 @@
                       </font>
                     </Label>
                     <Label id="timeStepDurationTF" text="Time step duration (ms):" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="100" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField fx:id="timeStepDurationTF" prefWidth="200.0" text="80" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <Label text="Pixels per Area point:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                     <TextField fx:id="pixelsPerAreaPointTF" prefWidth="200.0" text="30" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   </children>
@@ -54,7 +54,7 @@
                     <Label font="$x1" prefWidth="146.0" text="Simulation Parameters" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.halignment="LEFT" GridPane.rowIndex="0" GridPane.valignment="CENTER" />
                     <Label text="Time steps count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                     <Label text="Area size:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                    <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="400" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <TextField id="durationTF" fx:id="timeStepsCountTF" prefWidth="200.0" text="800" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <TextField fx:id="areaSizeTF" prefWidth="200.0" text="22" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   </children>
                   <columnConstraints>
@@ -73,22 +73,22 @@
                 <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
                   <children>
                     <Label font="$x1" text="Transport methods available" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="0" />
-                    <CheckBox fx:id="walkingCheckBox" mnemonicParsing="false" prefHeight="16.0" prefWidth="93.0" selected="true" text="Walking" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                    <CheckBox fx:id="taxiesCheckBox" mnemonicParsing="false" selected="true" text="Taxies" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                    <CheckBox fx:id="busesCheckBox" mnemonicParsing="false" prefHeight="22.0" prefWidth="93.0" selected="false" text="Buses" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                    <CheckBox fx:id="walkingCheckBox" mnemonicParsing="false" prefHeight="16.0" prefWidth="93.0" selected="false" text="Walking" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                    <CheckBox fx:id="taxiesCheckBox" mnemonicParsing="false" selected="false" text="Taxies" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                    <CheckBox fx:id="busesCheckBox" mnemonicParsing="false" prefHeight="22.0" prefWidth="93.0" selected="true" text="Buses" GridPane.columnIndex="0" GridPane.rowIndex="3" />
                     <ImageView fitHeight="32.0" fitWidth="32.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="1" GridPane.rowIndex="1">
                       <image>
-                        <Image url="@../images/walking.png" />
+                        <Image url="@../../images/walking.png" />
                       </image>
                     </ImageView>
                     <ImageView fitHeight="32.0" fitWidth="32.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="1" GridPane.rowIndex="2">
                       <image>
-                        <Image url="@../images/taxi.png" />
+                        <Image url="@../../images/taxi.png" />
                       </image>
                     </ImageView>
                     <ImageView fitHeight="32.0" fitWidth="32.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="1" GridPane.rowIndex="3">
                       <image>
-                        <Image url="@../images/bus.png" />
+                        <Image url="@../../images/bus.png" />
                       </image>
                     </ImageView>
                   </children>

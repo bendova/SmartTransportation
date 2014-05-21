@@ -174,21 +174,19 @@ public class BusStation extends AbstractParticipant
 		{
 			BusRoute busRoute = busRouteIterator.next().getValue();
 			UUID busRouteID = busRoute.getBusRouteID();
-			// find nearest bus station to start location
-			Location start = msg.getData().getStartLocation();
-			Location startBusStopLocation = getNearestBusStopLocationTo(busRouteID, start);
 			
-			// find nearest bus station to destination
+			Location startLocation = msg.getData().getStartLocation();
+			Location startBusStopLocation = getNearestBusStopLocationTo(busRouteID, startLocation);
+			List<Location> startTravelPath = getPathToBusStop(busRouteID, startLocation, startBusStopLocation);
+			
 			Location destination = msg.getData().getDestination();
 			Location finalBusStopLocation = getNearestBusStopLocationTo(busRouteID, destination);
-			
+			List<Location> destinationTravelPath;
 			if(startBusStopLocation.equals(finalBusStopLocation))
 			{
-				finalBusStopLocation = getNextBusStopAfter(busRouteID, finalBusStopLocation);
+				finalBusStopLocation = getNextBusStopAfter(busRouteID, startBusStopLocation);
 			}
-			List<Location> startTravelPath = getPath(busRouteID, start, startBusStopLocation);
-			List<Location> destinationTravelPath = getPath(busRouteID, destination, finalBusStopLocation); 
-			Collections.reverse(destinationTravelPath);
+			destinationTravelPath = mCityMap.getPath(finalBusStopLocation, destination); 
 			
 			int busTravelDistance = getBusTravelDistanceBetween(busRouteID, 
 					startBusStopLocation, finalBusStopLocation);
@@ -198,9 +196,9 @@ public class BusStation extends AbstractParticipant
 			if(busTravelDistance < minBusTravelDistance)
 			{
 				selectedStartTravelPath = startTravelPath;
-				selectionStartBusStop = start;
+				selectionStartBusStop = startBusStopLocation;
 				selectedDestinationTravelPath = destinationTravelPath;
-				selectionDestinationBusStop = destination;
+				selectionDestinationBusStop = finalBusStopLocation;
 				selectedBusRouteID = busRouteID;
 				minBusTravelDistance = busTravelDistance;
 			}
@@ -320,81 +318,104 @@ public class BusStation extends AbstractParticipant
 		network.sendMessage(routeMsg);
 	}
 
-	public List<Location> getPath(UUID busRouteID, Location start, Location destination)
+	public List<Location> getPathToBusStop(UUID busRouteID, Location start, Location destinationBusStop)
 	{
-		Set<Location> evaluatedLocations = new HashSet<Location>();
-		Map<Location, Location> traveledPaths = new HashMap<Location, Location>();
-		Set<Location> locationsToEvaluate = new HashSet<Location>();
-		locationsToEvaluate.add(start);
-		
-		Map<Location, Integer> globalCostMap = new HashMap<Location, Integer>();
-		globalCostMap.put(start, 0);
-		Map<Location, Integer> estimatedCostMap = new HashMap<Location, Integer>();
-		estimatedCostMap.put(start, Integer.valueOf((int)start.distanceTo(destination)));
-		
-		while(locationsToEvaluate.isEmpty() == false)
+		List<Location> pathList = getPath(busRouteID, start, destinationBusStop);
+		if(pathList.size() > 0)
 		{
-			Location currentLocation = null;
-			int minCost = Integer.MAX_VALUE;
-			for (Iterator<Location> iterator = locationsToEvaluate.iterator(); iterator.hasNext();)
-			{
-				Location location = iterator.next();
-				if(estimatedCostMap.get(location) < minCost)
-				{
-					minCost = estimatedCostMap.get(location);
-					currentLocation = location;
-				}
-			}
+			pathList.remove(0);
+		}
+		return pathList;
+	}
+	
+	public List<Location> getPathFromBusStop(UUID busRouteID, Location startBusStop, Location destination)
+	{
+		List<Location> pathList = getPath(busRouteID, destination, startBusStop);
+		if(pathList.size() > 0)
+		{
+			Collections.reverse(pathList);
+			pathList.remove(0);
+		}
+		return pathList;
+	}
+	
+	public List<Location> getPath(UUID busRouteID, Location start, Location destinationBusStop)
+	{
+		if(start.equals(destinationBusStop) == false)
+		{
+			Set<Location> evaluatedLocations = new HashSet<Location>();
+			Map<Location, Location> traveledPaths = new HashMap<Location, Location>();
+			Set<Location> locationsToEvaluate = new HashSet<Location>();
+			locationsToEvaluate.add(start);
 			
-			if(currentLocation.equals(destination))
-			{
-				List<Location> pathList = reconstructPath(traveledPaths, destination);
-				pathList.remove(0);
-				return pathList;
-			}
+			Map<Location, Integer> globalCostMap = new HashMap<Location, Integer>();
+			globalCostMap.put(start, 0);
+			Map<Location, Integer> estimatedCostMap = new HashMap<Location, Integer>();
+			estimatedCostMap.put(start, Integer.valueOf((int)start.distanceTo(destinationBusStop)));
 			
-			// check if our destination is still the best one
-			Location bestBusStop = getNearestBusStopLocationTo(busRouteID, currentLocation).getLocation();
-			if(bestBusStop.equals(destination) == false)
+			while(locationsToEvaluate.isEmpty() == false)
 			{
-				// change of plans
+				Location currentLocation = null;
+				int minCost = Integer.MAX_VALUE;
 				for (Iterator<Location> iterator = locationsToEvaluate.iterator(); iterator.hasNext();)
 				{
 					Location location = iterator.next();
-					int currentCost = estimatedCostMap.get(location);
-					int newCost = (currentCost - (int)location.distanceTo(destination)) 
-							+ (int)location.distanceTo(bestBusStop);
-					estimatedCostMap.put(location, newCost);
-				}
-				
-				// update our destination
-				destination = bestBusStop;
-			}
-			
-			locationsToEvaluate.remove(currentLocation);
-			evaluatedLocations.add(currentLocation);
-			// evaluate the neighbors
-			List<Location> neighborsList = getNeighboringLocations(currentLocation);
-			for (Iterator<Location> iterator2 = neighborsList.iterator(); 
-					iterator2.hasNext();) 
-			{
-				Location neighbor = iterator2.next();
-				int cost = globalCostMap.get(currentLocation) + (int)currentLocation.distanceTo(neighbor);
-				int estimatedTotalCost = cost + (int)neighbor.distanceTo(destination);
-				
-				if(evaluatedLocations.contains(neighbor) && (estimatedTotalCost >= estimatedCostMap.get(neighbor)))
-				{
-					continue;
-				}
-				
-				if((locationsToEvaluate.contains(neighbor) == false) || (estimatedTotalCost < estimatedCostMap.get(neighbor)))
-				{
-					traveledPaths.put(neighbor, currentLocation);
-					globalCostMap.put(neighbor, cost);
-					estimatedCostMap.put(neighbor, estimatedTotalCost);
-					if(locationsToEvaluate.contains(neighbor) == false)
+					if(estimatedCostMap.get(location) < minCost)
 					{
-						locationsToEvaluate.add(neighbor);
+						minCost = estimatedCostMap.get(location);
+						currentLocation = location;
+					}
+				}
+				
+				if(currentLocation.equals(destinationBusStop))
+				{
+					List<Location> pathList = reconstructPath(traveledPaths, destinationBusStop);
+					return pathList;
+				}
+				
+				// check if our destination is still the best one
+				Location bestBusStop = getNearestBusStopLocationTo(busRouteID, currentLocation).getLocation();
+				if(bestBusStop.equals(destinationBusStop) == false)
+				{
+					// change of plans
+					for (Iterator<Location> iterator = locationsToEvaluate.iterator(); iterator.hasNext();)
+					{
+						Location location = iterator.next();
+						int currentCost = estimatedCostMap.get(location);
+						int newCost = (currentCost - (int)location.distanceTo(destinationBusStop)) 
+								+ (int)location.distanceTo(bestBusStop);
+						estimatedCostMap.put(location, newCost);
+					}
+					
+					// update our destination
+					destinationBusStop = bestBusStop;
+				}
+				
+				locationsToEvaluate.remove(currentLocation);
+				evaluatedLocations.add(currentLocation);
+				// evaluate the neighbors
+				List<Location> neighborsList = getNeighboringLocations(currentLocation);
+				for (Iterator<Location> iterator2 = neighborsList.iterator(); 
+						iterator2.hasNext();) 
+				{
+					Location neighbor = iterator2.next();
+					int cost = globalCostMap.get(currentLocation) + (int)currentLocation.distanceTo(neighbor);
+					int estimatedTotalCost = cost + (int)neighbor.distanceTo(destinationBusStop);
+					
+					if(evaluatedLocations.contains(neighbor) && (estimatedTotalCost >= estimatedCostMap.get(neighbor)))
+					{
+						continue;
+					}
+					
+					if((locationsToEvaluate.contains(neighbor) == false) || (estimatedTotalCost < estimatedCostMap.get(neighbor)))
+					{
+						traveledPaths.put(neighbor, currentLocation);
+						globalCostMap.put(neighbor, cost);
+						estimatedCostMap.put(neighbor, estimatedTotalCost);
+						if(locationsToEvaluate.contains(neighbor) == false)
+						{
+							locationsToEvaluate.add(neighbor);
+						}
 					}
 				}
 			}

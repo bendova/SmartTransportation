@@ -121,6 +121,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private TransportServiceRequest mCurrentServiceRequest;
 	
 	private IBusTravelPlan mBusTravelPlan;
+	private NetworkAddress mBusNetworkAddress;
 	
 	// the path that we are currently following on foot
 	private List<Location> mOnFootTravelPath;
@@ -234,6 +235,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			public void processMessage(DestinationReachedMessage msg)
 			{
 				logger.info("onDestinationReached() " + msg.getData());
+				
+				mCurrentState = State.TRAVELING_ON_FOOT;
 			}
 		};
 		
@@ -308,11 +311,13 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		{
 			logger.info("updateLocation() currentLocation " + currentLocation);
 			
-			mCurrentLocation = currentLocation;
-			if(mCurrentLocation.equals(mTargetLocation))
-			{
-				onDestinationReached();
-			}
+			mCurrentLocation = currentLocation;	
+		}
+		
+		if(mCurrentLocation.equals(mTargetLocation) && 
+		  (mCurrentState == State.TRAVELING_ON_FOOT))
+		{
+			onDestinationReached();
 		}
 	}
 	
@@ -489,47 +494,53 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mBusTravelPlan = msg.getData();
 		
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToFirstBusStop() " + mBusTravelPlan.getPathToFirstBusStop());
+		logger.info("handleBusTravelPlan() mBusTravelPlan.getFirstBusStopLocation() " + mBusTravelPlan.getFirstBusStopLocation());
 		logger.info("handleBusTravelPlan() mBusTravelPlan.getPathToDestination() " + mBusTravelPlan.getPathToDestination());
+		logger.info("handleBusTravelPlan() mBusTravelPlan.getDestinationBusStopLocation() " + mBusTravelPlan.getDestinationBusStopLocation());
 	}
 	
 	private void handleArrivalAtBusStop(NotificationOfArrivalAtBusStop notification)
 	{		
-		if(notification.getData().getBusRoute().getBusRouteID().
-				equals(mBusTravelPlan.getBusRouteID()))
+		switch (mCurrentState) 
 		{
-			switch (mCurrentState) 
+			case IN_BUS_STOP:
 			{
-				case IN_BUS_STOP:
+				if(notification.getData().getBusRoute().getBusRouteID().
+						equals(mBusTravelPlan.getBusRouteID()))
 				{
-					logger.info("handleBusArrival() The bus has arrived " + notification.getFrom());
+					logger.info("handleArrivalAtBusStop() My bus has arrived " + notification.getFrom());
 					
 					mCurrentState = State.WAITING_BUS_BOARD_CONFIRMATION;
 					
-					// send a request to board the bus
 					BoardBusRequest request = new BoardBusRequest(authkey);
 					BoardBusRequestMessage msg = new BoardBusRequestMessage(request, 
 							network.getAddress(), notification.getFrom());
-					network.sendMessage(msg);	
+					network.sendMessage(msg);
 				}
-				break;
-				case TRAVELING_BY_BUS:
+			}
+			break;
+			case TRAVELING_BY_BUS:
+			{
+				if(notification.getFrom().equals(mBusNetworkAddress))
 				{
 					Location targetBusStop = mBusTravelPlan.getDestinationBusStopLocation();
 					Location currentBusStop = notification.getData().getBusStopLocation();
+					
+					logger.info("handleArrivalAtBusStop() I've reached the bus stop " + currentBusStop);
+					
 					if(currentBusStop.equals(targetBusStop))
 					{
-						logger.info("handleBusArrival() I've reached my bus stop " + targetBusStop);
+						logger.info("handleArrivalAtBusStop() This is my bus stop " + targetBusStop);
 						
 						mCurrentState = State.WAITING_BUS_UNBOARD_CONFIRMATION;
-						// send a request to unboard the bus
-						String request = "This is my stop!";
-						UnBoardBusRequestMessage msg = new UnBoardBusRequestMessage(request, 
+						
+						UnBoardBusRequestMessage msg = new UnBoardBusRequestMessage("This is my stop!", 
 								network.getAddress(), notification.getFrom());
 						network.sendMessage(msg);
 					}
 				}
-				break;
 			}
+			break;
 		}
 	}
 	
@@ -540,6 +551,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		assert (mCurrentState == State.WAITING_BUS_BOARD_CONFIRMATION);
 		
 		mCurrentState = State.TRAVELING_BY_BUS;
+		mBusNetworkAddress = msg.getFrom();
 	}
 	
 	private void handleBusBoardFailure(BusIsFullMessage msg)
@@ -557,6 +569,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		
 		assert (mCurrentState == State.WAITING_BUS_UNBOARD_CONFIRMATION);
 		
+		mBusNetworkAddress = null;
 		mCurrentState = State.TRAVELING_ON_FOOT;
 		mOnFootTravelPath = mBusTravelPlan.getPathToDestination();
 	}

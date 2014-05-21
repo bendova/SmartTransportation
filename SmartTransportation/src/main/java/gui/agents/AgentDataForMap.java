@@ -17,15 +17,30 @@ public class AgentDataForMap
 {
 	public enum AgentType
 	{
-		USER,
-		TAXI_CAB,
-		BUS
+		USER("User"),
+		TAXI_CAB("Taxi Cab"),
+		BUS("Bus");
+		
+		private String mTypeDescription;
+		private AgentType(String description)
+		{
+			mTypeDescription = description;
+		}
+		public String getTypeDescription()
+		{
+			return mTypeDescription;
+		}
 	}
 	
-	private final String SHAPES_PATH = GUI.LAYOUTS_PATH + "agentShapes/";
-	private final String TAXI_SHAPE_LAYOUT = SHAPES_PATH + "TaxiShape.fxml";
-	private final String USER_SHAPE_LAYOUT = SHAPES_PATH + "UserShape.fxml";
-	private final String BUS_SHAPE_LAYOUT = SHAPES_PATH + "BusShape.fxml";
+	private static final String SHAPES_PATH = GUI.LAYOUTS_PATH + "agentShapes/";
+
+	public static final String USER_LAYOUT = SHAPES_PATH + "User.fxml";
+	public static final String TAXI_LAYOUT = SHAPES_PATH + "Taxi.fxml";
+	public static final String BUS_LAYOUT = SHAPES_PATH + "Bus.fxml";
+
+	public static final String USER_SHAPE_LAYOUT = SHAPES_PATH + "UserShape.fxml";
+	public static final String TAXI_SHAPE_LAYOUT = SHAPES_PATH + "TaxiShape.fxml";
+	public static final String BUS_SHAPE_LAYOUT = SHAPES_PATH + "BusShape.fxml";
 	
 	private String mName;
 	private List<Movement> mMovements;
@@ -58,13 +73,13 @@ public class AgentDataForMap
 		switch (mAgentType) 
 		{
 		case TAXI_CAB:
-			mLayoutPath = TAXI_SHAPE_LAYOUT;
+			mLayoutPath = TAXI_LAYOUT;
 			break;
 		case USER:
-			mLayoutPath = USER_SHAPE_LAYOUT;
+			mLayoutPath = USER_LAYOUT;
 			break;
 		case BUS:
-			mLayoutPath = BUS_SHAPE_LAYOUT;
+			mLayoutPath = BUS_LAYOUT;
 			break;
 		default:
 			assert(false) : "Case not handled for mAgentType " + mAgentType;

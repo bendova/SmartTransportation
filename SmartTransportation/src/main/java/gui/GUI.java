@@ -8,6 +8,7 @@ import gui.charts.transportMethodsUsed.TransportMethodsUsedWindow;
 import gui.charts.transportResults.TransportResultsWindow;
 import gui.charts.userDataTable.UserTableData;
 import gui.charts.userDataTable.UserTableWindow;
+import gui.components.LabelsPaneController;
 import gui.screens.LoadingScreen;
 import gui.screens.configurationScreen.ConfigureSimulationController;
 import gui.screens.configurationScreen.SimulationConfiguration;
@@ -61,6 +62,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private static final String MENU_BAR_LAYOUT 	= COMPONENTS_PATH + "MenuBar.fxml";
 	private static final String CHARTS_MENU_LAYOUT 	= COMPONENTS_PATH + "ChartsMenu.fxml";
+	private static final String LABELS_PANE_LAYOUT 	= COMPONENTS_PATH + "LabelsPane.fxml";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
@@ -76,8 +78,9 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private Group mMap;
 	private Pane mTimeLinePane;
 	private Pane mChartsMenuPane;
+	private Pane mLegendPane;
 	private Stage mStage;
-	private Group mAgentsGroup;
+	private Group mSimulationGroup;
 	private ToggleButton mPlayPauseToggle;
 	private Slider mTimeLineSlider;
 	
@@ -255,6 +258,25 @@ public class GUI extends Application implements ISmartTransportionGUI
 	{
 		System.out.println("GUI::beginAnimation()");
 		
+		loadComponents();
+		loadSimulation();
+		
+		initRootGroup();
+		
+		loadSimulationStage();
+	}
+	
+	private void loadComponents()
+	{
+		initTimeLineTimer();
+		mTimeLinePane = loadTimeLine();
+		mChartsMenuPane = loadChartsMenu();
+		mLegendPane = loadLegendPane();
+		mMap = loadMap();
+	}
+	
+	private void initTimeLineTimer()
+	{
 		// TODO replace this with a Timeline
 		mTimeLineTimer = new Timer();
 		mTimeLineTimer.schedule(new TimerTask() 
@@ -265,26 +287,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 				updateTimeLine();
 			}
 		}, 0, (int)mTimeStepDuration.toMillis());
-		
-		mMap = loadMap();
-		mTimeLinePane = loadTimeLine();
-		mChartsMenuPane = loadChartsMenu();
-		mAgentsGroup = new Group();
-		mAgentsGroup.getChildren().add(mMap);
-		mAgentsGroup.translateYProperty().bind(mTimeLinePane.heightProperty().add(10));
-		mAgentsGroup.translateXProperty().bind(mStage.widthProperty().subtract(mMapWidth).divide(2));
-		addAgentsToGroup(mAgentsGroup.getChildren());
-		
-		mRoot = new Group();
-		mRoot.getChildren().add(mTimeLinePane);
-		mRoot.getChildren().add(mAgentsGroup);
-		mRoot.getChildren().add(mChartsMenuPane);
-		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
-		mStage.setScene(scene);
-		mStage.setTitle("Smart Transportation");
-		
-		mStage.centerOnScreen();
-		mStage.show();
 	}
 	
 	private Group loadMap()
@@ -379,35 +381,59 @@ public class GUI extends Application implements ISmartTransportionGUI
 				return null;
 			}
 		});
-		Pane container = chartsMenuController.container;
+		Pane container = chartsMenuController.getContainer();
 		container.translateXProperty().set(0);
 		container.translateYProperty().bind(
 				mStage.heightProperty().subtract(container.heightProperty()).divide(2));
 		return container;
 	}
 	
-	private Parent loadScene(String scenePath)
+	private Pane loadLegendPane()
 	{
-		Parent rootGroup = null;
-		FXMLLoader loader;		
-		try 
-		{
-			loader = new FXMLLoader();
-			loader.setBuilderFactory(new JavaFXBuilderFactory());
-			loader.setLocation(getClass().getResource(scenePath));
-			InputStream inputStream = getClass().getResourceAsStream(scenePath);
-			rootGroup = (Parent)loader.load(inputStream);
-		} 
-		catch (IOException e) 
-		{
-			e.printStackTrace();
-			return null;
-		}
+		System.out.println("GUI::loadLegendPane()");
 		
-		Scene scene = new Scene(rootGroup);
+		LabelsPaneController legendPaneController = (LabelsPaneController)
+				(loadNode(LABELS_PANE_LAYOUT)).getController();
+		
+		Pane container = legendPaneController.getContainer();
+		container.translateXProperty().bind(
+				mStage.widthProperty()
+						.subtract(container.widthProperty()));
+		container.translateYProperty().bind(
+				mStage.heightProperty()
+						.subtract(container.heightProperty())
+						.divide(2));
+		
+		return container;
+	}
+	
+	private void loadSimulation()
+	{
+		mSimulationGroup = new Group();
+		
+		mSimulationGroup.getChildren().add(mMap);
+		mSimulationGroup.translateYProperty().bind(mTimeLinePane.heightProperty().add(10));
+		mSimulationGroup.translateXProperty().bind(mStage.widthProperty().subtract(mMapWidth).divide(2));
+		addAgentsToGroup(mSimulationGroup.getChildren());
+	}
+	
+	private void initRootGroup()
+	{
+		mRoot = new Group();
+		mRoot.getChildren().add(mTimeLinePane);
+		mRoot.getChildren().add(mSimulationGroup);
+		mRoot.getChildren().add(mChartsMenuPane);
+		mRoot.getChildren().add(mLegendPane);
+	}
+	
+	private void loadSimulationStage()
+	{
+		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
 		mStage.setScene(scene);
+		mStage.setTitle("Smart Transportation");
+		
+		mStage.centerOnScreen();
 		mStage.show();
-		return (Parent) loader.getController();
 	}
 	
 	private void addAgentsToGroup(ObservableList<Node> childrenList)
@@ -780,5 +806,29 @@ public class GUI extends Application implements ISmartTransportionGUI
 		{
 			window.show();
 		}
+	}
+	
+	private Parent loadScene(String scenePath)
+	{
+		Parent rootGroup = null;
+		FXMLLoader loader;		
+		try 
+		{
+			loader = new FXMLLoader();
+			loader.setBuilderFactory(new JavaFXBuilderFactory());
+			loader.setLocation(getClass().getResource(scenePath));
+			InputStream inputStream = getClass().getResourceAsStream(scenePath);
+			rootGroup = (Parent)loader.load(inputStream);
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+			return null;
+		}
+		
+		Scene scene = new Scene(rootGroup);
+		mStage.setScene(scene);
+		mStage.show();
+		return (Parent) loader.getController();
 	}
 }

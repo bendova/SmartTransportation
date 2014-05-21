@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+
+<VBox id="vBox" fx:id="container" alignment="TOP_LEFT" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="21.0" minWidth="28.0" prefHeight="31.0000084472631" prefWidth="123.0" spacing="5.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.agents.AgentNodeController">
+  <children>
+    <fx:include source="UserShape.fxml" prefWidth="14.0" />
+    <Label id="userNameTF" fx:id="title" text="UserName" />
+  </children>
+</VBox>

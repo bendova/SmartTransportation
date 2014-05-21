@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+
+<Pane id="container" fx:id="root" prefHeight="151.0" prefWidth="200.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.components.LabelsPaneController">
+  <children>
+    <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#bfbfbf" height="151.0" layoutX="0.0" layoutY="0.0" stroke="BLACK" strokeType="INSIDE" width="200.0">
+      <effect>
+        <Lighting specularConstant="1.3" specularExponent="5.0" surfaceScale="1.0">
+          <bumpInput>
+            <Shadow />
+          </bumpInput>
+          <light>
+            <javafx.scene.effect.Light.Distant />
+          </light>
+        </Lighting>
+      </effect>
+    </Rectangle>
+    <VBox id="container" fx:id="labelsContainer" layoutX="0.0" layoutY="2.0" prefHeight="151.0" prefWidth="200.0" spacing="10.0">
+      <children>
+        <Label alignment="CENTER" prefWidth="176.0" text="Icons description:">
+          <font>
+            <Font size="16.0" />
+          </font>
+        </Label>
+        <Separator halignment="CENTER" prefWidth="200.0" valignment="CENTER" />
+        <Label alignment="CENTER" contentDisplay="LEFT" prefWidth="176.0" text="User agent">
+          <font>
+            <Font size="14.0" fx:id="x1" />
+          </font>
+          <graphic>
+            <fx:include source="../agentShapes/UserShape.fxml" alignment="CENTER_LEFT" />
+          </graphic>
+        </Label>
+        <Label alignment="CENTER" font="$x1" prefWidth="176.0" text="Taxi agent">
+          <graphic>
+            <fx:include source="../agentShapes/TaxiShape.fxml" />
+          </graphic>
+        </Label>
+        <Label alignment="CENTER" contentDisplay="LEFT" font="$x1" prefWidth="176.0" text="Bus agent">
+          <graphic>
+            <fx:include source="../agentShapes/BusShape.fxml" />
+          </graphic>
+        </Label>
+      </children>
+      <padding>
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+      </padding>
+    </VBox>
+  </children>
+</Pane>

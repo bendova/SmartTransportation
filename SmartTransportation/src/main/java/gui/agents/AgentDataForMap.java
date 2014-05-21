@@ -22,9 +22,10 @@ public class AgentDataForMap
 		BUS
 	}
 	
-	private final String TAXI_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "TaxiShape.fxml";
-	private final String USER_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "UserShape.fxml";
-	private final String BUS_SHAPE_LAYOUT = GUI.LAYOUTS_PATH + "BusShape.fxml";
+	private final String SHAPES_PATH = GUI.LAYOUTS_PATH + "agentShapes/";
+	private final String TAXI_SHAPE_LAYOUT = SHAPES_PATH + "TaxiShape.fxml";
+	private final String USER_SHAPE_LAYOUT = SHAPES_PATH + "UserShape.fxml";
+	private final String BUS_SHAPE_LAYOUT = SHAPES_PATH + "BusShape.fxml";
 	
 	private String mName;
 	private List<Movement> mMovements;

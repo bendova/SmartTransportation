@@ -53,10 +53,14 @@ import javafx.util.*;
 public class GUI extends Application implements ISmartTransportionGUI
 {
 	public static final String LAYOUTS_PATH = "/layouts/";
-	private final String CONFIGURATION_DIALOG_LAYOUT 	= LAYOUTS_PATH + "ConfigurationDialog.fxml";
-	private final String LOADING_DIALOG_LAYOUT 		 	= LAYOUTS_PATH + "LoadingDialog.fxml";
-	private final String MENU_BAR_LAYOUT 				= LAYOUTS_PATH + "MenuBar.fxml";
-	private final String CHARTS_MENU_LAYOUT 			= LAYOUTS_PATH + "ChartsMenu.fxml";
+	public static final String SCREENS_PATH = LAYOUTS_PATH + "screens/";
+	public static final String COMPONENTS_PATH = LAYOUTS_PATH + "components/";
+	
+	private static final String CONFIGURATION_DIALOG_LAYOUT	= SCREENS_PATH + "ConfigurationDialog.fxml";
+	private static final String LOADING_DIALOG_LAYOUT 		= SCREENS_PATH + "LoadingDialog.fxml";
+	
+	private static final String MENU_BAR_LAYOUT 	= COMPONENTS_PATH + "MenuBar.fxml";
+	private static final String CHARTS_MENU_LAYOUT 	= COMPONENTS_PATH + "ChartsMenu.fxml";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;

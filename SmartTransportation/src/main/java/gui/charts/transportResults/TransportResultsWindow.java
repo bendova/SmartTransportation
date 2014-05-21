@@ -1,13 +1,12 @@
 package gui.charts.transportResults;
 
-import gui.GUI;
 import gui.charts.Chart;
 
 import java.util.TreeMap;
 
 public class TransportResultsWindow extends Chart
 {
-	private final static String AREA_CHART = GUI.LAYOUTS_PATH + "Chart.fxml";
+	private final static String AREA_CHART = Chart.CHARTS_PATH + "Chart.fxml";
 	
 	private TransportResultsController mAreaChartController;
 	private TreeMap<Number, Number> mChartData;

@@ -1,5 +1,7 @@
 package gui.charts;
 
+import gui.GUI;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -12,6 +14,8 @@ import javafx.stage.Stage;
 
 public class Chart 
 {
+	public final static String CHARTS_PATH = GUI.LAYOUTS_PATH + "charts/";
+	
 	protected Stage mStage;
 
 	public void show()

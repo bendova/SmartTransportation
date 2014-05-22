@@ -95,6 +95,7 @@
 			    <version>2.0</version>
 			    <configuration>
 			        <mainClass>gui.GUI</mainClass>
+			        <vendor>Marius</vendor>
 			    </configuration>
 			</plugin>
 		</plugins>

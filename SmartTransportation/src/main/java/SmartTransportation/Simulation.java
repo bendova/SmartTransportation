@@ -276,8 +276,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	{
 		Mediator mediator = new Mediator(Random.randomUUID(), "Mediator", mCityMap);
 		mediator.enableWalking(mIsWalkingEnabled);
-		mediator.enableBusUse(mAreBusesEnabled);
-		mediator.enableTaxiUse(mAreTaxiesEnabled);
 		s.addParticipant(mediator);
 		mMediatorNetworkAddress = mediator.getNetworkAddress();
 	}
@@ -291,7 +289,7 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 			Location startLocation = getRandomLocation();
 			Location destination = getRandomLocationOtherThan(startLocation);
 			int timeConstraint = getTimeConstraintForPath(startLocation, destination);
-			User newUser = new User(Random.randomUUID(), "User"+(mNextUserIndex++), mCityMap,
+			User newUser = new User(Random.randomUUID(), "User"+(mNextUserIndex++),
 					startLocation, destination, timeConstraint, mMediatorNetworkAddress, 
 					getTransportPreference());
 			newUser.setDataStore(mSimulationDataStore);

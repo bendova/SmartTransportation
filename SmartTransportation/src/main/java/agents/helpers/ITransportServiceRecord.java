@@ -16,4 +16,5 @@ public interface ITransportServiceRecord
 	void removeTransportOffer(TransportOffer offer);
 	void sendTransportOffers();
 	void sortTransportOffers();
+	boolean canShareTransportOffers();
 }

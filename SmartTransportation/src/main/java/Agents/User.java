@@ -129,18 +129,16 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	private int mTimeTakenPerUnitDistance;
 	private ProtocolWithTaxi mWithTaxi;
 	
-	private CityMap mCityMap;
 	private SimulationDataStore mSimulationDataStore;
 	
 	private List<ITransportOffer> mReceivedTransportOffers;
 	
-	public User(UUID id, String name, CityMap cityMap, Location startLocation, Location targetLocation, 
+	public User(UUID id, String name, Location startLocation, Location targetLocation, 
 			int travelTimeTarget, NetworkAddress mediatorNetworkAddress, TransportPreference transportPreference) 
 	{
 		super(id, name);
 		
 		assert(id != null);
-		assert(cityMap != null);
 		assert(startLocation != null);
 		assert(targetLocation != null);
 		assert(travelTimeTarget >= 0);
@@ -155,7 +153,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		// TODO pass this preference as a parameter
 		mTransportSortingPreference = TransportSortingPreference.PREFER_FASTEST;
 		mTransportModeUsed = TransportMode.NONE;
-		mCityMap = cityMap;
 		mCurrentLocation = startLocation;
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
@@ -363,12 +360,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		}
 		
 		sendConfirmationMessage(selectedTransportOffer);
-		clearTransportOffers();
-	}
-	
-	private void clearTransportOffers()
-	{
-		mReceivedTransportOffers = new ArrayList<ITransportOffer>();
 	}
 	
 	private void sendConfirmationMessage(ITransportOffer selectedTransportOffer)

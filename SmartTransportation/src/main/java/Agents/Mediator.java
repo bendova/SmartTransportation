@@ -1,7 +1,6 @@
 package agents;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -54,8 +53,6 @@ public class Mediator extends AbstractParticipant
 	private NetworkAddress mNetworkAddress;
 	
 	private boolean mIsWalkingEnabled = true;
-	private boolean mAreBusesEnabled = true;
-	private boolean mAreTaxiesEnabled = true;
 	
 	private Map<NetworkAddress, ITransportServiceRecord> mTransportServiceRecords;
 	private List<ITaxiDescription> mAvailableTaxies;
@@ -115,14 +112,6 @@ public class Mediator extends AbstractParticipant
 	{
 		mIsWalkingEnabled = enable;
 	}
-	public void enableTaxiUse(boolean enable)
-	{
-		mAreTaxiesEnabled = enable;
-	}
-	public void enableBusUse(boolean enable)
-	{
-		mAreBusesEnabled = enable;
-	}
 	
 	public NetworkAddress getNetworkAddress() 
 	{
@@ -137,7 +126,6 @@ public class Mediator extends AbstractParticipant
 	public void initialise()
 	{
 		super.initialise();
-		
 		
 		initializeLocationService();
 //		initializeProtocols();
@@ -406,12 +394,15 @@ public class Mediator extends AbstractParticipant
 			while(iterator.hasNext())
 			{
 				Map.Entry<NetworkAddress, ITransportServiceRecord> entry = iterator.next();
-				List<TransportOffer> transportOffers = entry.getValue().getTransportOffers();
+				ITransportServiceRecord serviceRecord = entry.getValue();
+				List<TransportOffer> transportOffers = serviceRecord.getTransportOffers();
 				if(transportOffers.isEmpty() == false)
 				{
-					entry.getValue().sortTransportOffers();
-					NetworkAddress userAddress = entry.getKey();
-					reassignSurplusOffers(userAddress, transportOffers);
+					serviceRecord.sortTransportOffers();
+					if(serviceRecord.canShareTransportOffers())
+					{
+						reassignSurplusOffers(entry.getKey(), transportOffers);
+					}
 				}
 			}
 			sendOffers();

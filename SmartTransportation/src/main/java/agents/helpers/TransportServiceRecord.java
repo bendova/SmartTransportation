@@ -30,6 +30,7 @@ public class TransportServiceRecord implements ITransportServiceRecord
 	private List<TransportOffer> mTransportOffers;
 	private Comparator<TransportOffer> mTransportOffersComparator;
 	private boolean mHasBeenUpdated;
+	private boolean mCanShareTransportOffers;
 	
 	public TransportServiceRecord(NetworkAddress userAddress, ITransportServiceRequest transportServiceRequest,
 			NetworkAddress mediatorAddress, NetworkAdaptor adaptor, Logger logger, 
@@ -50,6 +51,7 @@ public class TransportServiceRecord implements ITransportServiceRecord
 		mTransportOffersComparator = comparator;
 		mTransportOffers = new ArrayList<TransportOffer>();
 		mHasBeenUpdated = false;
+		mCanShareTransportOffers = true;
 	}
 	
 	@Override
@@ -77,11 +79,14 @@ public class TransportServiceRecord implements ITransportServiceRecord
 		assert(offer != null);
 		assert(mTransportOffers.contains(offer) == true);
 		
-		mLogger.info("removeTransportOffer() offer " + offer);
-		mLogger.info("removeTransportOffer() mUserAddress " + mUserAddress);
-		
-		mTransportOffers.remove(offer);
-		mHasBeenUpdated = true;
+		if(mCanShareTransportOffers)
+		{
+			mLogger.info("removeTransportOffer() offer " + offer);
+			mLogger.info("removeTransportOffer() mUserAddress " + mUserAddress);
+			
+			mTransportOffers.remove(offer);
+			mHasBeenUpdated = true;
+		}
 	}
 	
 	@Override
@@ -97,6 +102,7 @@ public class TransportServiceRecord implements ITransportServiceRecord
 			mNetworkAdaptor.sendMessage(msg);
 			
 			mHasBeenUpdated = false;
+			mCanShareTransportOffers = false;
 		}
 	}
 	@Override
@@ -121,5 +127,11 @@ public class TransportServiceRecord implements ITransportServiceRecord
 				Collections.sort(mTransportOffers, mTransportOffersComparator);
 			}
 		}
+	}
+
+	@Override
+	public boolean canShareTransportOffers()
+	{
+		return mCanShareTransportOffers;
 	}
 }

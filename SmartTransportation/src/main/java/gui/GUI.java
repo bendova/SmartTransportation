@@ -72,7 +72,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private static final String CHARTS_MENU_LAYOUT 	= COMPONENTS_PATH + "ChartsMenu.fxml";
 	private static final String LABELS_PANE_LAYOUT 	= COMPONENTS_PATH + "LabelsPane.fxml";
 	
-	private static final String SAVE_FILE_PATH = "/save/SavedSimulationConfig.sav";
+	private static final String SAVE_FILE_PATH = "save/SavedSimulationConfig.sav";
 	
 	private double mMapWidth = 300;
 	private double mMapHeight = 300;
@@ -213,18 +213,25 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private SimulationConfiguration loadSavedConfiguration()
 	{
-		SimulationConfiguration configuration;
+		SimulationConfiguration configuration = null;
 		try 
 		{
-			File file = new File(GUI.class.getResource(SAVE_FILE_PATH).toURI());
-			
-			FileInputStream fileInputStream = new FileInputStream(file);
-			ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-			
-			configuration = (SimulationConfiguration)objectInputStream.readObject();
-			objectInputStream.close();
+			File file = new File(getConfigurationSaveFilePath());
+			if(file.exists())
+			{
+				FileInputStream fileInputStream = new FileInputStream(file);
+				ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+				
+				configuration = (SimulationConfiguration)objectInputStream.readObject();
+				objectInputStream.close();
+			}
 		}
 		catch (Exception e) 
+		{
+			e.printStackTrace();
+		}
+
+		if(configuration == null)
 		{
 			configuration = new SimulationConfiguration();
 		}
@@ -237,9 +244,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		{
 			try 
 			{
-				File file = new File(GUI.class.getResource(SAVE_FILE_PATH).toURI());
-				
-				FileOutputStream fileOutputStream = new FileOutputStream(file);
+				FileOutputStream fileOutputStream = new FileOutputStream(getSaveFile());
 				ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
 				objectOutputStream.writeObject(config);
 				objectOutputStream.close();
@@ -248,11 +253,45 @@ public class GUI extends Application implements ISmartTransportionGUI
 			{
 				e.printStackTrace();
 			}
-			catch (URISyntaxException e) 
+		}
+	}
+	
+	private File getSaveFile()
+	{
+		File saveFile = new File(getConfigurationSaveFilePath());
+		if(saveFile.exists() == false)
+		{
+			if(saveFile.getParentFile().exists() == false)
+			{
+				saveFile.getParentFile().mkdirs();
+			}
+			
+			try 
+			{
+				saveFile.createNewFile();
+			} 
+			catch (IOException e) 
 			{
 				e.printStackTrace();
 			}
 		}
+		return saveFile;
+	}
+	
+	private String getConfigurationSaveFilePath()
+	{
+		String saveFilePath = "";
+		try 
+		{
+			URI codePath = GUI.class.getProtectionDomain().
+					getCodeSource().getLocation().toURI();
+			saveFilePath = codePath.resolve(SAVE_FILE_PATH).getPath();
+		} 
+		catch (URISyntaxException e) 
+		{
+			e.printStackTrace();
+		}
+		return saveFilePath;
 	}
 	
 	private void startSimulation(SimulationConfiguration config)

@@ -1,2 +1,3 @@
 target/*
-!target/jfx
+target/jfx/*
+!target/jfx/app

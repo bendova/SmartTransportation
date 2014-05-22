@@ -1,4 +1,4 @@
-package gui.charts.transportMethodsUsed;
+package gui.charts.pieChart;
 
 import java.net.URL;
 import java.util.Iterator;
@@ -12,7 +12,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.chart.PieChart;
 
-public class TransportMethodsUsedController extends Parent implements Initializable
+public class PieChartController extends Parent implements Initializable
 {
 	@FXML
 	private PieChart pieChart;
@@ -23,14 +23,14 @@ public class TransportMethodsUsedController extends Parent implements Initializa
 		System.out.println("PieChartController::initialize()");
 	}
 	
-	public void setPieChartData(Map<String, Double> data)
+	public void setPieChartData(Map<String, Integer> data)
 	{
 		ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
 		
-		Iterator<Map.Entry<String, Double>> iterator = data.entrySet().iterator();
+		Iterator<Map.Entry<String, Integer>> iterator = data.entrySet().iterator();
 		while(iterator.hasNext())
 		{
-			Map.Entry<String, Double> entry = iterator.next();
+			Map.Entry<String, Integer> entry = iterator.next();
 			pieChartData.add(new PieChart.Data(entry.getKey(), entry.getValue()));
 		}
 		pieChart.setData(pieChartData);

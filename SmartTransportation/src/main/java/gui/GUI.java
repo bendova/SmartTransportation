@@ -4,7 +4,7 @@ import gui.agents.AgentDataForMap;
 import gui.agents.AgentNodeController;
 import gui.charts.ChartsMenuController;
 import gui.charts.Chart;
-import gui.charts.transportMethodsUsed.TransportMethodsUsedWindow;
+import gui.charts.pieChart.PieChartWindow;
 import gui.charts.transportResults.TransportResultsWindow;
 import gui.charts.userDataTable.UserTableData;
 import gui.charts.userDataTable.UserTableWindow;
@@ -94,7 +94,8 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private ToggleButton mPlayPauseToggle;
 	private Slider mTimeLineSlider;
 	
-	private TransportMethodsUsedWindow mTransportModesUseChart;
+	private PieChartWindow mTransportModesUseChart;
+	private PieChartWindow mReachedDestinationChart;
 	private TransportResultsWindow mTransportResultsChart;
 	private UserTableWindow mUserDataTableChart;
 	
@@ -476,6 +477,15 @@ public class GUI extends Application implements ISmartTransportionGUI
 				return null;
 			}
 		});
+		chartsMenuController.setOnShowDestinationReachedPercentage(new Callback<Void, Void>() 
+		{
+			@Override
+			public Void call(Void param) 
+			{
+				toggleWindow(mReachedDestinationChart);
+				return null;
+			}
+		});
 		Pane container = chartsMenuController.getContainer();
 		container.translateXProperty().set(0);
 		container.translateYProperty().bind(
@@ -796,15 +806,15 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private void initCharts()
 	{
 		initTransportModesUseChart();
+		initReachedDestinationChart();
 		initTravelTimesChart();
 		initUserDataTable();
 	}
 	
 	private void initTransportModesUseChart()
 	{
-		mTransportModesUseChart = new TransportMethodsUsedWindow();
-		
 		TransportMode[] transportModes = TransportMode.values();
+		
 		int[] transportModeUse = new int[transportModes.length];
 		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
 		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
@@ -813,12 +823,50 @@ public class GUI extends Application implements ISmartTransportionGUI
 			UserDataStore data = iterator.next().getValue();
 			++transportModeUse[data.getTransportMethodUsed().ordinal()];
 		}
-		Map<String, Double> pieData = new HashMap<String, Double>();
+		
+		int usersCount = userDataStores.size();
+		Map<String, Integer> pieData = new HashMap<String, Integer>();
 		for (int i = 0; i < transportModeUse.length; ++i) 
 		{
-			pieData.put(transportModes[i].getName(), (double)transportModeUse[i]);
+			int percent = (int) (((double)transportModeUse[i] / usersCount) * 100);
+			
+			pieData.put(transportModes[i].getName() + "( " + percent + "% )",
+					transportModeUse[i]);
 		}
+		
+		mTransportModesUseChart = new PieChartWindow();
 		mTransportModesUseChart.setData(pieData);
+	}
+	
+	private void initReachedDestinationChart()
+	{
+		int reachedDestinationCount = 0;
+		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
+		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
+		while(iterator.hasNext())
+		{
+			UserDataStore data = iterator.next().getValue();
+			if(data.getHasReachedDestination())
+			{
+				++reachedDestinationCount;
+			}
+		}
+		
+		Map<String, Integer> pieData = new HashMap<String, Integer>();
+		int usersCount = userDataStores.size();
+		int reachedDestinationPercent = (int) (((double)reachedDestinationCount / usersCount) * 100);
+		String reachedDestinationDescription = "Reached destination (" + 
+				reachedDestinationPercent + " %)";
+		pieData.put(reachedDestinationDescription, reachedDestinationCount);
+		
+		int notReachDestinationCount = userDataStores.size() - reachedDestinationCount;
+		int notReachedDestinationPercent = 100 - reachedDestinationPercent;
+		String notReachedDestinationDescription = "Failed ( " + 
+				notReachedDestinationPercent + "% )";
+		pieData.put(notReachedDestinationDescription, notReachDestinationCount);
+		
+		mReachedDestinationChart = new PieChartWindow();
+		mReachedDestinationChart.setData(pieData);
 	}
 	
 	private void initTravelTimesChart()

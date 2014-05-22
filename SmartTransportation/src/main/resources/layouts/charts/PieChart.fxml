@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<StackPane id="StackPane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.charts.transportMethodsUsed.TransportMethodsUsedController">
+<StackPane id="StackPane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.charts.pieChart.PieChartController">
   <children>
     <PieChart id="PieChart" fx:id="pieChart" title="Transport methods used" />
   </children>

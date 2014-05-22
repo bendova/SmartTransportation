@@ -22,8 +22,11 @@ public class ChartsMenuController extends Parent implements Initializable
 	private Button showUserTransportResults; 
 	@FXML
 	private Button showUserDataTable; 
+	@FXML
+	private Button showDestinationReachedPercentage; 
 	
 	private Callback<Void, Void> mOnShowTransportMethodUsed;
+	private Callback<Void, Void> mOnShowDestinationReachedPercentage;
 	private Callback<Void, Void> mOnShowUserTransportResults;
 	private Callback<Void, Void> mOnShowUserDataTable;
 	
@@ -65,6 +68,17 @@ public class ChartsMenuController extends Parent implements Initializable
 				}
 			}
 		});
+		showDestinationReachedPercentage.setOnAction(new EventHandler<ActionEvent>() 
+		{
+			@Override
+			public void handle(ActionEvent event) 
+			{
+				if(mOnShowUserDataTable != null)
+				{
+					mOnShowDestinationReachedPercentage.call(null);
+				}
+			}
+		});
 	}
 	
 	public void setOnShowTransportMethodUsed(Callback<Void, Void> callback)
@@ -72,6 +86,12 @@ public class ChartsMenuController extends Parent implements Initializable
 		assert(callback != null);
 		
 		mOnShowTransportMethodUsed = callback;
+	}
+	public void setOnShowDestinationReachedPercentage(Callback<Void, Void> callback)
+	{
+		assert(callback != null);
+		
+		mOnShowDestinationReachedPercentage = callback;
 	}
 	public void setOnShowUserTransportResults(Callback<Void, Void> callback)
 	{

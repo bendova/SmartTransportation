@@ -9,9 +9,9 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
 
-<Pane fx:id="container" prefHeight="34.0" prefWidth="600.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.timeline.TimeLineController">
+<Pane fx:id="container" minHeight="-Infinity" prefHeight="40.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.timeline.TimeLineController">
   <children>
-    <Rectangle fx:id="background" arcHeight="5.0" arcWidth="5.0" fill="#bfbfbf" height="36.0" layoutX="0.0" layoutY="0.0" stroke="BLACK" strokeType="INSIDE" width="600.0">
+    <Rectangle fx:id="background" arcHeight="5.0" arcWidth="5.0" fill="#bfbfbf" height="40.0" layoutX="0.0" layoutY="0.0" stroke="BLACK" strokeType="INSIDE" width="600.0">
       <effect>
         <Lighting>
           <bumpInput>
@@ -23,25 +23,18 @@
         </Lighting>
       </effect>
     </Rectangle>
-    <VBox id="VBox" alignment="CENTER" layoutX="0.0" layoutY="-1.0" prefHeight="36.0" spacing="5.0">
-      <children>
-        <HBox fx:id="controlsContainer" maxHeight="-1.0" maxWidth="-1.0" prefHeight="32.0" prefWidth="600.0" spacing="10.0">
-          <children>
-            <ToggleButton fx:id="toggle" mnemonicParsing="false" text="Play/Pause" HBox.hgrow="NEVER" />
-            <Slider fx:id="timeLineSlider" onDragDetected="#startSliderDrag" prefWidth="480.0" value="0.0">
-              <HBox.margin>
-                <Insets top="4.0" />
-              </HBox.margin>
-            </Slider>
-          </children>
-          <padding>
-            <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
-          </padding>
-        </HBox>
-      </children>
-      <padding>
-        <Insets top="2.0" />
-      </padding>
-    </VBox>
+  <HBox fx:id="controlsContainer" maxHeight="-1.0" maxWidth="-1.0" prefHeight="40.0" prefWidth="600.0" spacing="10.0">
+    <children>
+      <ToggleButton fx:id="toggle" mnemonicParsing="false" prefHeight="31.0" prefWidth="130.0" text="Play/Pause" />
+      <Slider fx:id="timeLineSlider" onDragDetected="#startSliderDrag" prefWidth="480.0" value="0.0">
+        <HBox.margin>
+          <Insets top="4.0" />
+        </HBox.margin>
+      </Slider>
+    </children>
+    <padding>
+      <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
+    </padding>
+  </HBox>
   </children>
 </Pane>

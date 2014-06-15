@@ -5,8 +5,6 @@ import gui.GUI;
 import java.util.ArrayList;
 import java.util.List;
 
-import SmartTransportation.Simulation.TransportMethodSpeed;
-
 import javafx.animation.Animation;
 import javafx.scene.Node;
 

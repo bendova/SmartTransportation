@@ -1,7 +1,5 @@
 package gui;
 
-import gui.screens.configurationScreen.SimulationConfiguration;
-
 import dataStores.SimulationDataStore;
 
 public interface ISmartTransportionGUI 

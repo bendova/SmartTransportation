@@ -10,7 +10,7 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 
-<Pane id="container" fx:id="root" prefHeight="135.0" prefWidth="136.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.components.LabelsPaneController">
+<Pane id="container" fx:id="root" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.components.LabelsPaneController">
   <children>
     <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#bfbfbf" height="135.0" layoutX="0.0" layoutY="0.0" stroke="BLACK" strokeType="INSIDE" width="136.0">
       <effect>
@@ -37,7 +37,7 @@
             <Font size="12.0" fx:id="x1" />
           </font>
           <graphic>
-            <fx:include source="../agentShapes/UserShape.fxml" alignment="CENTER_LEFT" />
+            <fx:include alignment="CENTER_LEFT" source="../agentShapes/UserShape.fxml" />
           </graphic>
         </Label>
         <Label alignment="CENTER" font="$x1" prefWidth="176.0" text="Taxi agent">

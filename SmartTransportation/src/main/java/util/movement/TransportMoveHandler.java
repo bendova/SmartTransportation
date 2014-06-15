@@ -1,14 +1,12 @@
 package util.movement;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.math.geometry.Vector3D;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Inject;
@@ -34,12 +32,12 @@ import uk.ac.imperial.presage2.util.location.area.HasArea;
 @ServiceDependencies({ LocationService.class, AreaService.class })
 public class TransportMoveHandler implements ActionHandler
 {
-	private final Logger logger = Logger.getLogger(MoveHandler.class);
+	private final static Logger mLogger = Logger.getLogger(MoveHandler.class);
 	
 	final protected Area mArea;
 	final protected EnvironmentSharedStateAccess mSharedState;
-	private static  EnvironmentServiceProvider mServiceProvider;
 	private static LocationService mLocationService;
+	private static EnvironmentServiceProvider mServiceProvider;
 	private static Map<UUID, List<Movement>> mAgentMovements;
 	private static Map<UUID, List<Movement>> mMovingAgents;
 	private static int mSimulationTime;
@@ -51,9 +49,8 @@ public class TransportMoveHandler implements ActionHandler
 			throws UnavailableServiceException 
 	{
 		mArea = environment.getArea();
-		mServiceProvider = serviceProvider;
 		mSharedState = sharedState;
-		mLocationService = serviceProvider.getEnvironmentService(LocationService.class);
+		mServiceProvider = serviceProvider;
 		mAgentMovements = new ConcurrentHashMap<UUID, List<Movement>>();
 		mMovingAgents = new ConcurrentHashMap<UUID, List<Movement>>();
 		mSimulationTime = 0;
@@ -105,9 +102,9 @@ public class TransportMoveHandler implements ActionHandler
 	private void handleTransportMove(TransportMove move, UUID agentID) 
 			throws ActionHandlingException
 	{
-		if (logger.isDebugEnabled())
+		if (mLogger.isDebugEnabled())
 		{
-			logger.debug("Handling transport move " + move.getTargetLocation() + " from " + agentID);
+			mLogger.debug("Handling transport move " + move.getTargetLocation() + " from " + agentID);
 		}
 		
 		Location currentLocation = getCurrentLocation(agentID);
@@ -121,7 +118,7 @@ public class TransportMoveHandler implements ActionHandler
 	{
 		try 
 		{
-			return mLocationService.getAgentLocation(actor);
+			return getLocationService().getAgentLocation(actor);
 		} 
 		catch (CannotSeeAgent e) 
 		{
@@ -205,9 +202,9 @@ public class TransportMoveHandler implements ActionHandler
 	private static void changeAgentLocation(UUID agentID, Location targetLocation,
 			int timeTakenPerUnitDistance)
 	{
-		assert(mLocationService.getAgentLocation(agentID).distanceTo(targetLocation) == 1);
+		assert(getLocationService().getAgentLocation(agentID).distanceTo(targetLocation) == 1);
 		
-		mLocationService.setAgentLocation(agentID, targetLocation);
+		getLocationService().setAgentLocation(agentID, targetLocation);
 		addMovementForAgent(agentID, targetLocation, timeTakenPerUnitDistance);
 	}
 	
@@ -221,5 +218,21 @@ public class TransportMoveHandler implements ActionHandler
 			mAgentMovements.put(agentID, movements);
 		}
 		movements.add(new Movement(location, timeTakenPerUnitDistance, mSimulationTime));
+	}
+	
+	private static LocationService getLocationService() 
+	{
+		if (mLocationService == null) 
+		{
+			try 
+			{
+				mLocationService = mServiceProvider.getEnvironmentService(LocationService.class);
+			}
+			catch (UnavailableServiceException e) 
+			{
+				mLogger.warn("Could not load location service", e);
+			}
+		}
+		return mLocationService;
 	}
 }

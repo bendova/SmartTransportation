@@ -255,8 +255,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 	@Override
 	protected void addToScenario(Scenario s) 
 	{
-		initParameters();
-		
 		addMediator(s);
 		addUsers(s);
 		addTaxiStations(s);
@@ -265,11 +263,6 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		
 		mSession.setGlobal("gLogger", logger);
 //		mSession.setGlobal("DISTANCE_BETWEEN_REVISIONS", DISTANCE_BETWEEN_REVISIONS);
-	}
-	
-	private void initParameters()
-	{
-		
 	}
 	
 	private void addMediator(Scenario s)

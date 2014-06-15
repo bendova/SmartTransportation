@@ -1,7 +1,5 @@
 package conversations.userTaxi.messages.messageData;
 
-import java.util.UUID;
-
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 
 public class ConfirmationRequest implements IConfirmationRequest

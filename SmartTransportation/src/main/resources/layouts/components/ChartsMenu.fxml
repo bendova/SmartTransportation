@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
 <?import java.lang.*?>
 <?import java.util.*?>
 <?import javafx.scene.control.*?>
@@ -7,20 +8,27 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<Pane fx:id="container" maxHeight="-1.0" maxWidth="-1.0" prefHeight="147.00009999999747" prefWidth="170.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="gui.charts.ChartsMenuController">
+<Pane fx:id="container" maxHeight="-1.0" maxWidth="-1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.charts.ChartsMenuController">
   <children>
-    <ToolBar layoutX="0.0" layoutY="0.0" minWidth="155.0" orientation="VERTICAL" prefHeight="147.0" prefWidth="170.0">
+    <ToolBar layoutX="0.0" layoutY="0.0" orientation="VERTICAL">
       <items>
-        <Label alignment="CENTER" prefWidth="150.0" text="Charts" textAlignment="LEFT" wrapText="false">
-          <font>
-            <Font name="System Bold" size="12.0" />
-          </font>
-        </Label>
-        <Separator maxWidth="-Infinity" prefWidth="165.0" />
-        <Button fx:id="showTransportMethodsUsed" mnemonicParsing="false" prefWidth="160.0" text="Transport methods used" />
-        <Button fx:id="showUserTransportResults" mnemonicParsing="false" prefWidth="160.0" text="User transport results" />
-        <Button fx:id="showUserDataTable" mnemonicParsing="false" prefWidth="160.0" text="User data table" />
-        <Button fx:id="showDestinationReachedPercentage" mnemonicParsing="false" prefWidth="160.0" text="Destination reached %" />
+            <VBox spacing="5.0">
+               <children>
+              <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="17.0" prefWidth="182.0" text="Charts" textAlignment="LEFT" wrapText="false">
+                <font>
+                  <Font name="System Bold" size="12.0" />
+                </font>
+              </Label>
+              <Separator />
+              <Button fx:id="showTransportMethodsUsed" alignment="CENTER" mnemonicParsing="false" text="Transport methods used" />
+              <Button fx:id="showUserTransportResults" mnemonicParsing="false" text="User transport results" />
+              <Button fx:id="showUserDataTable" mnemonicParsing="false" text="User data table" />
+              <Button fx:id="showDestinationReachedPercentage" mnemonicParsing="false" text="Destination reached %" />
+               </children>
+               <padding>
+                  <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+               </padding>
+            </VBox>
       </items>
     </ToolBar>
   </children>

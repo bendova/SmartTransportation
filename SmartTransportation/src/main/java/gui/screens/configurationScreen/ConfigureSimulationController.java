@@ -2,7 +2,6 @@ package gui.screens.configurationScreen;
 
 import java.net.URL;
 import java.util.List;
-import java.util.Observable;
 import java.util.ResourceBundle;
 
 import javafx.collections.ObservableList;

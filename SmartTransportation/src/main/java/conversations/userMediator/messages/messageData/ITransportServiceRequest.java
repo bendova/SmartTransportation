@@ -2,8 +2,6 @@ package conversations.userMediator.messages.messageData;
 
 import java.util.UUID;
 
-import conversations.taxiStationMediator.messageData.ITaxiServiceRequest;
-
 import agents.User.TransportPreference;
 import agents.User.TransportSortingPreference;
 

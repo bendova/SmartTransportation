@@ -2,8 +2,6 @@ package agents.helpers;
 
 import java.util.List;
 
-import agents.User.TransportPreference;
-
 import conversations.userMediator.messages.messageData.ITransportServiceRequest;
 
 import transportOffers.TransportOffer;

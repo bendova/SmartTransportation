@@ -4,8 +4,6 @@ import java.util.*;
 
 import SmartTransportation.Simulation.TransportMethodSpeed;
 
-import map.CityMap;
-
 import conversations.protocols.user.ProtocolWithTaxi;
 import conversations.userBus.messages.BoardBusRequestMessage;
 import conversations.userBus.messages.BusBoardingSuccessfulMessage;

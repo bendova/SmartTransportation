@@ -23,25 +23,21 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.*;
 
 import agents.User.TransportMode;
-
 import dataStores.SimulationDataStore;
 import dataStores.AgentDataStore;
 import dataStores.UserDataStore;
-
 import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TimeConstraint;
 import SmartTransportation.Simulation.TransportPreferenceAllocation;
-
 import uk.ac.imperial.presage2.core.simulator.RunnableSimulation;
 import uk.ac.imperial.presage2.util.location.Location;
 import util.movement.Movement;
-
 import javafx.animation.*;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -229,7 +225,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		}
 		catch (Exception e) 
 		{
-			e.printStackTrace();
+			// do nothing
 		}
 
 		if(configuration == null)
@@ -380,7 +376,14 @@ public class GUI extends Application implements ISmartTransportionGUI
 			@Override
 			public void run() 
 			{
-				updateTimeLine();
+				Platform.runLater(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						updateTimeLine();
+					}
+				});
 			}
 		}, 0, (int)mTimeStepDuration.toMillis());
 	}
@@ -525,10 +528,11 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private void initRootGroup()
 	{
 		mRoot = new Group();
-		mRoot.getChildren().add(mTimeLinePane);
-		mRoot.getChildren().add(mSimulationGroup);
-		mRoot.getChildren().add(mChartsMenuPane);
-		mRoot.getChildren().add(mLegendPane);
+		ObservableList<Node> rootChildren = mRoot.getChildren();
+		rootChildren.add(mTimeLinePane);
+		rootChildren.add(mSimulationGroup);
+		rootChildren.add(mChartsMenuPane);
+		rootChildren.add(mLegendPane);
 	}
 	
 	private void loadSimulationStage()
@@ -559,8 +563,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 				// the user shapes must be displayed ABOVE
 				// the other shapes, so add them afterwards
 				userDataList.add(agentData);
-				break;
-			default:
 				break;
 			}
 		}
@@ -765,8 +767,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private void jumpToKeyFrame(double frame)
 	{
-		System.out.println("GUI::jumpToKeyFrame frame " + frame);
-		
 		if(mAnimationState == AnimationState.PLAYING)
 		{
 			mPlayPauseToggle.setSelected(false);
@@ -777,8 +777,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 		{
 			agentData.getAnimation().pause();
 			agentData.getAnimation().jumpTo(Duration.millis(frame * mTimeStepDuration.toMillis()));
-			
-			System.out.println("GUI::jumpToKeyFrame agentData.getName() " + agentData.getName());
 		}
 	}
 	

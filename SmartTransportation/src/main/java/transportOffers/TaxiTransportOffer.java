@@ -3,16 +3,12 @@ package transportOffers;
 import org.apache.log4j.Logger;
 
 import uk.ac.imperial.presage2.core.network.NetworkAdaptor;
-import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import agents.User.TransportMode;
 import agents.User.TransportPreference;
-import conversations.taxiStationMediator.TaxiAvailableMessage;
 import conversations.taxiStationMediator.messageData.ITaxiDescription;
 import conversations.taxiStationMediator.messageData.ITaxiServiceRequest;
-import conversations.taxiStationMediator.messageData.TaxiDescription;
 import conversations.taxiStationMediator.messageData.TaxiServiceRequest;
 import conversations.userMediator.messages.messageData.ITransportServiceRequest;
-import conversations.userTaxi.messages.RequestTaxiConfirmationMessage;
 import conversations.userTaxi.messages.TaxiRequestCancelMessage;
 import conversations.userTaxi.messages.TaxiRequestConfirmationMessage;
 

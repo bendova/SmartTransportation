@@ -9,8 +9,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<presage.version>0.3.4</presage.version>
-		<javafx.version>2.2</javafx.version>
-		<javafx.path>C:\Program Files\Java\jre7</javafx.path>
+		<javafx.version>8</javafx.version>
+		<javafx.path>C:\Program Files\Java\jdk1.8.0_05\jre\lib\ext</javafx.path>
 	</properties>
 
 	<dependencies>
@@ -50,7 +50,7 @@
 	        <artifactId>javafx</artifactId>
 	        <version>${javafx.version}</version>
 	        <scope>system</scope>
-	        <systemPath>${javafx.path}/lib/jfxrt.jar</systemPath>
+	        <systemPath>${javafx.path}/jfxrt.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>

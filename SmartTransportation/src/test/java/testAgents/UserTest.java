@@ -1,4 +1,4 @@
-package agents;
+package testAgents;
 
 public class UserTest 
 {

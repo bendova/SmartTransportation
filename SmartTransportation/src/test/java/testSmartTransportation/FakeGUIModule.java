@@ -1,4 +1,4 @@
-package SmartTransportation;
+package testSmartTransportation;
 
 import gui.ISmartTransportionGUI;
 import gui.screens.configurationScreen.SimulationConfiguration;

@@ -1,4 +1,4 @@
-package SmartTransportation;
+package testSmartTransportation;
 
 import gui.GUI;
 import gui.screens.configurationScreen.SimulationConfiguration;
@@ -13,6 +13,8 @@ import map.CityMap;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import SmartTransportation.Simulation;
 
 import com.google.inject.AbstractModule;
 

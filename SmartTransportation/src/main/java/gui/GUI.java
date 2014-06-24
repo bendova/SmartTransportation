@@ -1,6 +1,7 @@
 package gui;
 
 import gui.agents.AgentDataForMap;
+import gui.agents.AgentDataForMap.AgentType;
 import gui.agents.AgentNodeController;
 import gui.charts.ChartsMenuController;
 import gui.charts.Chart;
@@ -52,6 +53,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.RectangleBuilder;
+import javafx.scene.shape.Shape;
 import javafx.stage.Stage;
 import javafx.util.*;
 
@@ -107,6 +109,8 @@ public class GUI extends Application implements ISmartTransportionGUI
 		FINISHED
 	}
 	private AnimationState mAnimationState = AnimationState.PAUSED;
+	
+	private boolean mIsPathShowing = false;
 	
 	private static GUI mInstance;
 	private static int mMapLayout[][] = {
@@ -537,60 +541,42 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private void loadSimulationStage()
 	{
-		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, Color.WHITE);
+		Scene scene = new Scene(mRoot, mMapWidth, mMapHeight, false);
+		scene.setFill(Color.WHITE);
 		mStage.setScene(scene);
 		mStage.setTitle("Smart Transportation");
-		
-		mStage.centerOnScreen();
+		mStage.setMaximized(true);
 		mStage.show();
 	}
 	
 	private void addAgentsToGroup(ObservableList<Node> childrenList)
 	{
-		List<AgentDataForMap> userDataList = new LinkedList<AgentDataForMap>();
+		List<AgentDataForMap> userAgentDataList = new ArrayList<AgentDataForMap>(); 
 		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
-			switch (agentData.getType()) 
+			if(agentData.getAgentType() != AgentType.USER)
 			{
-			case TAXI_CAB:
-			case BUS:
-				Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
-				addAnimations(agentNode, agentData);
-				agentData.setNode(agentNode);
-				childrenList.add(agentNode);
-				break;
-			case USER:
-				// the user shapes must be displayed ABOVE
-				// the other shapes, so add them afterwards
-				userDataList.add(agentData);
-				break;
+				agentData.setRootChildrenList(childrenList);
+			}
+			else 
+			{
+				userAgentDataList.add(agentData);
 			}
 		}
-		for(AgentDataForMap agentData: userDataList)
+		for(AgentDataForMap agentData : userAgentDataList)
 		{
-			Node agentNode = loadAgentNode(agentData.getLayoutPath(), agentData.getName());
-			addAnimations(agentNode, agentData);
-			agentData.setNode(agentNode);
-			childrenList.add(agentNode);
+			agentData.setRootChildrenList(childrenList);
 		}
 	}
 	
-	private Node loadAgentNode(String path, String name)
-	{
-		AgentNodeController controller = (AgentNodeController)
-				(loadNode(path)).getController();
-		controller.setTitle(name);
-		return controller.getNode();
-	}
-	
-	private FXMLLoader loadNode(String path)
+	public static FXMLLoader loadNode(String path)
 	{
 		final FXMLLoader loader;		
 		try 
 		{
 			loader = new FXMLLoader();
 			loader.setBuilderFactory(new JavaFXBuilderFactory());
-			loader.setLocation(getClass().getResource(path));
+			loader.setLocation(GUI.class.getResource(path));
 			loader.load();
 		} 
 		catch (IOException e) 
@@ -599,96 +585,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 			return null;
 		}
 		return loader;
-	}
-	
-	private void addAnimations(final Node agentNode, AgentDataForMap agentData)
-	{
-		final String agentName = agentData.getName();
-
-		SequentialTransition sequentialTransition = new SequentialTransition();
-		agentData.setAnimation(sequentialTransition);
-			
-		Location startLocation = agentData.getStartLocation();
-		double currentX = startLocation.getX() * mPixelsPerAreaPoint;
-		double currentY = startLocation.getY() * mPixelsPerAreaPoint;
-
-		Transition startTransition = TranslateTransitionBuilder.create().
-				node(agentNode).duration(Duration.millis(100)).
-				fromX(0).toX(currentX).
-				fromY(0).toY(currentY).
-				cycleCount(1).autoReverse(false).
-				interpolator(Interpolator.LINEAR).
-				build();
-		sequentialTransition.getChildren().add(startTransition);
-		
-		FadeTransition fadeInTransition = FadeTransitionBuilder.create().
-				node(agentNode).duration(Duration.millis(100)).
-				toValue(1).
-				build();
-		sequentialTransition.getChildren().add(fadeInTransition);
-		
-		System.out.println("addAnimations() for " + agentName);
-		
-		List<Movement> movements = agentData.getMoveData();
-		int currentTime = 0;
-		for(Movement movement: movements)
-		{
-			int movementStartTime = movement.getStartTime();
-			
-			if(currentTime < movementStartTime)
-			{
-				Transition pauseTransition = new PauseTransition(mTimeStepDuration.
-						multiply((movementStartTime - currentTime)));
-				currentTime = movementStartTime;
-				sequentialTransition.getChildren().add(pauseTransition);
-			}
-			
-			Location location = movement.getLocation();
-			double nextX = location.getX() * mPixelsPerAreaPoint;
-			double nextY = location.getY() * mPixelsPerAreaPoint;
-			
-			int timeTakenPerUnitDistance = movement.getTimeTakenPerUnitDistance();
-			currentTime += timeTakenPerUnitDistance;
-			
-			Transition moveTransition = TranslateTransitionBuilder.create().
-					node(agentNode).duration(mTimeStepDuration.multiply(timeTakenPerUnitDistance)).
-					fromX(currentX).toX(nextX).
-					fromY(currentY).toY(nextY).
-					interpolator(Interpolator.LINEAR).
-					cycleCount(1).autoReverse(false).
-					build();
-			currentX = nextX;
-			currentY = nextY;
-			sequentialTransition.getChildren().add(moveTransition);
-		}
-		FadeTransition fadeOutTransition = FadeTransitionBuilder.create().
-				node(agentNode).duration(Duration.millis(100)).
-				toValue(0.2).
-				build();
-		
-		sequentialTransition.getChildren().add(fadeOutTransition);
-		
-		sequentialTransition.setCycleCount(1);
-		sequentialTransition.setAutoReverse(false);
-		sequentialTransition.setInterpolator(Interpolator.LINEAR);
-		sequentialTransition.setOnFinished(new EventHandler<ActionEvent>() 
-		{
-			@Override
-			public void handle(ActionEvent event) 
-			{
-				System.out.println("Animation completed for " + agentName);
-				--mAgentsAnimatingCount;
-				
-				if(mAgentsAnimatingCount == 0)
-				{
-					System.out.println("Animation finished!");
-					
-					mPlayPauseToggle.setSelected(false);
-					mAnimationState = AnimationState.FINISHED;
-				}
-			}
-		});
-		++mAgentsAnimatingCount;
 	}
 	
 	private void togglePlay()
@@ -715,14 +611,9 @@ public class GUI extends Application implements ISmartTransportionGUI
 	{
 		System.out.println("GUI::play()");
 		
-		Animation animation;
 		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
-			animation = agentData.getAnimation();
-			if(animation.getTotalDuration().greaterThan(animation.getCurrentTime()))
-			{
-				animation.play();
-			}
+			agentData.playAnimation();
 		}
 		mAnimationState = AnimationState.PLAYING;
 	}
@@ -733,7 +624,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		
 		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
-			agentData.getAnimation().pause();
+			agentData.pauseAnimation();
 		}
 		mAnimationState = AnimationState.PAUSED;
 	}
@@ -746,7 +637,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mAgentsAnimatingCount = mAgentsDataForMap.size();
 		for(AgentDataForMap agentData: mAgentsDataForMap)
 		{
-			agentData.getAnimation().playFromStart();
+			agentData.restartAnimation();
 		}
 		mAnimationState = AnimationState.PLAYING;
 	}
@@ -775,8 +666,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 		
 		for (AgentDataForMap agentData : mAgentsDataForMap) 
 		{
-			agentData.getAnimation().pause();
-			agentData.getAnimation().jumpTo(Duration.millis(frame * mTimeStepDuration.toMillis()));
+			agentData.jumpToInAnimation(Duration.millis(frame * mTimeStepDuration.toMillis()));
 		}
 	}
 	
@@ -925,9 +815,29 @@ public class GUI extends Application implements ISmartTransportionGUI
 		while(iterator.hasNext())
 		{
 			AgentDataStore data = iterator.next().getValue();
-			mAgentsDataForMap.add(new AgentDataForMap(data.getAgentType(), data.getName(), 
-					data.getMovements(), data.getStartLocation()));
+			AgentDataForMap agentDataForMap = new AgentDataForMap(data.getAgentType(), data.getName(), 
+					data.getMovements(), data.getStartLocation(), 
+					mPixelsPerAreaPoint, mTimeStepDuration);
+			mAgentsDataForMap.add(agentDataForMap);
+			
+			agentDataForMap.setOnAnimationFinished(new EventHandler<ActionEvent>() 
+			{
+				@Override
+				public void handle(ActionEvent event) 
+				{
+					--mAgentsAnimatingCount;
+					
+					if(mAgentsAnimatingCount == 0)
+					{
+						System.out.println("Animation finished!");
+						
+						mPlayPauseToggle.setSelected(false);
+						mAnimationState = AnimationState.FINISHED;
+					}
+				}
+			});
 		}
+		mAgentsAnimatingCount = mAgentsDataForMap.size();
 	}
 
 	private void toggleWindow(Chart window)
@@ -971,5 +881,10 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mStage.setScene(scene);
 		mStage.show();
 		return (Parent) loader.getController();
+	}
+	
+	private void togglePathForAgentNode(Node agentNode)
+	{
+		
 	}
 }

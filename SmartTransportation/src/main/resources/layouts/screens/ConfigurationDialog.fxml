@@ -11,7 +11,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<StackPane prefHeight="660.0" prefWidth="660.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.screens.configurationScreen.ConfigureSimulationController">
+<StackPane prefHeight="768.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.screens.configurationScreen.ConfigureSimulationController">
   <children>
     <Group id="Group">
       <children>
@@ -19,15 +19,15 @@
           <children>
             <ImageView fitHeight="100.0" fitWidth="232.72727272727272" pickOnBounds="true" preserveRatio="true">
               <image>
-                <Image url="@../../images/smartTransportation.jpg" />
+                <Image url="@../../images/smartTransportation.png" />
               </image>
               <VBox.margin>
                 <Insets />
               </VBox.margin>
             </ImageView>
-            <GridPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="636.0">
+            <GridPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="1000.0">
               <children>
-                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
+                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                   <children>
                     <Label prefWidth="200.0" text="GUI Parameters" GridPane.columnIndex="0" GridPane.rowIndex="0">
                       <font>
@@ -49,7 +49,7 @@
                     <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                 </GridPane>
-                <GridPane fx:id="gridPane" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
+                <GridPane fx:id="gridPane" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                   <children>
                     <Label font="$x1" prefWidth="146.0" text="Simulation Parameters" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.halignment="LEFT" GridPane.rowIndex="0" GridPane.valignment="CENTER" />
                     <Label text="Time steps count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
@@ -70,7 +70,7 @@
                     <RowConstraints maxHeight="35.0" minHeight="10.0" prefHeight="28.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                 </GridPane>
-                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
+                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
                   <children>
                     <Label font="$x1" text="Transport methods available" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="0" />
                     <CheckBox fx:id="walkingCheckBox" mnemonicParsing="false" prefHeight="16.0" prefWidth="93.0" selected="false" text="Walking" GridPane.columnIndex="0" GridPane.rowIndex="1" />
@@ -103,13 +103,13 @@
                     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                 </GridPane>
-                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
+                <GridPane hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
                   <children>
                     <Label text="Users count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                     <TextField fx:id="usersCountTF" prefHeight="32.0" prefWidth="126.0" text="3" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                     <Label font="$x1" text="User Parameters" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <Label text="Transport preference allocation:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                    <ChoiceBox id="preferenceCheckBox" fx:id="transportPreferenceChoiceBox" prefWidth="134.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                    <ChoiceBox id="preferenceCheckBox" fx:id="transportPreferenceChoiceBox" prefWidth="220.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
                       <items>
                         <FXCollections fx:factory="observableArrayList">
                           <String fx:value="Item 1" />
@@ -117,9 +117,12 @@
                           <String fx:value="Item 3" />
                         </FXCollections>
                       </items>
+                                 <GridPane.margin>
+                                    <Insets />
+                                 </GridPane.margin>
                     </ChoiceBox>
                     <Label text="Time constraint upper limit:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                    <ChoiceBox id="timeContraintCheckBox" fx:id="timeContraintChoiceBox" prefWidth="134.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                    <ChoiceBox id="timeContraintCheckBox" fx:id="timeContraintChoiceBox" prefWidth="220.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
                       <items>
                         <FXCollections fx:factory="observableArrayList">
                           <String fx:value="Item 1" />
@@ -130,8 +133,8 @@
                     </ChoiceBox>
                   </children>
                   <columnConstraints>
-                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="196.0" minWidth="10.0" prefWidth="172.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="156.0" minWidth="4.0" prefWidth="128.0" />
+                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="243.0" minWidth="10.0" prefWidth="217.0" />
+                    <ColumnConstraints hgrow="SOMETIMES" maxWidth="222.0" minWidth="4.0" prefWidth="218.0" />
                   </columnConstraints>
                   <rowConstraints>
                     <RowConstraints maxHeight="26.0" minHeight="10.0" prefHeight="26.0" vgrow="SOMETIMES" />
@@ -140,7 +143,7 @@
                     <RowConstraints maxHeight="27.0" minHeight="10.0" prefHeight="27.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                 </GridPane>
-                <GridPane id="bus" fx:id="busParametersGridPane" disable="false" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="6" GridPane.valignment="CENTER">
+                <GridPane id="bus" fx:id="busParametersGridPane" disable="false" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="6" GridPane.valignment="CENTER">
                   <children>
                     <Label font="$x1" text="Bus Parameters" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <Label text="Buses count:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
@@ -158,7 +161,7 @@
                     <RowConstraints maxHeight="30.0" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                   </rowConstraints>
                 </GridPane>
-                <GridPane fx:id="taxiParametersGridPane" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="300.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="6" GridPane.valignment="CENTER">
+                <GridPane fx:id="taxiParametersGridPane" hgap="5.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="100.0" prefWidth="440.0" vgap="5.0" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="6" GridPane.valignment="CENTER">
                   <children>
                     <Label font="$x1" text="Taxi Parameters" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                     <Label text="Taxi Stations count:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
@@ -184,7 +187,7 @@
                 <Separator orientation="VERTICAL" prefHeight="200.0" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.rowSpan="5" GridPane.valignment="CENTER" />
                 <Separator orientation="VERTICAL" prefHeight="200.0" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.rowSpan="5" GridPane.valignment="CENTER" />
                 <Button fx:id="startButton" mnemonicParsing="false" onAction="#onStart" prefWidth="134.0" text="Start" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.valignment="CENTER" />
-                <CheckBox fx:id="saveConfigurationCheckBox" alignment="CENTER_RIGHT" mnemonicParsing="false" prefWidth="300.0" selected="true" text="Save configuration" GridPane.columnIndex="3" GridPane.rowIndex="8" />
+                <CheckBox fx:id="saveConfigurationCheckBox" contentDisplay="RIGHT" mnemonicParsing="false" prefWidth="300.0" selected="true" text="Save configuration" GridPane.columnIndex="3" GridPane.rowIndex="8" />
               </children>
               <columnConstraints>
                 <ColumnConstraints hgrow="SOMETIMES" maxWidth="10.0" minWidth="10.0" prefWidth="100.0" />

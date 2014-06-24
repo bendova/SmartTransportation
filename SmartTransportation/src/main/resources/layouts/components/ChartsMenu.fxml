@@ -20,10 +20,10 @@
                 </font>
               </Label>
               <Separator />
-              <Button fx:id="showTransportMethodsUsed" alignment="CENTER" mnemonicParsing="false" text="Transport methods used" />
-              <Button fx:id="showUserTransportResults" mnemonicParsing="false" text="User transport results" />
-              <Button fx:id="showUserDataTable" mnemonicParsing="false" text="User data table" />
-              <Button fx:id="showDestinationReachedPercentage" mnemonicParsing="false" text="Destination reached %" />
+              <Button fx:id="showTransportMethodsUsed" alignment="CENTER" mnemonicParsing="false" prefWidth="182.0" text="Transport methods used" />
+              <Button fx:id="showUserTransportResults" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="User transport results" />
+              <Button fx:id="showUserDataTable" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="User data table" />
+              <Button fx:id="showDestinationReachedPercentage" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="Destination reached %" />
                </children>
                <padding>
                   <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />

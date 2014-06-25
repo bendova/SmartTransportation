@@ -19,7 +19,8 @@ import conversations.userTaxi.messages.TakeMeToDestinationMessage;
 import conversations.userTaxi.messages.messageData.TaxiData;
 import conversations.userTaxi.messages.messageData.TaxiOrder;
 import dataStores.SimulationDataStore;
-import dataStores.AgentDataStore;
+import dataStores.agentData.AgentData;
+import dataStores.agentData.IAgentDataStore;
 import SmartTransportation.Simulation.TransportMethodSpeed;
 import map.CityMap;
 import uk.ac.imperial.presage2.core.environment.*;
@@ -50,7 +51,7 @@ public class Taxi extends AbstractParticipant
 	private int mTimeTakenPerUnitDistance;
 	
 	private CityMap mCityMap;
-	private SimulationDataStore mSimulationDataStore;
+	private IAgentDataStore mSimulationDataStore;
 	
 	public enum Status
 	{
@@ -83,7 +84,7 @@ public class Taxi extends AbstractParticipant
 		mTimeTakenPerUnitDistance = TransportMethodSpeed.TAXI_SPEED.getTimeTakenPerUnitDistance();
 	}
 	
-	public void setDataStore(SimulationDataStore dataStore) 
+	public void setDataStore(IAgentDataStore dataStore) 
 	{
 		assert(dataStore != null);
 		mSimulationDataStore = dataStore;
@@ -438,8 +439,8 @@ public class Taxi extends AbstractParticipant
 	@Override
 	public void onSimulationComplete()
 	{
-		AgentDataStore dataStore = new AgentDataStore(getName(), getID(), 
+		AgentData dataStore = new AgentData(getName(), getID(), 
 				AgentType.TAXI_CAB, mStartLocation);
-		mSimulationDataStore.addAgentDataStore(getID(), dataStore);
+		mSimulationDataStore.addAgentData(getID(), dataStore);
 	}
 }

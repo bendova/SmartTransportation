@@ -2,13 +2,7 @@ package gui;
 
 import gui.agents.AgentDataForMap;
 import gui.agents.AgentDataForMap.AgentType;
-import gui.agents.AgentNodeController;
 import gui.charts.ChartsMenuController;
-import gui.charts.Chart;
-import gui.charts.pieChart.PieChartWindow;
-import gui.charts.transportResults.TransportResultsWindow;
-import gui.charts.userDataTable.UserTableData;
-import gui.charts.userDataTable.UserTableWindow;
 import gui.components.LabelsPaneController;
 import gui.screens.LoadingScreen;
 import gui.screens.configurationScreen.ConfigureSimulationController;
@@ -26,20 +20,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 
-import agents.User.TransportMode;
 import dataStores.SimulationDataStore;
-import dataStores.AgentDataStore;
-import dataStores.UserDataStore;
+import dataStores.agentData.AgentData;
+import dataStores.agentData.IAgentData;
 import SmartTransportation.Simulation;
 import SmartTransportation.Simulation.TimeConstraint;
 import SmartTransportation.Simulation.TransportPreferenceAllocation;
 import uk.ac.imperial.presage2.core.simulator.RunnableSimulation;
-import uk.ac.imperial.presage2.util.location.Location;
-import util.movement.Movement;
-import javafx.animation.*;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
@@ -53,7 +42,6 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.RectangleBuilder;
-import javafx.scene.shape.Shape;
 import javafx.stage.Stage;
 import javafx.util.*;
 
@@ -92,11 +80,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 	private ToggleButton mPlayPauseToggle;
 	private Slider mTimeLineSlider;
 	
-	private PieChartWindow mTransportModesUseChart;
-	private PieChartWindow mReachedDestinationChart;
-	private TransportResultsWindow mTransportResultsChart;
-	private UserTableWindow mUserDataTableChart;
-	
 	private Timer mTimeLineTimer;
 	private LoadingScreen mProgressDialogController;
 	
@@ -109,8 +92,6 @@ public class GUI extends Application implements ISmartTransportionGUI
 		FINISHED
 	}
 	private AnimationState mAnimationState = AnimationState.PAUSED;
-	
-	private boolean mIsPathShowing = false;
 	
 	private static GUI mInstance;
 	private static int mMapLayout[][] = {
@@ -319,14 +300,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 					return null;
 				}
 			};
-			simulation.setOnSucceeded(new EventHandler<WorkerStateEvent>() 
-			{
-				@Override
-				public void handle(WorkerStateEvent event) 
-				{
-					beginAnimation();
-				}
-			});
+			simulation.setOnSucceeded(event -> beginAnimation());
 			Thread simulationThread = new Thread(simulation);
 			simulationThread.start();
 		}
@@ -428,25 +402,12 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mTimeLineSlider = controller.getTimeLineSlider();
 		mTimeLineSlider.setBlockIncrement(1);
 		mTimeLineSlider.setMax(mTimeStepsCount);
-		EventHandler<MouseEvent> timeLineEventHandler = new EventHandler<MouseEvent>() 
-		{
-			@Override
-			public void handle(MouseEvent event) 
-			{
-				jumpToKeyFrame(mTimeLineSlider.getValue());
-			}
-		};
+		EventHandler<MouseEvent> timeLineEventHandler = (event ->
+				jumpToKeyFrame(mTimeLineSlider.getValue()));
 		mTimeLineSlider.setOnMouseClicked(timeLineEventHandler);
 		mTimeLineSlider.setOnMouseDragged(timeLineEventHandler);
 		mPlayPauseToggle = controller.getPlayPauseButton();
-		mPlayPauseToggle.setOnAction(new EventHandler<ActionEvent>()
-		{
-			@Override
-			public void handle(ActionEvent event)
-			{
-				togglePlay();
-			}
-		});
+		mPlayPauseToggle.setOnAction(event -> togglePlay());
 		return controller.getMenuBar();
 	}
 	
@@ -456,43 +417,8 @@ public class GUI extends Application implements ISmartTransportionGUI
 		
 		ChartsMenuController chartsMenuController = (ChartsMenuController)
 				(loadNode(CHARTS_MENU_LAYOUT)).getController();
-				
-		chartsMenuController.setOnShowTransportMethodUsed(new Callback<Void, Void>() 
-		{
-			@Override
-			public Void call(Void param) 
-			{
-				toggleWindow(mTransportModesUseChart);
-				return null;
-			}
-		});
-		chartsMenuController.setOnShowUserTransportResults(new Callback<Void, Void>() 
-		{
-			@Override
-			public Void call(Void param) 
-			{
-				toggleWindow(mTransportResultsChart);
-				return null;
-			}
-		});
-		chartsMenuController.setOnShowUserDataTable(new Callback<Void, Void>() 
-		{
-			@Override
-			public Void call(Void param) 
-			{
-				toggleWindow(mUserDataTableChart);
-				return null;
-			}
-		});
-		chartsMenuController.setOnShowDestinationReachedPercentage(new Callback<Void, Void>() 
-		{
-			@Override
-			public Void call(Void param) 
-			{
-				toggleWindow(mReachedDestinationChart);
-				return null;
-			}
-		});
+		chartsMenuController.setData(mSimulationDataStore);		
+		
 		Pane container = chartsMenuController.getContainer();
 		container.translateXProperty().set(0);
 		container.translateYProperty().bind(
@@ -686,120 +612,11 @@ public class GUI extends Application implements ISmartTransportionGUI
 	{
 		assert(agentsData != null);
 		
-		mSimulationDataStore = agentsData;
-		initCharts();
-		initMapData();
-	}
-	
-	private void initCharts()
-	{
-		initTransportModesUseChart();
-		initReachedDestinationChart();
-		initTravelTimesChart();
-		initUserDataTable();
-	}
-	
-	private void initTransportModesUseChart()
-	{
-		TransportMode[] transportModes = TransportMode.values();
-		
-		int[] transportModeUse = new int[transportModes.length];
-		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
-		while(iterator.hasNext())
+		if(agentsData != null)
 		{
-			UserDataStore data = iterator.next().getValue();
-			++transportModeUse[data.getTransportMethodUsed().ordinal()];
+			mSimulationDataStore = agentsData;
+			initMapData();
 		}
-		
-		int usersCount = userDataStores.size();
-		Map<String, Integer> pieData = new HashMap<String, Integer>();
-		for (int i = 0; i < transportModeUse.length; ++i) 
-		{
-			int percent = (int) (((double)transportModeUse[i] / usersCount) * 100);
-			
-			pieData.put(transportModes[i].getName() + "( " + percent + "% )",
-					transportModeUse[i]);
-		}
-		
-		mTransportModesUseChart = new PieChartWindow();
-		mTransportModesUseChart.setData(pieData);
-	}
-	
-	private void initReachedDestinationChart()
-	{
-		int reachedDestinationCount = 0;
-		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			UserDataStore data = iterator.next().getValue();
-			if(data.getHasReachedDestination())
-			{
-				++reachedDestinationCount;
-			}
-		}
-		
-		Map<String, Integer> pieData = new HashMap<String, Integer>();
-		int usersCount = userDataStores.size();
-		int reachedDestinationPercent = (int) (((double)reachedDestinationCount / usersCount) * 100);
-		String reachedDestinationDescription = "Reached destination (" + 
-				reachedDestinationPercent + " %)";
-		pieData.put(reachedDestinationDescription, reachedDestinationCount);
-		
-		int notReachDestinationCount = userDataStores.size() - reachedDestinationCount;
-		int notReachedDestinationPercent = 100 - reachedDestinationPercent;
-		String notReachedDestinationDescription = "Failed ( " + 
-				notReachedDestinationPercent + "% )";
-		pieData.put(notReachedDestinationDescription, notReachDestinationCount);
-		
-		mReachedDestinationChart = new PieChartWindow();
-		mReachedDestinationChart.setData(pieData);
-	}
-	
-	private void initTravelTimesChart()
-	{
-		mTransportResultsChart = new TransportResultsWindow();
-		TreeMap<Number, Number> chartData = new TreeMap<Number, Number>();
-		
-		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			UserDataStore data = iterator.next().getValue();
-			int deltaTravelTime = (int)(data.getActualTravelTime() - data.getTargetTravelTime());
-			Number usersCount = chartData.get(deltaTravelTime);
-			if(usersCount != null)
-			{
-				chartData.put(deltaTravelTime, usersCount.intValue()+1);
-			}
-			else 
-			{
-				chartData.put(deltaTravelTime, 1);
-			}
-		}
-		
-		mTransportResultsChart.setData(chartData);
-	}
-	
-	private void initUserDataTable()
-	{
-		ObservableList<UserTableData> userTableDataList = FXCollections.observableArrayList();
-		
-		Map<UUID, UserDataStore> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, UserDataStore>> iterator = userDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			UserDataStore data = iterator.next().getValue();
-			
-			userTableDataList.add(new UserTableData(data.getName(), data.getID(), 
-					data.getHasReachedDestination(), data.getActualTravelTime(), 
-					data.getTargetTravelTime(), data.getTransportPreference(), 
-					data.getTransportMethodUsed()));
-		}
-		
-		mUserDataTableChart = new UserTableWindow();
-		mUserDataTableChart.setData(userTableDataList);
 	}
 	
 	private void initMapData()
@@ -810,20 +627,17 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private void fillAgentsDataForMap()
 	{
-		Map<UUID, AgentDataStore> agentDataStores = mSimulationDataStore.getAgentsDataStores();
-		Iterator<Map.Entry<UUID, AgentDataStore>> iterator = agentDataStores.entrySet().iterator();
+		Map<UUID, IAgentData> agentDataStores = mSimulationDataStore.getAgentsDataStores();
+		Iterator<Map.Entry<UUID, IAgentData>> iterator = agentDataStores.entrySet().iterator();
 		while(iterator.hasNext())
 		{
-			AgentDataStore data = iterator.next().getValue();
+			IAgentData data = iterator.next().getValue();
 			AgentDataForMap agentDataForMap = new AgentDataForMap(data.getAgentType(), data.getName(), 
 					data.getMovements(), data.getStartLocation(), 
 					mPixelsPerAreaPoint, mTimeStepDuration);
 			mAgentsDataForMap.add(agentDataForMap);
 			
-			agentDataForMap.setOnAnimationFinished(new EventHandler<ActionEvent>() 
-			{
-				@Override
-				public void handle(ActionEvent event) 
+			agentDataForMap.setOnAnimationFinished(event ->
 				{
 					--mAgentsAnimatingCount;
 					
@@ -835,28 +649,9 @@ public class GUI extends Application implements ISmartTransportionGUI
 						mAnimationState = AnimationState.FINISHED;
 					}
 				}
-			});
+			);
 		}
 		mAgentsAnimatingCount = mAgentsDataForMap.size();
-	}
-
-	private void toggleWindow(Chart window)
-	{
-		System.out.println("GUI::toggleWindow() window " + window);
-		System.out.println("GUI::toggleWindow() window.isIconified() " + window.isIconified());
-		
-		if(window.isIconified())
-		{
-			window.maximize();
-		}
-		else if(window.isShowing())
-		{
-			window.close();
-		}
-		else 
-		{
-			window.show();
-		}
 	}
 	
 	private Parent loadScene(String scenePath)
@@ -881,10 +676,5 @@ public class GUI extends Application implements ISmartTransportionGUI
 		mStage.setScene(scene);
 		mStage.show();
 		return (Parent) loader.getController();
-	}
-	
-	private void togglePathForAgentNode(Node agentNode)
-	{
-		
 	}
 }

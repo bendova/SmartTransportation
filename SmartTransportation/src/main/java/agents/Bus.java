@@ -24,7 +24,6 @@ import uk.ac.imperial.presage2.util.participant.AbstractParticipant;
 import uk.ac.imperial.presage2.util.participant.HasPerceptionRange;
 import util.movement.TransportMove;
 import SmartTransportation.Simulation.TransportMethodSpeed;
-
 import conversations.busStationBus.BusRouteMessage;
 import conversations.busStationBus.RegisterAsBusMessage;
 import conversations.busStationBus.messageData.IBusRoute;
@@ -35,8 +34,9 @@ import conversations.userBus.messages.BusUnBoardingSuccessful;
 import conversations.userBus.messages.NotificationOfArrivalAtBusStop;
 import conversations.userBus.messages.UnBoardBusRequestMessage;
 import conversations.userBus.messages.messageData.BusStopArrivalNotification;
-import dataStores.AgentDataStore;
 import dataStores.SimulationDataStore;
+import dataStores.agentData.AgentData;
+import dataStores.agentData.IAgentDataStore;
 
 public class Bus extends AbstractParticipant implements HasPerceptionRange
 {
@@ -75,7 +75,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	private List<UnBoardBusRequestMessage> mUnBoardRequests;
 	
 	private CityMap mCityMap;
-	private SimulationDataStore mSimulationDataStore;
+	private IAgentDataStore mSimulationDataStore;
 	
 	private int mTimeTakenPerUnitDistance;
 	
@@ -103,7 +103,7 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 		MAX_BUS_STOP_WAIT_TIME = 2 * mTimeTakenPerUnitDistance;
 	}
 	
-	public void setDataStore(SimulationDataStore dataStore) 
+	public void setDataStore(IAgentDataStore dataStore) 
 	{
 		assert(dataStore != null);
 		mSimulationDataStore = dataStore;
@@ -423,9 +423,9 @@ public class Bus extends AbstractParticipant implements HasPerceptionRange
 	@Override
 	public void onSimulationComplete()
 	{
-		AgentDataStore dataStore = new AgentDataStore(getName(), getID(), 
+		AgentData dataStore = new AgentData(getName(), getID(), 
 				AgentType.BUS, mStartLocation);
-		mSimulationDataStore.addAgentDataStore(getID(), dataStore);
+		mSimulationDataStore.addAgentData(getID(), dataStore);
 	}
 
 	@Override

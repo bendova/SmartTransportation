@@ -1,35 +1,29 @@
-package gui.charts.transportResults;
+package gui.charts;
 
-import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.ResourceBundle;
 import java.util.TreeMap;
 
 import javafx.collections.ObservableList;
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.Parent;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
-import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
-public class TransportResultsController extends Parent implements Initializable
+public class TransportResultsWindow extends Stage
 {
-	@FXML
-	private StackPane container;
-	
-	private XYChart<Number, Number> areaChart;
-	
-	
-	@Override
-	public void initialize(URL location, ResourceBundle resources)
+	public TransportResultsWindow(TreeMap<Number, Number> areaChartData)
 	{
-		System.out.println("LineChartController::initialize()");
+		assert(areaChartData != null);
+		
+		Scene scene = new Scene(createAreaChart(areaChartData, "Transport Results"));
+		setScene(scene);
+		centerOnScreen();
 	}
 	
-	public void setAreaChartData(TreeMap<Number, Number> data)
+	public XYChart<Number, Number> createAreaChart(TreeMap<Number, Number> data, String title)
 	{
 		XYChart.Series<Number, Number> negativeSeries = new XYChart.Series<Number, Number>();
 		XYChart.Series<Number, Number> pozitiveSeries = new XYChart.Series<Number, Number>();
@@ -58,7 +52,7 @@ public class TransportResultsController extends Parent implements Initializable
 		xAxis.setLabel("Delta arrival times");
 		NumberAxis yAxis = new NumberAxis();
 		yAxis.setLabel("Users count");
-		areaChart = new ScatterChart<Number, Number>(xAxis, yAxis);
+		XYChart<Number, Number> areaChart = new ScatterChart<Number, Number>(xAxis, yAxis);
 		if(negativeSeries.getData().size() > 0)
 		{
 			areaChart.getData().add(negativeSeries);
@@ -68,7 +62,8 @@ public class TransportResultsController extends Parent implements Initializable
 			areaChart.getData().add(pozitiveSeries);
 		}
 		areaChart.setHorizontalZeroLineVisible(true);
-		areaChart.setTitle("Transport results");
-		container.getChildren().add(areaChart);
+		areaChart.setTitle(title);
+		
+		return areaChart;
 	}
 }

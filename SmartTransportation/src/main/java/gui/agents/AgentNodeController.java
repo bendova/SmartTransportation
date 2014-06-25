@@ -35,8 +35,6 @@ public class AgentNodeController
 			@Override
 			public void handle(MouseEvent event)
 			{
-				System.out.println("AgentNodeController::onMouseClicked()");
-				
 				if(mOnClickCallback != null)
 				{
 					mOnClickCallback.call(null);

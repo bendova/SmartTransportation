@@ -10,9 +10,9 @@
 
 <Pane fx:id="container" maxHeight="-1.0" maxWidth="-1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.charts.ChartsMenuController">
   <children>
-    <ToolBar layoutX="0.0" layoutY="0.0" orientation="VERTICAL">
+    <ToolBar layoutX="0.0" layoutY="0.0" orientation="VERTICAL" prefHeight="224.0" prefWidth="200.0">
       <items>
-            <VBox spacing="5.0">
+            <VBox prefHeight="206.0" prefWidth="186.0" spacing="5.0">
                <children>
               <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="17.0" prefWidth="182.0" text="Charts" textAlignment="LEFT" wrapText="false">
                 <font>
@@ -23,6 +23,7 @@
               <Button fx:id="showTransportMethodsUsed" alignment="CENTER" mnemonicParsing="false" prefWidth="182.0" text="Transport methods used" />
               <Button fx:id="showUserTransportResults" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="User transport results" />
               <Button fx:id="showUserDataTable" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="User data table" />
+                  <Button fx:id="showUserTimeline" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="User timeline" />
               <Button fx:id="showDestinationReachedPercentage" mnemonicParsing="false" prefHeight="31.0" prefWidth="182.0" text="Destination reached %" />
                </children>
                <padding>

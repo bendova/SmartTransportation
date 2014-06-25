@@ -1,31 +1,36 @@
-package dataStores;
+package dataStores.userData;
 
 import gui.agents.AgentDataForMap.AgentType;
 
+import java.util.List;
 import java.util.UUID;
 
+import dataStores.agentData.AgentData;
 import agents.User.TransportMode;
 import agents.User.TransportPreference;
-
 import uk.ac.imperial.presage2.util.location.Location;
 
-public class UserDataStore extends AgentDataStore
+public class UserData extends AgentData implements IUserData
 {
 	private double mTargetTravelTime;
 	private double mActualTravelTime;
 	private boolean mHasReachedDestination;
 	private TransportPreference mTransportPreference;
 	private TransportMode mTransportModeUsed;
+	private List<UserEvent> mEvents;
 	
-	public UserDataStore(String agentName, UUID agentID, Location startLocation)
+	public UserData(String agentName, UUID agentID, Location startLocation, List<UserEvent> events)
 	{
 		super(agentName, agentID, AgentType.USER, startLocation);
+		
+		assert(events != null);
 		
 		mTargetTravelTime = 0;
 		mActualTravelTime = 0;
 		mHasReachedDestination = false;
 		mTransportPreference = TransportPreference.NO_PREFERENCE;
 		mTransportModeUsed = TransportMode.NONE;
+		mEvents = events;
 	}
 	public void setTargetTravelTime(double target)
 	{
@@ -66,5 +71,9 @@ public class UserDataStore extends AgentDataStore
 	public TransportMode getTransportMethodUsed()
 	{
 		return mTransportModeUsed;
+	}
+	public List<UserEvent> getUserEvents()
+	{
+		return mEvents;
 	}
 }

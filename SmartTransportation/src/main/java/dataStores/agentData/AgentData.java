@@ -1,4 +1,4 @@
-package dataStores;
+package dataStores.agentData;
 
 import gui.agents.AgentDataForMap.AgentType;
 
@@ -8,7 +8,7 @@ import java.util.UUID;
 import uk.ac.imperial.presage2.util.location.Location;
 import util.movement.Movement;
 
-public class AgentDataStore 
+public class AgentData implements IAgentData
 {
 	private String mName;
 	private UUID mID;
@@ -16,7 +16,7 @@ public class AgentDataStore
 	private List<Movement> mMovements = null;
 	private Location mStartLocation;
 	
-	public AgentDataStore(String agentName, UUID agentID, 
+	public AgentData(String agentName, UUID agentID, 
 			AgentType agentType, Location startLocation)
 	{
 		assert(agentName != null);

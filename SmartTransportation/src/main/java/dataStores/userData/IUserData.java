@@ -11,6 +11,7 @@ public interface IUserData extends IAgentData
 	double getTargetTravelTime();
 	double getActualTravelTime();
 	boolean getHasReachedDestination();
+	boolean getHasReachedDestinationOnTime();
 	TransportPreference getTransportPreference();
 	TransportMode getTransportMethodUsed();
 	List<UserEvent> getUserEvents();

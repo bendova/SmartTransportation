@@ -36,10 +36,13 @@ public class ChartsMenuController extends Parent
 	private Button showUserTimeline; 
 	@FXML
 	private Button showDestinationReachedPercentage; 
+	@FXML
+	private Button showOnTimePercentage; 
 	
 	private SimulationDataStore mSimulationDataStore;
 	private PieChartWindow mTransportModesUseChart;
 	private PieChartWindow mReachedDestinationChart;
+	private PieChartWindow mOnTimeChart;
 	private TransportResultsWindow mTransportResultsChart;
 	private UserTableWindow mUserDataTableChart;
 	private UserTimelineWindow mUserTimelineWindow;
@@ -65,6 +68,7 @@ public class ChartsMenuController extends Parent
 	{
 		initTransportModesUseChart();
 		initReachedDestinationChart();
+		initOnTimeChart();
 		initTravelTimesChart();
 		initUserDataTable();
 		initUserTimelineWindow();
@@ -98,17 +102,10 @@ public class ChartsMenuController extends Parent
 	
 	private void initReachedDestinationChart()
 	{
-		int reachedDestinationCount = 0;
 		Map<UUID, IUserData> userDataStores = mSimulationDataStore.getUserDataStores();
-		Iterator<Map.Entry<UUID, IUserData>> iterator = userDataStores.entrySet().iterator();
-		while(iterator.hasNext())
-		{
-			IUserData data = iterator.next().getValue();
-			if(data.getHasReachedDestination())
-			{
-				++reachedDestinationCount;
-			}
-		}
+		int reachedDestinationCount = (int)userDataStores.entrySet().stream().
+				filter(data -> data.getValue().getHasReachedDestination()).
+				count();
 		
 		Map<String, Integer> pieData = new HashMap<String, Integer>();
 		int usersCount = userDataStores.size();
@@ -124,6 +121,30 @@ public class ChartsMenuController extends Parent
 		pieData.put(notReachedDestinationDescription, notReachDestinationCount);
 		
 		mReachedDestinationChart = new PieChartWindow(pieData, "Destination reach percentages");
+	}
+	
+	private void initOnTimeChart()
+	{
+		Map<UUID, IUserData> userDataStores = mSimulationDataStore.getUserDataStores();
+		int usersOnTimeCount = (int)userDataStores.entrySet().
+			stream().
+			filter(data -> data.getValue().getHasReachedDestinationOnTime()).
+			count();
+		
+		Map<String, Integer> pieData = new HashMap<String, Integer>();
+		int usersCount = userDataStores.size();
+		int onTimeUsersPercentage = (int) (((double)usersOnTimeCount / usersCount) * 100);
+		String reachedDestinationDescription = "On time (" + 
+				onTimeUsersPercentage + " %)";
+		pieData.put(reachedDestinationDescription, usersOnTimeCount);
+		
+		int lateUsersCount = userDataStores.size() - usersOnTimeCount;
+		int lateUsersPercentage = 100 - onTimeUsersPercentage;
+		String notReachedDestinationDescription = "Late (" + 
+				lateUsersPercentage + " %)";
+		pieData.put(notReachedDestinationDescription, lateUsersCount);
+		
+		mOnTimeChart = new PieChartWindow(pieData, "User on time percentages");
 	}
 	
 	private void initTravelTimesChart()
@@ -161,9 +182,9 @@ public class ChartsMenuController extends Parent
 			IUserData data = iterator.next().getValue();
 			
 			userTableDataList.add(new UserTableData(data.getName(), data.getID(), 
-					data.getHasReachedDestination(), data.getActualTravelTime(), 
-					data.getTargetTravelTime(), data.getTransportPreference(), 
-					data.getTransportMethodUsed()));
+					data.getHasReachedDestination(), data.getHasReachedDestinationOnTime(),
+					data.getActualTravelTime(), data.getTargetTravelTime(), 
+					data.getTransportPreference(), data.getTransportMethodUsed()));
 		}
 		
 		mUserDataTableChart = new UserTableWindow(userTableDataList);
@@ -187,6 +208,9 @@ public class ChartsMenuController extends Parent
 		);
 		showDestinationReachedPercentage.setOnAction(
 			event -> toggleWindow(mReachedDestinationChart)
+		);
+		showOnTimePercentage.setOnAction(
+			event -> toggleWindow(mOnTimeChart)
 		);
 		showUserTimeline.setOnAction(
 			event -> toggleWindow(mUserTimelineWindow)

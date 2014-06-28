@@ -131,6 +131,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 	
 	private List<ITransportOffer> mReceivedTransportOffers;
 	
+	private boolean mHasDestinationOnTime;
+	
 	public User(UUID id, String name, Location startLocation, Location targetLocation, 
 			int travelTimeTarget, NetworkAddress mediatorNetworkAddress, TransportPreference transportPreference) 
 	{
@@ -155,6 +157,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		mStartLocation = startLocation;
 		mTargetLocation = targetLocation;
 		mTravelTimeTarget = travelTimeTarget;
+		mHasDestinationOnTime = false;
 		mMediatorAddress = mediatorNetworkAddress;
 		
 		mTravelTime = 0;
@@ -309,8 +312,6 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 			logger.info("updateLocation() currentLocation " + currentLocation);
 			
 			mCurrentLocation = currentLocation;
-			
-			logEvent("Updated location", "");
 		}
 		
 		if(mCurrentLocation.equals(mTargetLocation) && 
@@ -495,7 +496,8 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		logger.info("onDestinationReached()");
 
 		mCurrentState = State.REACHED_DESTINATION;
-		logEvent("Reached destination", "");
+		mHasDestinationOnTime = (mTravelTime <= mTravelTimeTarget);
+		logEvent("Reached destination", "On time: " + mHasDestinationOnTime);
 	}
 	
 	private void handleBusTravelPlan(BusTravelPlanMessage msg)
@@ -623,6 +625,7 @@ public class User extends AbstractParticipant implements HasPerceptionRange
 		UUID userID = getID();
 		UserData userData = new UserData(getName(), userID, mStartLocation, mEventsList);
 		userData.setHasReachedDestination(hasReachedDestination);
+		userData.setHasReachedDestinationOnTime(mHasDestinationOnTime);
 		userData.setTransportPreference(mTransportPreference);
 		userData.setTransportMethodUsed(mTransportModeUsed);
 		userData.setTargetTravelTime(mTravelTimeTarget);

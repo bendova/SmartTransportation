@@ -16,18 +16,21 @@ public class UserTableData
 	private StringProperty mNameProperty;
 	private StringProperty mIDProperty;
 	private BooleanProperty mHasReachedDestinationProperty;
+	private BooleanProperty mHasReachedDestinationOnTimeProperty;
 	private DoubleProperty mTravelTimeProperty;
 	private DoubleProperty mTravelTimeTargetProperty;
 	private StringProperty mTransportPreferenceProperty;
 	private StringProperty mTransportModeUsedProperty;
 	
 	public UserTableData(String userName, UUID userID, boolean hasReachedDestination,
+			boolean hasReachedDestinationOnTime,
 			double travelTime, double targetTravelTime,
 			TransportPreference transportPreference, TransportMode transportModeUsed)
 	{
 		mNameProperty = new SimpleStringProperty(userName);
 		mIDProperty = new SimpleStringProperty(userID.toString());
 		mHasReachedDestinationProperty = new SimpleBooleanProperty(hasReachedDestination);
+		mHasReachedDestinationOnTimeProperty = new SimpleBooleanProperty(hasReachedDestinationOnTime);
 		mTravelTimeProperty = new SimpleDoubleProperty(travelTime);
 		mTravelTimeTargetProperty = new SimpleDoubleProperty(targetTravelTime);
 		mTransportPreferenceProperty = new SimpleStringProperty(transportPreference.toString());
@@ -45,6 +48,10 @@ public class UserTableData
 	public BooleanProperty hasReachedDestinationProperty()
 	{
 		return mHasReachedDestinationProperty;
+	}
+	public BooleanProperty hasReachedDestinationOnTimeProperty()
+	{
+		return mHasReachedDestinationOnTimeProperty;
 	}
 	public DoubleProperty travelTimeProperty()
 	{

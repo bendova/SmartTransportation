@@ -21,6 +21,7 @@ public class TransportResultsWindow extends Stage
 		Scene scene = new Scene(createAreaChart(areaChartData, "Transport Results"));
 		setScene(scene);
 		centerOnScreen();
+		setTitle("Transport Results");
 	}
 	
 	public XYChart<Number, Number> createAreaChart(TreeMap<Number, Number> data, String title)

@@ -222,7 +222,7 @@ public class GUI extends Application implements ISmartTransportionGUI
 	
 	private void saveConfiguration(SimulationConfiguration config)
 	{
-		if(config.getSaveConfiguration())
+		if(config.shouldSaveConfiguration())
 		{
 			try 
 			{

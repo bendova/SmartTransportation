@@ -1,6 +1,5 @@
 package gui.charts;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import dataStores.userData.IUserData;
 import dataStores.userData.UserEvent;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -27,6 +25,7 @@ public class UserTimelineWindow extends Stage
 		Scene scene = new Scene(createTabPane(userDataStores));
 		setScene(scene);
 		centerOnScreen();
+		setTitle("User Timeline");
 	}
 	
 	private TabPane createTabPane(Map<UUID, IUserData> userDataStores)

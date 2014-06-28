@@ -68,6 +68,9 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 	
 	private Callback<SimulationConfiguration, Void> mOnStart;
 	
+	private int mTransportPreferenceSelectedIndex = 0;
+	private int mTimeConstraintSelectedIndex = 0;
+	
 	public void setOnStartCallback(Callback<SimulationConfiguration, Void> onStart)
 	{
 		mOnStart = onStart;
@@ -87,7 +90,7 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		ObservableList<String> items = transportPreferenceChoiceBox.getItems();
 		items.clear();
 		items.addAll(types);
-		transportPreferenceChoiceBox.getSelectionModel().selectFirst();
+		transportPreferenceChoiceBox.getSelectionModel().select(mTransportPreferenceSelectedIndex);
 	}
 	
 	public void setsTimeConstraints(List<String> constraints)
@@ -95,7 +98,7 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		ObservableList<String> items = timeContraintChoiceBox.getItems();
 		items.clear();
 		items.addAll(constraints);
-		timeContraintChoiceBox.getSelectionModel().selectFirst();
+		timeContraintChoiceBox.getSelectionModel().select(mTimeConstraintSelectedIndex);
 	}
 	
 	@FXML
@@ -128,10 +131,10 @@ public class ConfigureSimulationController extends StackPane implements Initiali
 		busesCountTF.setText(Integer.toString(config.getBusesCount()));
 		busRoutesCountTF.setText(Integer.toString(config.getBusRoutesCount()));
 		
-		transportPreferenceChoiceBox.getSelectionModel().select(config.getTransportAllocationIndex());
-		timeContraintChoiceBox.getSelectionModel().select(config.getTimeConstraintIndex());
+		mTransportPreferenceSelectedIndex = config.getTransportAllocationIndex();
+		mTimeConstraintSelectedIndex = config.getTimeConstraintIndex();
 		
-		saveConfigurationCheckBox.setSelected(config.getSaveConfiguration());
+		saveConfigurationCheckBox.setSelected(config.shouldSaveConfiguration());
 	}
 	
 	private SimulationConfiguration getConfiguration()

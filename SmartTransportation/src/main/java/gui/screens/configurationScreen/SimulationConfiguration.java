@@ -4,10 +4,10 @@ import java.io.Serializable;
 
 public class SimulationConfiguration implements Serializable
 {
-	private int mTimeStepDuration 	= 50;
-	private int mTimeStepsCount 	= 100;
+	private int mTimeStepDuration 	= 100;
+	private int mTimeStepsCount 	= 200;
 	private int mAreaSize 			= 22;
-	private int mPixelsPerAreaPoint = 30;
+	private int mPixelsPerAreaPoint = 40;
 	private int mUsersCount 		= 0;
 	private int mTaxiStationsCount 	= 0;
 	private int mTaxiesCount 		= 0;
@@ -202,7 +202,7 @@ public class SimulationConfiguration implements Serializable
 		return mTimeConstraintIndex;
 	}
 	
-	public boolean getSaveConfiguration()
+	public boolean shouldSaveConfiguration()
 	{
 		return mSaveConfiguration;
 	}

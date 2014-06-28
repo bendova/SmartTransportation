@@ -15,6 +15,7 @@ public class UserData extends AgentData implements IUserData
 	private double mTargetTravelTime;
 	private double mActualTravelTime;
 	private boolean mHasReachedDestination;
+	private boolean mHasReachedDestinationOnTime;
 	private TransportPreference mTransportPreference;
 	private TransportMode mTransportModeUsed;
 	private List<UserEvent> mEvents;
@@ -28,6 +29,7 @@ public class UserData extends AgentData implements IUserData
 		mTargetTravelTime = 0;
 		mActualTravelTime = 0;
 		mHasReachedDestination = false;
+		mHasReachedDestinationOnTime = false;
 		mTransportPreference = TransportPreference.NO_PREFERENCE;
 		mTransportModeUsed = TransportMode.NONE;
 		mEvents = events;
@@ -55,6 +57,14 @@ public class UserData extends AgentData implements IUserData
 	public boolean getHasReachedDestination()
 	{
 		return mHasReachedDestination;
+	}
+	public void setHasReachedDestinationOnTime(boolean value)
+	{
+		mHasReachedDestinationOnTime = value;
+	}
+	public boolean getHasReachedDestinationOnTime()
+	{
+		return mHasReachedDestinationOnTime;
 	}
 	public void setTransportPreference(TransportPreference pref)
 	{

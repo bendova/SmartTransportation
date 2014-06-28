@@ -5,6 +5,7 @@ import gui.ISmartTransportionGUI;
 import gui.screens.configurationScreen.SimulationConfiguration;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -29,7 +30,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 
 import dataStores.SimulationDataStore;
-
 import uk.ac.imperial.presage2.core.TimeDriven;
 import uk.ac.imperial.presage2.core.network.NetworkAddress;
 import uk.ac.imperial.presage2.core.participant.Participant;
@@ -176,20 +176,43 @@ public class Simulation extends InjectedSimulation implements TimeDriven
 		mTaxies = new LinkedList<Taxi>();
 		mUsers = new LinkedList<User>();
 		
+		addBusRoutes();
+	}
+	
+	private void addBusRoutes()
+	{
 		mBusRoutes = new ArrayList<List<Location>>();
 		List<Location> mBusRoute1 = new ArrayList<Location>();
 		mBusRoute1.add(new Location(3, 5));
+		mBusRoute1.add(new Location(10, 5));
 		mBusRoute1.add(new Location(20, 5));
+		mBusRoute1.add(new Location(21, 8));
+		mBusRoute1.add(new Location(18, 12));
 		mBusRoute1.add(new Location(20, 16));
-		mBusRoute1.add(new Location(3, 16));		
-		List<Location> mBusRoute2 = new ArrayList<Location>();
-		mBusRoute2.add(new Location(3, 16));		
-		mBusRoute2.add(new Location(20, 16));
-		mBusRoute2.add(new Location(20, 5));
-		mBusRoute2.add(new Location(3, 5));
-		
+		mBusRoute1.add(new Location(15, 16));
+		mBusRoute1.add(new Location(10, 16));
+		mBusRoute1.add(new Location(3, 16));
+		mBusRoute1.add(new Location(0, 11));
+		List<Location> mBusRoute1Reversed = new ArrayList<Location>(mBusRoute1);
+		Collections.reverse(mBusRoute1Reversed);
 		mBusRoutes.add(mBusRoute1);
+		mBusRoutes.add(mBusRoute1Reversed);
+		
+		List<Location> mBusRoute2 = new ArrayList<Location>();
+		mBusRoute2.add(new Location(14, 1));
+		mBusRoute2.add(new Location(9, 1));
+		mBusRoute2.add(new Location(9, 5));
+		mBusRoute2.add(new Location(7, 11));
+		mBusRoute2.add(new Location(6, 16));
+		mBusRoute2.add(new Location(8, 21));
+		mBusRoute2.add(new Location(14, 16));
+		mBusRoute2.add(new Location(16, 9));
+		mBusRoute2.add(new Location(14, 5));
+		List<Location> mBusRoute2Reversed = new ArrayList<Location>(mBusRoute2);
+		Collections.reverse(mBusRoute2Reversed);
+		
 		mBusRoutes.add(mBusRoute2);
+		mBusRoutes.add(mBusRoute2Reversed);
 	}
 	
 	@Inject

@@ -196,8 +196,6 @@ public class AgentDataForMap
 				build();
 		mAnimation.getChildren().add(fadeInTransition);
 		
-		System.out.println("addAnimations() for " + mName);
-		
 		int currentTime = 0;
 		for(Movement movement: mMovements)
 		{

@@ -20,6 +20,7 @@ public class PieChartWindow extends Stage
 		Scene scene = new Scene(createPieChart(chartData, title));
 		setScene(scene);
 		centerOnScreen();
+		setTitle(title);
 	}
 	
 	private PieChart createPieChart(Map<String, Integer> chartData, String title)

@@ -18,6 +18,7 @@ public class UserTableWindow extends Stage
 		Scene scene = new Scene(createTable(data));
 		setScene(scene);
 		centerOnScreen();
+		setTitle("User Data Table");
 	}
 	
 	public TableView<UserTableData> createTable(ObservableList<UserTableData> userTableDataList)
@@ -31,6 +32,11 @@ public class UserTableWindow extends Stage
 		hasReachedDestinationColumn.setMinWidth(200);
 		hasReachedDestinationColumn.setText("Has reached destination");
 		hasReachedDestinationColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, Boolean>("hasReachedDestination"));
+		
+		TableColumn<UserTableData, Boolean> onTimeColumn = new TableColumn<UserTableData, Boolean>();
+		onTimeColumn.setMinWidth(100);
+		onTimeColumn.setText("On Time");
+		onTimeColumn.setCellValueFactory(new PropertyValueFactory<UserTableData, Boolean>("hasReachedDestinationOnTime"));
 		
 		TableColumn<UserTableData, Double> travelTimeColumn = new TableColumn<UserTableData, Double>();
 		travelTimeColumn.setMinWidth(100);
@@ -54,7 +60,7 @@ public class UserTableWindow extends Stage
 		
 		TableView<UserTableData> mTableView = new TableView<UserTableData>();
 		mTableView.setItems(userTableDataList);
-		mTableView.getColumns().addAll(nameColumn, hasReachedDestinationColumn, 
+		mTableView.getColumns().addAll(nameColumn, hasReachedDestinationColumn, onTimeColumn,
 				travelTimeColumn, travelTimeTargetColumn, transportPreferenceColumn, transportModeUsedColumn);
 		mTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		
